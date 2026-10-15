@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADPHOR S.A.S. | Plataforma Integral de Gestión PH</title>
+  <meta name="description" content="Gestión de copropiedades, bitácora de minutas y reportes para Juntas Directivas — ADPHOR S.A.S.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/adphor-platform/assets/index-BnAR73YX.js"></script>
+  <link rel="stylesheet" crossorigin href="/adphor-platform/assets/index-vZKLGTGs.css">
+</head>
+<body class="bg-slate-100 text-slate-800 h-full flex flex-col antialiased">
+  <div id="app" class="flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- LOGIN -->
+    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100">
+        <div class="text-center mb-6">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-100 text-sky-600 mb-3 text-2xl font-bold" aria-hidden="true">
+            <i class="fa-solid fa-building-user"></i>
+          </div>
+          <h1 id="login-title" class="text-2xl font-bold text-slate-900">ADPHOR S.A.S.</h1>
+          <p class="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">Administración Profesional de Propiedad Horizontal</p>
+        </div>
+
+        <form id="login-form" class="space-y-4">
+          <div>
+            <label for="login-user" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Perfil de Acceso</label>
+            <select id="login-user" name="user" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-slate-50">
+              <option value="angelica">Angélica Castilla (Gerente General ADPHOR)</option>
+              <option value="adalberto">Adalberto Gándara (Director Financiero)</option>
+              <option value="carlos">Carlos Restrepo (Coordinador de Campo - Zona Bocagrande)</option>
+              <option value="orlando">Dr. Orlando Bustillo (Presidente Consejo - Centro Médico)</option>
+            </select>
+          </div>
+          <div>
+            <label for="login-password" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contraseña de Usuario</label>
+            <input id="login-password" name="password" type="password" value="••••••••" autocomplete="current-password" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-slate-50" required>
+          </div>
+          <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition shadow-lg text-sm">
+            Ingresar a la Plataforma ADPHOR
+          </button>
+        </form>
+        <div class="mt-6 text-center text-xs text-slate-400">Cartagena de Indias • Ley 675 de 2001</div>
+      </div>
+    </div>
+
+    <!-- MAIN INTERFACE -->
+    <div id="main-interface" class="flex-1 flex flex-col h-full overflow-hidden hidden">
+
+      <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-900 text-sky-400 flex items-center justify-center font-bold text-xl shadow" aria-hidden="true">A</div>
+            <div>
+              <span class="font-extrabold text-slate-900 text-lg tracking-tight">ADPHOR <span class="text-xs font-medium text-sky-600">S.A.S.</span></span>
+              <span class="text-[11px] text-slate-400 block font-medium">Gestión PH Cartagena</span>
+            </div>
+          </div>
+          <div class="hidden lg:flex items-center space-x-2 ml-6 pl-6 border-l border-slate-200">
+            <label for="project-selector" class="text-xs font-semibold text-slate-500"><i class="fa-solid fa-city mr-1.5 text-sky-600" aria-hidden="true"></i> Copropiedad:</label>
+            <select id="project-selector" data-project-select class="text-sm font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl px-3.5 py-1.5 border-none focus:ring-2 focus:ring-sky-500 cursor-pointer max-w-xs truncate"></select>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="text-right hidden sm:block">
+            <div id="user-display-name" class="text-sm font-bold text-slate-900"></div>
+            <div id="user-display-role" class="text-[11px] text-sky-700 font-semibold bg-sky-50 px-2.5 py-0.5 rounded-full inline-block"></div>
+          </div>
+          <button type="button" data-action="logout" class="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition" aria-label="Cerrar sesión" title="Cerrar Sesión">
+            <i class="fa-solid fa-power-off text-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Selector de copropiedad para móvil (oculto en escritorio) -->
+      <div class="lg:hidden shrink-0 bg-white border-b border-slate-200 px-6 py-2.5">
+        <label for="project-selector-mobile" class="sr-only">Copropiedad</label>
+        <select id="project-selector-mobile" data-project-select class="w-full text-sm font-bold text-slate-800 bg-slate-100 rounded-xl px-3.5 py-2 border-none focus:ring-2 focus:ring-sky-500"></select>
+      </div>
+
+      <div class="flex-1 flex overflow-hidden">
+
+        <!-- SIDEBAR (escritorio) -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex-col shrink-0 hidden md:flex" aria-label="Navegación principal">
+          <nav class="p-4 flex-1 space-y-1" aria-label="Secciones">
+            <button type="button" data-tab="dashboard" data-nav="dashboard" aria-current="page" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-900 aria-[current=page]:font-semibold aria-[current=page]:text-sky-600 aria-[current=page]:bg-sky-50">
+              <i class="fa-solid fa-chart-line w-5" aria-hidden="true"></i><span>Dashboard General</span>
+            </button>
+            <button type="button" data-tab="areas" data-nav="areas" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-900 aria-[current=page]:font-semibold aria-[current=page]:text-sky-600 aria-[current=page]:bg-sky-50">
+              <i class="fa-solid fa-sitemap w-5" aria-hidden="true"></i><span>Áreas de Trabajo</span>
+            </button>
+            <button type="button" data-tab="minutas" data-nav="minutas" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-900 aria-[current=page]:font-semibold aria-[current=page]:text-sky-600 aria-[current=page]:bg-sky-50">
+              <i class="fa-solid fa-clipboard-list w-5" aria-hidden="true"></i><span>Minuta &amp; Bitácora</span>
+            </button>
+            <button type="button" data-tab="juntas" data-nav="juntas" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-600 hover:bg-slate-50 hover:text-slate-900 aria-[current=page]:font-semibold aria-[current=page]:text-sky-600 aria-[current=page]:bg-sky-50">
+              <i class="fa-solid fa-file-signature w-5" aria-hidden="true"></i><span>Consolidado para Junta</span>
+            </button>
+          </nav>
+          <div class="p-4 border-t border-slate-100">
+            <div class="bg-slate-900 rounded-xl p-3.5 text-white shadow-sm">
+              <div class="flex items-center space-x-2 text-[11px] font-bold uppercase text-sky-400 mb-1">
+                <i class="fa-solid fa-shield-cat" aria-hidden="true"></i><span>Soporte ADPHOR S.A.S.</span>
+              </div>
+              <p class="text-xs text-slate-300">Central de Atención y PQRS en tiempo real.</p>
+            </div>
+          </div>
+        </aside>
+
+        <!-- CONTENIDO -->
+        <main class="flex-1 overflow-y-auto p-6 md:p-8 pb-24 md:pb-8 bg-slate-100">
+
+          <!-- DASHBOARD -->
+          <section id="tab-dashboard" data-section="dashboard" class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span id="dash-type-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800"></span>
+                  <span id="dash-location" class="text-xs text-slate-500 font-medium"></span>
+                </div>
+                <h2 id="dash-project-title" class="text-2xl font-bold text-slate-900 mt-1"></h2>
+              </div>
+              <button type="button" data-action="open-minuta" class="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-sm transition shadow">
+                <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i><span>Registrar Novedad / Minuta</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold uppercase text-slate-400">Áreas de Trabajo</span>
+                  <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline">
+                  <span class="text-2xl font-bold text-slate-900" id="kpi-areas-count">0</span>
+                  <span class="ml-2 text-xs text-slate-500">Especializadas</span>
+                </div>
+              </div>
+              <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold uppercase text-slate-400">Minutas Pendientes</span>
+                  <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-clock"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline">
+                  <span class="text-2xl font-bold text-slate-900" id="kpi-open-count">0</span>
+                  <span class="ml-2 text-xs text-amber-600 font-medium">En seguimiento</span>
+                </div>
+              </div>
+              <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold uppercase text-slate-400">Resueltas Mes</span>
+                  <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline">
+                  <span class="text-2xl font-bold text-slate-900" id="kpi-resolved-count">0</span>
+                  <span class="ml-2 text-xs text-emerald-600 font-medium">98% Eficiencia</span>
+                </div>
+              </div>
+              <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold uppercase text-slate-400">Auditoría Legal</span>
+                  <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></div>
+                </div>
+                <div class="mt-3 flex items-baseline">
+                  <span class="text-sm font-bold text-emerald-600">Al Día</span>
+                  <span class="ml-2 text-[11px] text-slate-400">Ley 675 / 2001</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+              <h3 class="font-bold text-slate-900 text-base flex items-center justify-between">
+                <span>Estructura Operativa por Áreas de Trabajo</span>
+                <span class="text-xs font-normal text-slate-500">Configurado para esta copropiedad</span>
+              </h3>
+              <div id="dash-areas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+              <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-base">Bitácora Reciente de Novedades</h3>
+                <button type="button" data-tab="minutas" class="text-xs font-semibold text-sky-600 hover:underline">Ver todas</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <caption class="sr-only">Últimas novedades registradas</caption>
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-400 text-xs uppercase tracking-wider font-semibold border-b border-slate-100">
+                      <th scope="col" class="py-3 px-6">Fecha / Hora</th>
+                      <th scope="col" class="py-3 px-6">Área de Trabajo</th>
+                      <th scope="col" class="py-3 px-6">Descripción</th>
+                      <th scope="col" class="py-3 px-6">Registrado Por</th>
+                      <th scope="col" class="py-3 px-6">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-minutas-table" class="text-sm divide-y divide-slate-100 text-slate-700"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ÁREAS -->
+          <section id="tab-areas" data-section="areas" class="space-y-6 hidden">
+            <div>
+              <h2 class="text-2xl font-bold text-slate-900">Módulos y Áreas de Trabajo Especializadas</h2>
+              <p class="text-sm text-slate-500">Supervisión descentralizada de la infraestructura y áreas comunes.</p>
+            </div>
+            <div id="full-areas-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+          </section>
+
+          <!-- MINUTAS -->
+          <section id="tab-minutas" data-section="minutas" class="space-y-6 hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-bold text-slate-900">Bitácora Oficial de Minutas</h2>
+                <p class="text-sm text-slate-500">Registro histórico de eventos, mantenimientos y solicitudes con soporte digital.</p>
+              </div>
+              <button type="button" data-action="open-minuta" class="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium text-sm transition shadow">
+                <i class="fa-solid fa-plus text-xs" aria-hidden="true"></i><span>Nueva Minuta</span>
+              </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center gap-4">
+              <div class="flex-1 min-w-[200px]">
+                <label for="search-minuta" class="sr-only">Buscar en la bitácora</label>
+                <input type="search" id="search-minuta" placeholder="Buscar en bitácora..." class="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-slate-50">
+              </div>
+              <div>
+                <label for="filter-area" class="sr-only">Filtrar por área de trabajo</label>
+                <select id="filter-area" class="px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-slate-50"></select>
+              </div>
+              <div>
+                <label for="filter-status" class="sr-only">Filtrar por estado</label>
+                <select id="filter-status" class="px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-slate-50">
+                  <option value="">Todos los Estados</option>
+                  <option value="Abierta">Abierta</option>
+                  <option value="En Proceso">En Proceso</option>
+                  <option value="Resuelta">Resuelta</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <caption class="sr-only">Bitácora de minutas de la copropiedad seleccionada</caption>
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-400 text-xs uppercase tracking-wider font-semibold border-b border-slate-100">
+                      <th scope="col" class="py-3 px-6">ID / Fecha</th>
+                      <th scope="col" class="py-3 px-6">Área de Trabajo</th>
+                      <th scope="col" class="py-3 px-6">Detalle de la Novedad</th>
+                      <th scope="col" class="py-3 px-6">Responsable</th>
+                      <th scope="col" class="py-3 px-6">Estado</th>
+                      <th scope="col" class="py-3 px-6 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="full-minutas-table" class="text-sm divide-y divide-slate-100 text-slate-700"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- JUNTA -->
+          <section id="tab-juntas" data-section="juntas" class="space-y-6 hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 class="text-2xl font-bold text-slate-900">Consolidado Ejecutivo para Juntas Directivas</h2>
+                <p class="text-sm text-slate-500">Resumen periódico desglosado por Áreas de Trabajo bajo el estándar de ADPHOR S.A.S.</p>
+              </div>
+              <button type="button" data-action="export-report" class="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium text-sm transition shadow">
+                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i><span>Exportar Reporte Oficial</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm lg:col-span-1 space-y-4">
+                <h3 class="font-bold text-slate-900 text-base border-b border-slate-100 pb-3">Parámetros del Informe</h3>
+                <div>
+                  <label for="report-period" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Período Mensual</label>
+                  <select id="report-period" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50">
+                    <option>Octubre 2026 (Período Actual)</option>
+                    <option>Septiembre 2026</option>
+                    <option>Informe Trimestral Q3</option>
+                  </select>
+                </div>
+                <div class="space-y-2 text-sm pt-2">
+                  <label class="flex items-center space-x-2"><input type="checkbox" checked class="rounded text-sky-600"> <span>Resumen de Áreas de Trabajo</span></label>
+                  <label class="flex items-center space-x-2"><input type="checkbox" checked class="rounded text-sky-600"> <span>Control de Mantenimiento Anticorrosión</span></label>
+                  <label class="flex items-center space-x-2"><input type="checkbox" checked class="rounded text-sky-600"> <span>Balance Financiero y Cartera</span></label>
+                </div>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm lg:col-span-2 space-y-6">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h4 id="report-project-name" class="font-bold text-slate-900 text-lg"></h4>
+                    <p class="text-xs text-slate-400">Informe de Gestión Administrativa • ADPHOR S.A.S.</p>
+                  </div>
+                  <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">Revisado por Gerencia</span>
+                </div>
+                <div class="space-y-4 text-sm text-slate-600">
+                  <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h5 class="font-bold text-slate-900 mb-1">1. Estado Operativo por Área de Trabajo</h5>
+                    <div id="report-areas-breakdown" class="space-y-1.5 text-xs mt-2"></div>
+                  </div>
+                  <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h5 class="font-bold text-slate-900 mb-1">2. Observación Jurídica y Financiera</h5>
+                    <p class="text-xs">Se garantiza el cumplimiento de la Ley 675 de 2001. Las cuotas de expensas e informes contables se encuentran auditados bajo la dirección de la gerencia de ADPHOR S.A.S.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- NAVEGACIÓN INFERIOR (móvil) -->
+      <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 grid grid-cols-4 pb-[env(safe-area-inset-bottom)]" aria-label="Secciones móviles">
+        <button type="button" data-tab="dashboard" data-nav="dashboard" aria-current="page" class="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-slate-500 aria-[current=page]:text-sky-600 aria-[current=page]:font-semibold">
+          <i class="fa-solid fa-chart-line text-base" aria-hidden="true"></i><span>Inicio</span>
+        </button>
+        <button type="button" data-tab="areas" data-nav="areas" class="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-slate-500 aria-[current=page]:text-sky-600 aria-[current=page]:font-semibold">
+          <i class="fa-solid fa-sitemap text-base" aria-hidden="true"></i><span>Áreas</span>
+        </button>
+        <button type="button" data-tab="minutas" data-nav="minutas" class="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-slate-500 aria-[current=page]:text-sky-600 aria-[current=page]:font-semibold">
+          <i class="fa-solid fa-clipboard-list text-base" aria-hidden="true"></i><span>Minutas</span>
+        </button>
+        <button type="button" data-tab="juntas" data-nav="juntas" class="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-slate-500 aria-[current=page]:text-sky-600 aria-[current=page]:font-semibold">
+          <i class="fa-solid fa-file-signature text-base" aria-hidden="true"></i><span>Junta</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- MODAL NUEVA MINUTA -->
+    <div id="minuta-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="minuta-modal-title">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <h3 id="minuta-modal-title" class="font-bold text-slate-900 text-lg">Registrar Minuta por Área de Trabajo</h3>
+          <button type="button" data-action="close-minuta" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+            <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+        <form id="new-minuta-form" class="space-y-4 pt-4">
+          <div>
+            <label for="new-area-select" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Área de Trabajo Correspondiente</label>
+            <select id="new-area-select" name="area" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:ring-2 focus:ring-sky-500 focus:outline-none"></select>
+          </div>
+          <div>
+            <label for="new-descripcion" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Detalle de la Novedad / Trabajo Realizado</label>
+            <textarea id="new-descripcion" name="descripcion" rows="4" maxlength="1000" placeholder="Suministre los detalles de la bitácora..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:ring-2 focus:ring-sky-500 focus:outline-none" required></textarea>
+          </div>
+          <div class="flex items-center justify-end space-x-3 pt-2">
+            <button type="button" data-action="close-minuta" class="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50">Cancelar</button>
+            <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow">Guardar en Bitácora</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-24 md:bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm max-w-[calc(100vw-3rem)]">
+      <i class="fa-solid fa-circle-check text-sky-400 text-lg" aria-hidden="true"></i>
+      <span id="toast-message"></span>
+    </div>
+  </div>
+</body>
+</html>
