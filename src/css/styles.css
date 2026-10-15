@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { font-family: 'Inter', sans-serif; }
+  :focus-visible { outline: 2px solid #0284C7; outline-offset: 2px; }
+}
+
+/* Impresión del informe para Junta: aísla la sección de reporte */
+@media print {
+  body.is-printing-report #app,
+  body.is-printing-report #main-interface,
+  body.is-printing-report #main-interface > div,
+  body.is-printing-report main { height: auto !important; overflow: visible !important; display: block !important; }
+  body.is-printing-report #main-interface > header,
+  body.is-printing-report aside,
+  body.is-printing-report nav,
+  body.is-printing-report #login-modal,
+  body.is-printing-report #minuta-modal,
+  body.is-printing-report #toast,
+  body.is-printing-report [data-section]:not(#tab-juntas) { display: none !important; }
+  body.is-printing-report #tab-juntas { display: block !important; }
+}
