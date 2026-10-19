@@ -1,0 +1,65 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+
+test('PostgreSQL: enforce isolation, actor identity, evidence, transitions and concurrency', async () => {
+  const db = new PGlite();
+  try {
+    // Minimal Supabase Auth/Storage contracts; real RLS and RPCs run in PostgreSQL.
+    await db.exec(`create role anon; create role authenticated;
+      create schema auth; create schema storage;
+      create table auth.users(id uuid primary key);
+      create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      grant usage on schema auth,storage to authenticated;
+      grant execute on function auth.uid() to authenticated;
+      create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+      create table storage.objects(id serial primary key,bucket_id text,name text);
+      alter table storage.objects enable row level security;
+      grant select,insert on storage.objects to authenticated;
+      grant usage on sequence storage.objects_id_seq to authenticated;`);
+    await db.exec(await readFile(new URL('../supabase/migrations/202610190001_workflow.sql',import.meta.url),'utf8'));
+    const boss='00000000-0000-4000-8000-000000000001', tech='00000000-0000-4000-8000-000000000002', outsider='00000000-0000-4000-8000-000000000003', viewer='00000000-0000-4000-8000-000000000004';
+    const id='10000000-0000-4000-8000-000000000001';
+    await db.exec(`insert into auth.users values('${boss}'),('${tech}'),('${outsider}'),('${viewer}');
+      insert into public.profiles values('${boss}','Coordinador'),('${tech}','Técnico'),('${outsider}','Otra copropiedad'),('${viewer}','Consulta');
+      insert into public.projects(id,name,areas) values('one','Uno',array['Piscina']),('two','Dos',array['Piscina']);
+      insert into public.memberships values('one','${boss}','coordinator'),('one','${tech}','technician'),('two','${outsider}','coordinator'),('one','${viewer}','viewer');`);
+    const asUser=async user=>{await db.exec(`reset role; set role authenticated; set request.jwt.claim.sub='${user}';`);};
+    const command=async (action,payload)=> (await db.query('select to_jsonb(public.ticket_command($1,$2::jsonb)) as ticket',[action,JSON.stringify(payload)])).rows[0].ticket;
+    const input={id,project_id:'one',title:'Fuga',description:'Fuga en tubería',location:'Cuarto de máquinas',area:'Piscina',priority:'Alta',assignee:tech,due_date:'2099-12-01',evidence:[]};
+    await asUser(boss);
+    let row=await command('create',input); assert.equal(row.status,'Pendiente');
+    assert.equal((await command('create',input)).id,id);
+    await assert.rejects(()=>db.exec(`update public.tickets set status='Cerrada'`),/permission denied/);
+    await assert.rejects(()=>db.exec(`update public.memberships set role='admin'`),/permission denied/);
+    await asUser(outsider);
+    assert.equal((await db.query('select * from public.tickets')).rows.length,0);
+    assert.equal((await db.query('select * from public.projects')).rows.length,1);
+    await assert.rejects(()=>command('start',{id,version:1}),/permiso/);
+    await assert.rejects(()=>command('create',{...input,id:'10000000-0000-4000-8000-000000000002'}),/permiso/);
+    await asUser(viewer);
+    await assert.rejects(()=>command('start',{id,version:1}),/permiso/);
+    await asUser(tech);
+    await assert.rejects(()=>command('create',{...input,id:'10000000-0000-4000-8000-000000000003',assignee:boss}),/coordinador/);
+    row=await command('start',{id,version:1}); assert.equal(row.status,'En proceso');
+    await assert.rejects(()=>command('submit',{id,version:2,note:'Reparado',evidence:[]}),/evidencia/);
+    await assert.rejects(()=>command('submit',{id,version:2,note:'Reparado',evidence:[{name:'x',path:'untrusted'}]}),/evidencia/);
+    const path=`one/${tech}/${id}/evidence.png`;
+    await db.query('insert into storage.objects(bucket_id,name) values($1,$2)',['evidence',path]);
+    await assert.rejects(()=>db.query('insert into storage.objects(bucket_id,name) values($1,$2)',['evidence',`two/${tech}/${id}/evidence.png`]),/row-level security/);
+    row=await command('submit',{id,version:2,note:'Reparado',evidence:[{name:'Foto',path}]});
+    assert.equal(row.status,'Por verificar');
+    await assert.rejects(()=>command('close',{id,version:3,note:'Verificado'}),/coordinador/);
+    await asUser(boss);
+    await assert.rejects(()=>command('close',{id,version:2,note:'Verificado'}),/actualizó/);
+    await assert.rejects(()=>command('close',{id,version:3,note:''}),/Describe/);
+    row=await command('close',{id,version:3,note:'Prueba satisfactoria',actor:'Falso',history:[]});
+    assert.equal(row.status,'Cerrada'); assert.equal(row.history.length,4); assert.equal(row.history.at(-1).actor,'Coordinador');
+    row=await command('reopen',{id,version:4,note:'Fuga recurrente'}); assert.equal(row.status,'En proceso');
+    await asUser(outsider); assert.equal((await db.query('select * from storage.objects')).rows.length,0);
+    await db.exec('reset role; set role anon;');
+    await assert.rejects(()=>db.exec('select * from public.tickets'),/permission denied/);
+    await assert.rejects(()=>command('close',{id,version:5,note:'Falso'}),/permission denied/);
+  } finally { await db.close(); }
+});
