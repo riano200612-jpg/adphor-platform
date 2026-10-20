@@ -1,3 +1,4 @@
+import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -17,6 +18,10 @@ const fmt = date => date && !Number.isNaN(new Date(date).getTime()) ? new Intl.D
 const stamp = date => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(date));
 const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null };
 let busy = false;
+let monthlyResult = null;
+let monthlyKey = '';
+const currentReportKey = () => `${state.projectId}:${state.reportMonth}`;
+
 let toastTimer;
 let modalReturnFocus;
 const project = () => state.projects.find(p => p.id === state.projectId);
@@ -73,6 +78,15 @@ function ticketResults() {
 function ticketsPage() { return heading(state.page === 'mine' ? 'Mis tareas' : 'Bitácora de mantenimiento', state.page === 'mine' ? 'Tu trabajo asignado, sus plazos y próximos pasos.' : 'Cada caso con responsable, evidencia y seguimiento.', newButton()) + `<div class="toolbar"><p>Selecciona una novedad para ver su detalle y avanzar.</p><div class="segmented"><button data-view="board" aria-pressed="${state.view === 'board'}">${icon('table-columns')} Tablero</button><button data-view="list" aria-pressed="${state.view === 'list'}">${icon('list')} Lista</button></div></div>` + filters() + `<div id="ticket-results">${ticketResults()}</div>`; }
 function areasPage() { return heading('Áreas de trabajo', 'Prioriza el mantenimiento según los pendientes de cada área.') + `<div class="areas-grid">${project().areas.map((area,i) => { const m = metrics(rows().filter(t => t.area === area)); return `<button class="area-card" data-area="${esc(area)}"><span class="area-number">${String(i+1).padStart(2,'0')}</span><h2>${esc(area)}</h2><div><span><strong>${m.pending}</strong> pendientes</span><span class="${m.overdue ? 'late' : ''}"><strong>${m.overdue}</strong> fuera de plazo</span></div><p>Consultar bitácora ${icon('arrow-right')}</p></button>`; }).join('')}</div>`; }
 function reportPage() {
+  if(repo.mode === 'cloud') {
+    if(!state.reportMonth) state.reportMonth=today().slice(0,7);
+    const r=monthlyKey===currentReportKey()?monthlyResult:null;
+    return heading('Informe mensual para la junta', 'Movimientos del período y pendientes al corte, calculados en la base de datos.', `${r?'<button class="btn secondary" data-action="csv">Descargar CSV</button><button class="btn primary" data-action="print">Imprimir / PDF</button>':''}`)
+      + `<div class="report-period no-print"><label>Mes del informe<input id="report-month" type="month" max="${today().slice(0,7)}" value="${esc(state.reportMonth)}"></label><button class="btn primary" data-action="monthly-load">Generar / consultar informe</button></div>`
+      + (r?monthlyReportView(r):'<section class="panel"><h2>Consulta el período</h2><p>Genera el informe para leer las cifras completas del servidor. Si falta la actualización SQL, se mostrará un aviso; no se usarán cifras parciales como informe oficial.</p></section>')
+      + (r && !r.frozen && !r.is_demo && isManager(role()) && state.reportMonth<today().slice(0,7)?'<section class="panel no-print"><h3>Conservar cierre mensual</h3><p>Guarda una versión fija de las cifras y gráficas. Revisa el informe antes de cerrar: la aplicación no permite reemplazarlo.</p><button class="btn secondary" data-action="monthly-finalize">Conservar cierre de este mes</button></section>':'');
+  }
+
   const list = rows().filter(t => !state.reportMonth || t.created_at.slice(0,7) === state.reportMonth);
   const m = metrics(list);
   return heading('Informe de seguimiento', 'Estado actual de los casos registrados en el período elegido.', `<button class="btn secondary" data-action="csv">${icon('download')} Descargar CSV</button><button class="btn primary" data-action="print">${icon('print')} Imprimir / PDF</button>`) + `<label class="report-period no-print">Mes de registro <input id="report-month" type="month" value="${esc(state.reportMonth)}"><span class="muted">Déjalo vacío para incluir todo el historial.</span></label><article class="panel printable"><div class="report-title"><div><p class="eyebrow">ADPHOR · INFORME OPERATIVO</p><h2>${esc(project().name)}</h2><p>${state.reportMonth ? `Casos registrados en ${esc(state.reportMonth)}` : 'Todos los registros'} · Generado: ${stamp(new Date())}</p></div><span class="badge">${repo.mode === 'demo' ? 'Datos de demostración' : 'Resumen de bitácora'}</span></div><div class="report-numbers"><span><strong>${m.total}</strong>Total</span><span><strong>${m.pending}</strong>Pendientes</span><span><strong>${m.closed}</strong>Cerrados</span><span><strong>${m.overdue}</strong>Fuera de plazo</span></div><div class="table-wrap"><table><thead><tr><th>Área de trabajo</th><th>Pendientes</th><th>Por verificar</th><th>Cerradas</th></tr></thead><tbody>${project().areas.map(a => { const k = metrics(list.filter(t => t.area === a)); return `<tr><td>${esc(a)}</td><td>${k.pending}</td><td>${k.review}</td><td>${k.closed}</td></tr>`; }).join('')}</tbody></table></div><p class="muted report-note">Los valores corresponden al estado actual de la bitácora. Este informe no certifica auditorías legales, financieras ni condiciones técnicas de las instalaciones.</p></article>`;
@@ -107,7 +121,7 @@ function actionFields(action, t) {
 function csvReport() {
   const list = rows().filter(t => !state.reportMonth || t.created_at.slice(0,7) === state.reportMonth);
   const cell = value => { let s = String(value ?? ''); if (/^[\s]*[=+@-]/.test(s)) s = `'${s}`; return `"${s.replace(/"/g,'""')}"`; };
-  const data = [['ID','Título','Área','Ubicación','Responsable','Prioridad','Estado','Plazo','Registro'], ...list.map(t => [t.id,t.title,t.area,t.location,person(t.assignee),t.priority,t.status,t.due_date,t.created_at])];
+  const data = repo.mode === 'cloud' && monthlyKey === currentReportKey() && monthlyResult ? monthlyCsvRows(monthlyResult) : [['ID','Título','Área','Ubicación','Responsable','Prioridad','Estado','Plazo','Registro'], ...list.map(t => [t.id,t.title,t.area,t.location,person(t.assignee),t.priority,t.status,t.due_date,t.created_at])];
   const blob = new Blob(['\ufeff' + data.map(r => r.map(cell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `adphor-${state.projectId}-${state.reportMonth || 'historial'}.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
@@ -155,7 +169,20 @@ document.addEventListener('click', async event => {
       case 'close-dialog': dialog.close(); break;
       case 'clear': state.filters = {}; renderPage(); break;
       case 'refresh': el.disabled = true; try { await refresh(); shell(); toast('Datos actualizados.'); } finally { el.disabled = false; } break;
-      case 'logout': await repo.logout(); state.user = null; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
+      case 'logout': monthlyResult=null; monthlyKey=''; await repo.logout(); state.user = null; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
+      case 'monthly-load':
+      case 'monthly-finalize': {
+        const projectId=state.projectId, month=state.reportMonth, requestKey=currentReportKey();
+        busy=true; el.disabled=true;
+        try {
+          const result=await repo.monthlyReport(projectId,month,el.dataset.action==='monthly-finalize');
+          if(requestKey===currentReportKey()) { monthlyResult=result; monthlyKey=requestKey; renderPage(); }
+        } catch(error) {
+          monthlyResult=null; monthlyKey=''; renderPage();
+          throw new Error(/function|schema cache|PGRST202/.test(error.message) ? 'Falta aplicar la actualización SQL de informes mensuales en Supabase. Los casos existentes siguen guardados.' : error.message);
+        } finally { busy=false; if(el.isConnected) el.disabled=false; }
+        break;
+      }
       case 'csv': csvReport(); break;
       case 'print': window.print(); break;
     }

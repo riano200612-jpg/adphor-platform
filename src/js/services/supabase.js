@@ -3,7 +3,18 @@ export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
+  async function allPages(query) {
+    const rows = [];
+    for (let start=0;;start+=500) {
+      const page=check(await query().range(start,start+499));
+      rows.push(...page);
+      if(page.length<500) return rows;
+    }
+  }
   return {
+    async monthlyReport(project, month, finalize=false) {
+      return check(await client.rpc(finalize ? 'finalize_monthly_report' : 'monthly_report', { project, report_month: `${month}-01` }));
+    },
     mode: 'cloud',
     async login({ email, password }) {
       const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
@@ -15,11 +26,11 @@ export function createCloudRepository(url, key) {
     async logout() { check(await client.auth.signOut()); user = null; },
     async load() {
       const results = await Promise.all([
-        client.from('projects').select('*').order('name'),
-        client.from('memberships').select('project_id,user_id,role,profiles(name)'),
-        client.from('tickets').select('*').order('created_at', { ascending: false }),
+        allPages(() => client.from('projects').select('*').order('id')),
+        allPages(() => client.from('memberships').select('project_id,user_id,role,profiles(name)').order('project_id').order('user_id')),
+        allPages(() => client.from('tickets').select('*').order('created_at', { ascending: false }).order('id')),
       ]);
-      const [projects, members, tickets] = results.map(check);
+      const [projects, members, tickets] = results;
       return { projects, members: members.map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets };
     },
     async save(action, payload) { return check(await client.rpc('ticket_command', { command: action, payload })); },

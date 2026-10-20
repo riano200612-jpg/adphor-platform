@@ -74,5 +74,35 @@ test('PostgreSQL: enforce isolation, actor identity, evidence, transitions and c
     await assert.rejects(()=>command('start',{id,version:5}),/permiso/);
     await asUser(outsider);
     assert.equal((await db.query('select * from public.projects')).rows.length,1);
+    await db.exec('reset role;');
+    await db.exec(await readFile(new URL('../supabase/migrations/202610200002_monthly_reporting.sql',import.meta.url),'utf8'));
+    await db.exec(`insert into public.tickets(id,project_id,title,description,location,area,priority,assignee,due_date,status,created_by,created_at,history)
+      values('20000000-0000-4000-8000-000000000001','one','Histórico','Prueba','Zona','Piscina','Media','${boss}','2025-09-15','En proceso','${boss}','2025-08-10T12:00:00Z',
+      '[{"action":"create","at":"2025-08-10T12:00:00Z","status":"Pendiente","due_date":"2025-09-15"},{"action":"close","at":"2025-09-10T12:00:00Z","status":"Cerrada"},{"action":"reopen","at":"2025-10-01T05:00:00Z","status":"En proceso"}]');`);
+    await asUser(boss);
+    const monthly=async(project,month,finalize=false)=>(await db.query(`select public.${finalize?'finalize_monthly_report':'monthly_report'}($1,$2::date) as report`,[project,month])).rows[0].report;
+    const september=await monthly('one','2025-09-01');
+    assert.equal(september.opening,1); assert.equal(september.ending,0);
+    assert.equal(september.created,0); assert.equal(september.closure_events,1);
+    assert.equal(september.trend.at(-1).closures,1);
+    const october=await monthly('one','2025-10-01');
+    assert.equal(october.opening,0); assert.equal(october.ending,1); assert.equal(october.reopened,1);
+    const frozen=await monthly('one','2025-09-01',true); assert.equal(frozen.frozen,true);
+    assert.equal((await monthly('one','2025-09-01',true)).finalized_at,frozen.finalized_at);
+    await assert.rejects(()=>db.exec("update public.monthly_reports set content='{}'"),/permission denied/);
+    await asUser(viewer); await assert.rejects(()=>monthly('one','2025-08-01',true),/Solo/);
+    await asUser(outsider); await assert.rejects(()=>monthly('one','2025-09-01'),/acceso/);
+    await asUser('00000000-0000-4000-8000-000000000005');
+    await assert.rejects(()=>monthly('demo-adphor-01','2025-09-01',true),/demostración/);
+    await db.exec('reset role;');
+    await assert.rejects(()=>db.exec("update public.tickets set history='[]' where id='20000000-0000-4000-8000-000000000001'"),/acumulativo/);
+    await db.exec(`insert into public.tickets(id,project_id,title,description,location,area,priority,assignee,due_date,status,created_by,created_at,history)
+      select md5('load:'||n)::uuid,'two','Carga','Registro sintético','Zona','Piscina','Media','${outsider}','2025-09-30','Pendiente','${outsider}','2025-09-01T05:00:00Z',
+      '[{"action":"create","at":"2025-09-01T05:00:00Z","status":"Pendiente","due_date":"2025-09-30"}]'::jsonb from generate_series(1,10000) n;`);
+    await asUser(outsider);
+    const started=performance.now(); const bulk=await monthly('two','2025-09-01');
+    assert.equal(bulk.created,10000); assert.equal(bulk.ending,10000);
+    console.log(`Informe de 10.000 casos sintéticos en PostgreSQL local: ${Math.round(performance.now()-started)} ms`);
+
   } finally { await db.close(); }
 });

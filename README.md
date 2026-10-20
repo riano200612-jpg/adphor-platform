@@ -121,3 +121,47 @@ a esta cuenta compartida proyectos reales de operación.
 Tras desplegar, entrar como adphor, comprobar el aviso de demostración, las 16
 propiedades y el ciclo de un caso nuevo. No se ha validado esta cuenta en producción
 hasta que el administrador la cree y ejecute el script.
+
+## Informes mensuales para junta (actualización 202610200002)
+
+Antes de desplegar esta versión, aplicar en SQL Editor
+`supabase/migrations/202610200002_monthly_reporting.sql` después de la migración inicial.
+Es una migración de una sola ejecución: crea eventos, índices, políticas y cierres;
+no requiere crear la cuenta de demostración ni ejecutar demo-owner.sql. Conserva
+los tickets y el historial existente. Al probarla en una copia, revisar el respaldo
+previo y el tiempo de la reconstrucción del historial antes de aplicarla a producción.
+
+La nueva vista de Informes usa RPC en PostgreSQL y no calcula el informe oficial
+sobre la lista del navegador. Incluye pendientes iniciales, nuevos, eventos de cierre,
+casos distintos con cierre, reaperturas desde cerrado, pendientes finales y vencidos.
+Un cierre seguido de reapertura se contabiliza como ambos movimientos; devolver un
+caso de Por verificar a En proceso no es una reapertura desde cerrado. Se usa
+America/Bogota con límites [inicio, siguiente mes), y el mes actual tiene corte parcial.
+
+La gráfica de seis meses diferencia registros nuevos de eventos de cierre. CSV y
+PDF imprimible contienen los mismos agregados, desglose por área y prioridad. El
+botón Conservar cierre solo está disponible para administración/coordinación, meses
+terminados y propiedades no demo. El servidor valida estos requisitos. El cierre es
+único por propiedad/mes y no se puede sobrescribir desde el cliente. Las correcciones
+posteriores requieren un procedimiento de rectificación (aún no implementado).
+
+Los eventos se sincronizan transaccionalmente desde el historial de ticket_command.
+La API no puede modificarlos ni sustituir historia anterior. Cuando no existe un plazo
+histórico, no se inventa: se informa el número de casos sin ese dato y se excluyen del
+indicador de vencidos. La clasificación por área usa el área del ticket, que esta
+versión no permite cambiar. Los nombres del proyecto quedan conservados en el cierre.
+
+La carga operativa recorre páginas de 500 filas para evitar el truncamiento habitual
+de una sola respuesta. Todavía reúne el historial accesible en memoria: para un piloto
+de larga duración falta paginación de la interfaz, búsquedas y métricas operativas en
+servidor, y carga de evidencias/historial a demanda. El informe mensual ya se agrega
+independientemente en el servidor. No se afirma que el frontend soporte volúmenes
+ilimitados ni que la base administrada tenga capacidad contratada suficiente.
+
+Validación: pruebas PostgreSQL de límites mensuales, cierre/reapertura, permisos,
+repetición de cierre, aislamiento demo y 10.000 casos sintéticos. La medición local
+no representa concurrencia, red, almacenamiento ni recursos del proyecto Supabase.
+Pendientes antes de operación real: prueba concurrente con carga representativa,
+backups y restauración de DB y Storage, retención de fotos, tiempos/SLA acordados,
+resumen ejecutivo y anexos de trabajos/evidencias para junta. No se han configurado
+backups ni modificado el proyecto Supabase mediante estas pruebas locales.
