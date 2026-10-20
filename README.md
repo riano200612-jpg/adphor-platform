@@ -98,3 +98,26 @@ GitHub Actions ejecuta pruebas y compilación. El despliegue a Pages sigue ocurr
 - No depender del sistema para emergencias: activar primero el protocolo local y el contacto directo.
 
 Fuera de esta versión: notificaciones externas, sensores, IA, contabilidad, portal de residentes, tareas preventivas programadas y trabajo sin conexión completo. El acceso se mantiene solo durante la sesión de la página; recargar requiere volver a ingresar.
+
+
+## Demostración para dirección
+
+El usuario `adphor` se resuelve a `demo-adphor@example.invalid` en Supabase Auth.
+Crear esa cuenta manualmente con Auto Confirm User y una contraseña temporal privada;
+el correo es un identificador reservado, no un buzón para recuperación. Para cambiar
+la contraseña se requiere intervención del administrador. No incluir contraseñas
+en GitHub ni en variables VITE. Las cuentas existentes siguen entrando por correo.
+
+Ejecutar `supabase/demo-owner.sql` en SQL Editor después de crear la cuenta.
+Crea 16 proyectos separados con `is_demo=true`, membresía de coordinador y cuatro
+casos ficticios por proyecto. Los nombres provienen de https://adphor.com/clientes/;
+las áreas, ubicaciones, estados y trabajos son ejemplos, no información operativa.
+Los casos precargados no representan intervenciones verificadas y su historial lo
+indica. Los nuevos casos mantienen los requisitos normales de evidencia y cierre.
+El script es repetible, no restablece casos modificados, y rechaza una cuenta que
+ya tenga membresías operativas. RLS aplica el aislamiento por membresías: no asignar
+a esta cuenta compartida proyectos reales de operación.
+
+Tras desplegar, entrar como adphor, comprobar el aviso de demostración, las 16
+propiedades y el ciclo de un caso nuevo. No se ha validado esta cuenta en producción
+hasta que el administrador la cree y ejecute el script.

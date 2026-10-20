@@ -61,5 +61,18 @@ test('PostgreSQL: enforce isolation, actor identity, evidence, transitions and c
     await db.exec('reset role; set role anon;');
     await assert.rejects(()=>db.exec('select * from public.tickets'),/permission denied/);
     await assert.rejects(()=>command('close',{id,version:5,note:'Falso'}),/permission denied/);
+    await db.exec(`reset role; alter table auth.users add column email text;
+      insert into auth.users(id,email) values('00000000-0000-4000-8000-000000000005','demo-adphor@example.invalid');`);
+    const seed=await readFile(new URL('../supabase/demo-owner.sql',import.meta.url),'utf8');
+    await db.exec(seed);
+    await db.exec(seed);
+    await asUser('00000000-0000-4000-8000-000000000005');
+    const demoProjects=(await db.query('select * from public.projects')).rows;
+    assert.equal(demoProjects.length,16);
+    assert.ok(demoProjects.every(p=>p.is_demo));
+    assert.equal((await db.query('select * from public.tickets')).rows.length,64);
+    await assert.rejects(()=>command('start',{id,version:5}),/permiso/);
+    await asUser(outsider);
+    assert.equal((await db.query('select * from public.projects')).rows.length,1);
   } finally { await db.close(); }
 });

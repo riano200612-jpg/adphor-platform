@@ -6,7 +6,8 @@ export function createCloudRepository(url, key) {
   return {
     mode: 'cloud',
     async login({ email, password }) {
-      const data = check(await client.auth.signInWithPassword({ email, password }));
+      const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
+      const data = check(await client.auth.signInWithPassword({ email: loginEmail, password }));
       const profile = check(await client.from('profiles').select('name').eq('id', data.user.id).single());
       user = { id: data.user.id, name: profile.name };
       return user;
