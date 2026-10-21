@@ -173,18 +173,30 @@ document.addEventListener('click', async event => {
       case 'monthly-load':
       case 'monthly-finalize': {
         const projectId=state.projectId, month=state.reportMonth, requestKey=currentReportKey();
-        busy=true; el.disabled=true;
+        if(!/^\d{4}-\d{2}$/.test(month)) { toast('Selecciona el mes del informe.'); return; }
+        const finalize=el.dataset.action==='monthly-finalize';
+        if(finalize && !window.confirm(`¿Conservar el cierre de ${project().name} para ${month}?\n\nLas cifras quedarán fijas y no podrán reemplazarse desde la plataforma. Revisa el informe antes de continuar.`)) return;
+        const originalLabel=el.textContent;
+        busy=true; el.disabled=true; el.textContent=finalize?'Conservando cierre…':'Generando informe…';
+        el.setAttribute('aria-busy','true');
         try {
-          const result=await repo.monthlyReport(projectId,month,el.dataset.action==='monthly-finalize');
+          const result=await repo.monthlyReport(projectId,month,finalize);
           if(requestKey===currentReportKey()) { monthlyResult=result; monthlyKey=requestKey; renderPage(); }
         } catch(error) {
           monthlyResult=null; monthlyKey=''; renderPage();
           throw new Error(/function|schema cache|PGRST202/.test(error.message) ? 'Falta aplicar la actualización SQL de informes mensuales en Supabase. Los casos existentes siguen guardados.' : error.message);
-        } finally { busy=false; if(el.isConnected) el.disabled=false; }
+        } finally { busy=false; if(el.isConnected) { el.disabled=false; el.textContent=originalLabel; el.removeAttribute('aria-busy'); } }
         break;
       }
       case 'csv': csvReport(); break;
-      case 'print': window.print(); break;
+      case 'print': {
+        const originalTitle=document.title;
+        document.title=`ADPHOR - Informe ${state.reportMonth || 'general'} - ${project().name}`;
+        const restore=()=>{ document.title=originalTitle; window.removeEventListener('afterprint',restore); };
+        window.addEventListener('afterprint',restore);
+        try { window.print(); } catch(error) { restore(); throw error; }
+        break;
+      }
     }
   } catch(error) { reportError(error); }
 });
