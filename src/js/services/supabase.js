@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { agentApiOrigin, fetchAgentRuns } from './agent-api.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
@@ -12,6 +13,12 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
+    async agentRuns(projectId, offset = 0) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('El servicio de asistentes todavía no está conectado a esta versión de la plataforma.');
+      const { session } = check(await client.auth.getSession());
+      return fetchAgentRuns({origin, token: session?.access_token, projectId, offset});
+    },
     async monthlyReport(project, month, finalize=false) {
       return check(await client.rpc(finalize ? 'finalize_monthly_report' : 'monthly_report', { project, report_month: `${month}-01` }));
     },
