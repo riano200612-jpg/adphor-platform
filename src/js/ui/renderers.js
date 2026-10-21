@@ -1,4 +1,4 @@
-import { PROJECTS, RESOLVED_MONTH_BASELINE, STATUS } from '../data/adphorData.js';
+import { PROJECTS, STATUS } from '../data/adphorData.js';
 
 let refs = null;
 
@@ -31,6 +31,7 @@ export function initRefs() {
     kpiAreas: $('kpi-areas-count'),
     kpiOpen: $('kpi-open-count'),
     kpiResolved: $('kpi-resolved-count'),
+    kpiResolutionRate: $('kpi-resolution-rate'),
     dashAreas: $('dash-areas-grid'),
     dashMinutas: $('dash-minutas-table'),
     areasList: $('full-areas-list'),
@@ -108,8 +109,11 @@ export function renderAreas(project, selectedArea = '') {
 export function renderKpis(project, minutas) {
   refs.kpiAreas.textContent = project.areas.length;
   refs.kpiOpen.textContent = minutas.filter((m) => m.estado !== STATUS.RESOLVED).length;
-  refs.kpiResolved.textContent =
-    minutas.filter((m) => m.estado === STATUS.RESOLVED).length + RESOLVED_MONTH_BASELINE;
+  const resolved = minutas.filter((m) => m.estado === STATUS.RESOLVED).length;
+  refs.kpiResolved.textContent = resolved;
+  refs.kpiResolutionRate.textContent = minutas.length
+    ? `${Math.round((resolved / minutas.length) * 100)}% del total registrado`
+    : 'Sin minutas registradas';
 }
 
 function emptyRow(colspan, message, actionHtml = '') {

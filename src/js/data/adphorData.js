@@ -4,9 +4,6 @@ export const STATUS = Object.freeze({
   RESOLVED: 'Resuelta',
 });
 
-/** Base histórica de resueltas del mes (valor que tenía el original). */
-export const RESOLVED_MONTH_BASELINE = 18;
-
 export const PROJECTS = Object.freeze([
   {
     id: 'palmetto-beach',
