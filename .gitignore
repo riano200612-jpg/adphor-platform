@@ -8,3 +8,10 @@ playwright-report/
 test-results/
 
 venv/
+
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
