@@ -1,3 +1,4 @@
+import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
 import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
 export function createCloudRepository(url, key) {
@@ -13,6 +14,9 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
+    async reviewAgentRun(projectId, runId, resultHash, decision, note) {
+      return submitAgentReview(client, {projectId, runId, resultHash, decision, note});
+    },
     async runAgentRules(projectId, requestId) {
       const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
       if (!origin) throw new Error('El servicio de asistentes no está conectado.');

@@ -80,3 +80,19 @@ cambiado, credencial ausente, entrada adicional rechazada, escape HTML y separac
 de propiedades. Las pruebas de SQL del registro siguen siendo independientes.
 
 Referencia de claves: https://supabase.com/docs/guides/getting-started/api-keys
+
+## Revisión humana del borrador
+
+El detalle ofrece Aprobar/Rechazar y observaciones (hasta 4000 caracteres) solo al
+Administrador. Una confirmación explícita precede al guardado. La decisión se
+inserta directamente en `agent_reviews` usando la sesión humana de Supabase;
+la clave privada del escritor y los agentes no participan en la aprobación.
+RLS valida el rol por copropiedad. La FK vincula la decisión al hash del borrador,
+la clave primaria impide decisiones duplicadas y no hay UPDATE ni DELETE.
+El servidor asigna autor y fecha. Una decisión no envía informes ni cierra casos.
+El detalle muestra estado, autor, fecha y observaciones; el texto original del
+borrador conserva su condición inicial para mantener la instantánea inmutable.
+Si falla la confirmación de guardado, consultar el historial antes de reintentar.
+
+Pruebas del cliente: `node --test tests/agent-api.test.js tests/agent-review.test.js`.
+Reiniciar Python tras actualizar para que el detalle también devuelva `note`.

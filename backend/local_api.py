@@ -135,7 +135,7 @@ async def list_runs(request: Request, actor: Annotated[dict, Depends(identity)],
 @app.get("/agent-runs/{run_id}")
 async def detail(run_id: UUID, request: Request, actor: Annotated[dict, Depends(identity)]):
     data = await call(request, actor["token"], "/rest/v1/agent_run_status", params={
-        "select":SUMMARY + ",draft,result_hash", "id":f"eq.{run_id}", "limit":"1"})
+        "select":SUMMARY + ",draft,result_hash,note", "id":f"eq.{run_id}", "limit":"1"})
     if not data:
         raise HTTPException(404, "Ejecución no disponible.")
     return data[0]

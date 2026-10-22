@@ -5,8 +5,8 @@ export function historyCards(items) {
   return items.map(item => `<article class="panel"><h3>${esc(item.status)}</h3><p>Lectura de datos: ${esc(date(item.source_read_at))} · Colombia</p><p>Método: ${item.engine_kind === 'models' ? 'Modelos' : item.engine_kind === 'rules' ? 'Reglas' : 'No identificado'}</p><p>Registro: ${esc(item.id)}</p>${item.decided_at ? `<p>Decisión registrada: ${esc(date(item.decided_at))}</p>` : '<p>Requiere revisión del Administrador.</p>'}<button class="btn secondary" data-history="detail" data-run-id="${esc(item.id)}">Ver borrador</button></article>`).join('');
 }
 
-export function draftCard(item) {
-  return `<article class="panel"><h3>${esc(item.status)}</h3><p>Lectura: ${esc(date(item.source_read_at))} · Colombia</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit">${esc(item.draft)}</pre><p>Consultar este documento no lo aprueba ni lo envía.</p></article>`;
+export function draftCard(item, canReview = false) {
+  return `<article class="panel"><h3>${esc(item.status)}</h3><p>Lectura: ${esc(date(item.source_read_at))} · Colombia</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit">${esc(item.draft)}</pre>${item.decided_at ? `<p>Decisión registrada: ${esc(date(item.decided_at))} · Colombia</p><p>Administrador: ${esc(item.administrator_id)}</p><p>Observaciones: ${esc(item.note || 'Sin observaciones')}</p><p>La decisión corresponde a esta versión; el texto original del borrador se conserva.</p>` : canReview ? `<section><label for="agent-review-note">Observaciones del Administrador (máximo 4000 caracteres)</label><textarea id="agent-review-note" data-review-note maxlength="4000" rows="3" style="width:100%"></textarea><p>La decisión es definitiva para esta versión. No envía el informe ni cierra casos.</p><button class="btn primary" data-history="approve">Aprobar borrador</button> <button class="btn secondary" data-history="reject">Rechazar borrador</button><p data-review-feedback role="status"></p></section>` : ''}<p>Consultar este documento no lo aprueba ni lo envía.</p></article>`;
 }
 
 export function mountAgentHistory(container, {repo, projectId, role}) {
@@ -16,6 +16,12 @@ export function mountAgentHistory(container, {repo, projectId, role}) {
   if (!repo.agentRuns) {
     container.innerHTML = '<p class="notice">El historial requiere una sesión conectada a Supabase.</p>'; return;
   }
+  let currentDraft = null;
+  const canReview = role === 'admin' && typeof repo.reviewAgentRun === 'function';
+  const renderDraft = item => {
+    currentDraft = item;
+    return draftCard(item, canReview && item.status === 'Pendiente de aprobación del administrador');
+  };
   let offset = 0;
   let loading = false;
   let requestId = null;
@@ -24,6 +30,32 @@ export function mountAgentHistory(container, {repo, projectId, role}) {
   container.addEventListener('click', async event => {
     const button = event.target.closest('[data-history]');
     if (!button || loading) return;
+    if (['approve','reject'].includes(button.dataset.history)) {
+      if (!canReview || !currentDraft || currentDraft.decided_at) return;
+      const decision = button.dataset.history === 'approve' ? 'approved' : 'rejected';
+      const note = container.querySelector('[data-review-note]').value;
+      if (!window.confirm(`¿Confirmas ${decision === 'approved' ? 'aprobar' : 'rechazar'} este borrador leído el ${date(currentDraft.source_read_at)}? La decisión es definitiva para esta versión y no envía informes ni cierra casos.`)) return;
+      loading = true;
+      container.querySelectorAll('[data-history]').forEach(b => b.disabled = true);
+      const feedback = container.querySelector('[data-review-feedback]');
+      feedback.textContent = 'Registrando tu decisión…';
+      try {
+        const review = await repo.reviewAgentRun(projectId, currentDraft.id, currentDraft.result_hash, decision, note);
+        if (!container.isConnected) return;
+        const item = {...currentDraft, ...review, status: decision === 'approved' ? 'Aprobado por el administrador' : 'Rechazado por el administrador'};
+        container.querySelector('[data-results]').innerHTML = renderDraft(item);
+      } catch (error) {
+        if (container.isConnected) feedback.textContent = error.message;
+      } finally {
+        loading = false;
+        if (container.isConnected) {
+          container.querySelectorAll('[data-history]').forEach(b => b.disabled = false);
+          container.querySelector('[data-history="previous"]').disabled = offset === 0;
+          container.querySelector('[data-history="next"]').disabled = !hasNext;
+        }
+      }
+      return;
+    }
     const nextOffset = button.dataset.history === 'previous' ? Math.max(0,offset-20) : button.dataset.history === 'next' ? offset+20 : 0;
     loading = true;
     const controls = container.querySelectorAll('[data-history]');
@@ -37,12 +69,12 @@ export function mountAgentHistory(container, {repo, projectId, role}) {
         requestId = null;
         if (!container.isConnected) return;
         const item = await repo.agentRunDetail(projectId, saved.id);
-        if (container.isConnected) results.innerHTML = '<p class="notice">Borrador guardado. Requiere aprobación del Administrador.</p>' + draftCard(item);
+        if (container.isConnected) results.innerHTML = '<p class="notice">Borrador guardado. Requiere aprobación del Administrador.</p>' + renderDraft(item);
         return;
       }
       if (button.dataset.history === 'detail') {
         const item = await repo.agentRunDetail(projectId, button.dataset.runId);
-        if (container.isConnected) results.innerHTML = draftCard(item);
+        if (container.isConnected) results.innerHTML = renderDraft(item);
         return;
       }
       const items = await repo.agentRuns(projectId, nextOffset);
