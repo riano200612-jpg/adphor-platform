@@ -1,0 +1,65 @@
+const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const number = n => new Intl.NumberFormat('es-CO').format(Number(n)||0);
+const monthLabel = value => new Intl.DateTimeFormat('es-CO',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(value.slice(0,7)+'-01T12:00:00Z'));
+export function reportComparison(r) {
+  const [year, month] = r.month.slice(0,7).split('-').map(Number);
+  const end = Date.UTC(year,month,1,5); // Colombia: the next month begins at 05:00 UTC.
+  const partial = new Date(r.cutoff).getTime() < end;
+  const previousMonth = new Date(Date.UTC(year,month-2,1)).toISOString().slice(0,7);
+  const previous = r.trend.find(x=>x.month===previousMonth);
+  const rows = [['Nuevos',Number(r.created),'created'],['Eventos de cierre',Number(r.closure_events),'closures']].map(([label,current,key])=>{
+    const prior=previous ? Number(previous[key]) : null;
+    const difference=prior===null?null:current-prior;
+    return {label,current,prior,difference,percent:prior>0?100*difference/prior:null};
+  });
+  return {partial,previousMonth,rows};
+}
+function comparisonView(r) {
+  const c=reportComparison(r);
+  const delta=x=>x.difference===null?'Sin referencia':c.partial?'No comparable':`${x.difference>0?'+':''}${number(x.difference)}${x.percent===null?' (base anterior: 0)':` / ${x.percent>0?'+':''}${number(Math.round(x.percent))}%`}`;
+  return `<section class="executive-comparison"><h4>Comparación con ${esc(monthLabel(c.previousMonth))}</h4><p class="executive-caption">${c.partial?'Mes en curso: se muestran volúmenes, sin calcular variaciones frente a un mes completo.':'Se comparan meses completos. Una variación de volumen no mide calidad ni cumplimiento.'}</p><div class="table-wrap"><table><thead><tr><th>Indicador</th><th>Mes anterior</th><th>Mes del informe${c.partial?' (parcial)':''}</th><th>Variación</th></tr></thead><tbody>${c.rows.map(x=>`<tr><td>${x.label}</td><td>${x.prior===null?'Sin referencia':number(x.prior)}</td><td>${number(x.current)}</td><td>${delta(x)}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+function trendChart(trend) {
+  const max=Math.max(2,2*Math.ceil(Math.max(0,...trend.flatMap(x=>[x.created,x.closures]))/2));
+  const width=660, base=160, height=125, step=600/Math.max(1,trend.length);
+  return `<svg class="executive-trend" viewBox="0 0 ${width} 205" role="img" aria-label="Registros nuevos y eventos de cierre por mes"><title>Volumen mensual de mantenimiento</title>${[0,.5,1].map(f=>`<line x1="38" x2="650" y1="${base-height*f}" y2="${base-height*f}" stroke="#dce5e8"/><text x="30" y="${base-height*f+4}" text-anchor="end">${number(max*f)}</text>`).join('')}${trend.map((x,i)=>{const cx=60+i*step+step/2;return `<g><rect x="${cx-27}" y="${base-height*x.created/max}" width="23" height="${height*x.created/max}" rx="3" fill="#397baf"/><rect x="${cx+3}" y="${base-height*x.closures/max}" width="23" height="${height*x.closures/max}" rx="3" fill="#07877c"/><text x="${cx-15}" y="${base-height*x.created/max-7}" text-anchor="middle">${number(x.created)}</text><text x="${cx+15}" y="${base-height*x.closures/max-7}" text-anchor="middle">${number(x.closures)}</text><text x="${cx}" y="184" text-anchor="middle">${esc(x.month.slice(5))}/${esc(x.month.slice(2,4))}</text></g>`;}).join('')}</svg>`;
+}
+function bars(items,field,color) {
+  const max=Math.max(1,...items.map(x=>x[field]));
+  return items.length?items.map(x=>`<div class="executive-bar"><div><span>${esc(x.area??x.priority)}</span><strong>${number(x[field])}</strong></div><div class="executive-track"><span style="width:${100*x[field]/max}%;background:${color}"></span></div></div>`).join(''):'<p class="executive-empty">Sin pendientes al corte.</p>';
+}
+export function monthlyReportView(r) {
+  const delta=r.ending-r.opening;
+  const areas=[...r.areas].filter(a=>a.pending>0).sort((a,b)=>b.pending-a.pending);
+  const review=r.areas.reduce((sum,a)=>sum+Number(a.review),0);
+  const priorities=[...r.priorities].sort((a,b)=>b.pending-a.pending);
+  const partial=reportComparison(r).partial;
+  const status=r.is_demo?'DEMOSTRACIÓN':r.frozen?'CIERRE CONSERVADO':partial?'BORRADOR · MES EN CURSO':'BORRADOR';
+  const balance=Number(r.opening)+Number(r.created)+Number(r.reopened)-Number(r.closure_events);
+  const actions=[];
+  if(r.overdue) actions.push(`Priorizar los ${number(r.overdue)} pendientes vencidos y acordar fechas de recuperación con sus responsables.`);
+  if(review) actions.push(`Revisar las evidencias de ${number(review)} casos por verificar para confirmar su cierre o solicitar ajustes.`);
+  if(r.unknown_deadlines) actions.push(`Revisar ${number(r.unknown_deadlines)} pendientes sin plazo histórico disponible; no están incluidos en el indicador de vencidos.`);
+  if(areas.length) actions.push(`Concentrar el seguimiento en ${areas[0].area}: reúne ${number(areas[0].pending)} de los ${number(r.ending)} pendientes.`);
+  if(!actions.length) actions.push('Mantener el seguimiento preventivo y revisar la programación del siguiente período. No hay pendientes registrados al corte.');
+  const cards=[['Nuevos del mes',r.created,'Casos registrados en el período'],['Casos con cierre',r.closed_cases,'Casos distintos con al menos un cierre'],['Pendientes al corte',r.ending,'Trabajo que continúa abierto'],['Vencidos al corte',r.overdue,'Pendientes con plazo superado']];
+  return `<article class="panel printable executive-report">
+    <section class="executive-page">
+      <header class="executive-header"><div><p class="eyebrow">ADPHOR / GESTIÓN DE MANTENIMIENTO</p><h2>Informe ejecutivo</h2><p class="executive-property">${esc(r.project_name)}</p></div><div class="executive-meta"><span class="badge">${status}</span><strong>${esc(monthLabel(r.month))}</strong><span>Corte: ${esc(new Date(r.cutoff).toLocaleString('es-CO',{timeZone:'America/Bogota'}))}</span><span>Hora de Colombia</span></div></header>
+      ${r.is_demo?'<p class="notice">Datos de demostración. No representan la operación real de la copropiedad.</p>':''}
+      <div class="executive-kpis">${cards.map(([label,n,note],i)=>`<div class="executive-kpi ${i===3&&r.overdue?'attention':''}"><span>${label}</span><strong>${number(n)}</strong><small>${note}</small></div>`).join('')}</div>
+      <section class="executive-summary"><p class="eyebrow">LECTURA EN 30 SEGUNDOS</p><h3>${r.ending?`${number(r.ending)} pendientes requieren seguimiento`:'Sin pendientes registrados al corte'}</h3><p>Se registraron <b>${number(r.created)} casos nuevos</b> y <b>${number(r.closed_cases)} casos tuvieron cierre</b>. La carga pendiente ${delta===0?'se mantuvo':delta>0?`aumentó en ${number(delta)} casos`:`disminuyó en ${number(-delta)} casos`} frente al inicio del mes (${number(r.opening)} → ${number(r.ending)}).</p>${r.seeded||balance!==Number(r.ending)?'<p class="notice">El balance requiere revisión: existen datos precargados o movimientos que no concilian. No usar como cierre operativo.</p>':''}</section>
+      <section class="executive-section"><div class="executive-section-title"><h3>01 / Evolución de la operación</h3><span>Últimos seis meses</span></div><p class="executive-caption">Volumen de registros nuevos y cierres realizados; no mide cumplimiento de plazos.</p><div class="executive-legend"><span><i class="new"></i>Nuevos</span><span><i class="closed"></i>Eventos de cierre</span></div>${trendChart(r.trend)}<details class="executive-chart-data no-print"><summary>Ver cifras de la gráfica</summary><div class="table-wrap" tabindex="0" aria-label="Cifras mensuales"><table><thead><tr><th>Mes</th><th>Nuevos</th><th>Eventos de cierre</th></tr></thead><tbody>${r.trend.map(x=>`<tr><td>${esc(monthLabel(x.month))}</td><td>${number(x.created)}</td><td>${number(x.closures)}</td></tr>`).join('')}</tbody></table></div></details><p class="executive-caption">Un caso reabierto puede tener varios cierres. Los meses sin movimientos se muestran en cero.${partial?' El último mes muestra únicamente lo registrado hasta el corte.':''}</p></section>
+      <section class="executive-section"><div class="executive-section-title"><h3>02 / Próximas acciones sugeridas</h3><span>Para revisión de gerencia</span></div><ol class="executive-actions">${actions.map(a=>`<li>${esc(a)}</li>`).join('')}</ol><p class="executive-caption">Sugerencias basadas en los registros; la coordinación debe validar responsables y compromisos.</p></section>
+    </section>
+    <section class="executive-page executive-detail">${comparisonView(r)}<div class="executive-section-title"><h3>03 / Foco del trabajo pendiente</h3><span>${esc(monthLabel(r.month))}</span></div><div class="executive-columns"><section><h4>Áreas con mayor carga</h4>${bars(areas.slice(0,5),'pending','#397baf')}<p class="executive-caption">Hasta cinco áreas, ordenadas por pendientes. El detalle completo está debajo.</p></section><section><h4>Distribución por prioridad</h4>${bars(priorities,'pending','#07877c')}<p class="executive-caption">Prioridad registrada de los casos pendientes.</p></section></div>
+      <div class="executive-section-title"><h3>04 / Detalle por área</h3><span>Cifras al corte</span></div><div class="table-wrap"><table><thead><tr><th>Área</th><th>Nuevos</th><th>Pendientes</th><th>Por verificar*</th></tr></thead><tbody>${r.areas.map(x=>`<tr><td>${esc(x.area)}</td><td>${number(x.created)}</td><td>${number(x.pending)}</td><td>${number(x.review)}</td></tr>`).join('')||'<tr><td colspan="4">Sin registros para este período.</td></tr>'}</tbody></table></div><p class="executive-caption">* Los casos por verificar forman parte de los pendientes; no se suman nuevamente.</p>
+      <section class="executive-reconcile"><h4>Conciliación de movimientos</h4><div>${[['Pendientes iniciales',r.opening],['+ Nuevos',r.created],['+ Reaperturas',r.reopened],['− Eventos de cierre',r.closure_events],['= Pendientes finales',r.ending]].map(([label,n])=>`<span><small>${label}</small><strong>${number(n)}</strong></span>`).join('')}</div></section>
+      <footer class="executive-notes"><h4>Alcance y calidad de los datos</h4><p>Fuente: bitácora de mantenimiento de ADPHOR. ${number(r.unknown_deadlines)} pendientes sin plazo histórico disponible se excluyen del indicador de vencidos. Las cifras no representan costos, presupuesto ni cumplimiento de un SLA.</p><p>${r.frozen?`Cifras conservadas el ${esc(new Date(r.finalized_at).toLocaleString('es-CO',{timeZone:'America/Bogota'}))}.`:'Borrador sujeto a revisión. Las cifras se actualizan al generar el informe; un mes en curso es parcial.'} Este informe resume los registros disponibles y no constituye una certificación técnica.</p><span>ADPHOR · Información para gerencia y junta directiva</span></footer>
+    </section></article>`;
+}
+
+export function monthlyCsvRows(r) {
+ const comparison=reportComparison(r);
+ return [['Copropiedad',r.project_name],['Mes',r.month],['Tipo',r.is_demo?'DEMOSTRACIÓN':r.frozen?'CIERRE CONSERVADO':'BORRADOR'],['Corte',r.cutoff],['Indicador','Valor'],['Pendientes al inicio',r.opening],['Nuevos',r.created],['Casos con cierre',r.closed_cases],['Eventos de cierre',r.closure_events],['Reaperturas desde cerrado',r.reopened],['Pendientes al corte',r.ending],['Vencidos',r.overdue],['Plazos sin historial',r.unknown_deadlines],[],['Área','Nuevos','Pendientes al corte','Por verificar'],...r.areas.map(x=>[x.area,x.created,x.pending,x.review]),[],['Mes','Nuevos','Eventos de cierre'],...r.trend.map(x=>[x.month,x.created,x.closures]),[],['Comparación con',comparison.previousMonth],['Comparabilidad',comparison.partial?'Mes parcial: sin variaciones porcentuales':'Meses completos'],['Indicador','Anterior','Actual','Diferencia','Variación %'],...comparison.rows.map(x=>[x.label,x.prior??'Sin referencia',x.current,comparison.partial?'No comparable':x.difference??'Sin referencia',comparison.partial?'No comparable':x.percent===null?'Sin base porcentual':Math.round(x.percent)]),[],['Prioridad','Pendientes'],...r.priorities.map(x=>[x.priority,x.pending])];
+}

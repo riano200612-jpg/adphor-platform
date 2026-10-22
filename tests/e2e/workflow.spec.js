@@ -1,0 +1,81 @@
+import {test,expect} from '@playwright/test';
+const photo={name:'evidencia.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j9ZkAAAAASUVORK5CYII=','base64')};
+async function login(page,profile='admin-demo') { await page.locator('[name="profile"]').selectOption(profile); await page.getByRole('button',{name:'Explorar demostración'}).click(); await expect(page.getByRole('heading',{name:'Todo tu mantenimiento, en un lugar.'})).toBeVisible(); }
+async function logout(page) {await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();}
+async function create(page,title='Fuga de prueba') {
+ await page.getByRole('button',{name:'Registrar novedad',exact:true}).first().click();
+ const form=page.locator('#new-case');
+ await form.locator('[name="title"]').fill(title);
+ await form.locator('[name="area"]').selectOption({index:1});
+ await form.locator('[name="location"]').fill('Cuarto de máquinas');
+ await form.locator('[name="description"]').fill('Fuga detectada en la tubería.');
+ await form.locator('[name="priority"]').selectOption('Urgente');
+ await form.locator('[name="assignee"]').selectOption('tecnico');
+ await form.getByRole('button',{name:'Guardar novedad'}).click();
+ await expect(page.locator('dialog')).not.toBeVisible();
+}
+test('create, technician intervention with evidence, coordinator closure, history and report',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('./'); await login(page); await create(page);
+ await logout(page); await login(page,'tecnico');
+ await page.getByRole('button',{name:'Mis tareas',exact:true}).click();
+ await page.locator('.ticket-card').filter({hasText:'Fuga de prueba'}).click();
+ let form=page.locator('#case-action');
+ await expect(form.locator('[name="action"]')).toHaveValue('start');
+ await form.getByRole('button',{name:'Guardar actualización'}).click();
+ await page.locator('.ticket-card').filter({hasText:'Fuga de prueba'}).click();
+ form=page.locator('#case-action');
+ await form.locator('[name="action"]').selectOption('submit');
+ await form.locator('[name="note"]').fill('Se reemplazó el tramo y se comprobó que no hay fuga.');
+ await form.locator('[name="photos"]').setInputFiles(photo);
+ await form.getByRole('button',{name:'Guardar actualización'}).click();
+ await page.locator('.ticket-card').filter({hasText:'Fuga de prueba'}).click();
+ await expect(page.locator('#case-action option[value="close"]')).toHaveCount(0);
+ await page.getByRole('button',{name:'Cerrar detalle'}).click();
+ await logout(page); await login(page,'coordinator-demo');
+ await page.getByRole('button',{name:'Bitácora',exact:true}).click();
+ await page.locator('.ticket-card').filter({hasText:'Fuga de prueba'}).click();
+ form=page.locator('#case-action');await form.locator('[name="action"]').selectOption('close');
+ await form.locator('[name="note"]').fill('Verifiqué la reparación y el funcionamiento de la piscina.');
+ await form.getByRole('button',{name:'Guardar actualización'}).click();
+ await page.locator('.ticket-card').filter({hasText:'Fuga de prueba'}).click();
+ await expect(page.locator('dialog .status-3')).toHaveText('Cerrada');
+ await expect(page.locator('.timeline')).toContainText('Cierre verificado');
+ await expect(page.locator('.timeline')).toContainText('Técnico de demostración');
+ await expect(page.locator('.evidence-grid img')).toHaveCount(1);
+ await page.getByRole('button',{name:'Cerrar detalle'}).click();
+ await page.getByRole('button',{name:'Informes',exact:true}).click();
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar CSV'}).click();await download;
+ await page.reload();await login(page);
+ await expect(page.locator('.stat').filter({hasText:'Cerradas'}).locator('strong')).toHaveText('1');
+ expect(errors).toEqual([]);
+});
+test('filters, empty project, read-only profile and mobile layout',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await page.goto('./');await login(page);
+ await page.locator('#project-select').selectOption('demo-03');
+ await expect(page.locator('.stat').filter({hasText:'Cerradas'}).locator('strong')).toHaveText('0');
+ await page.getByRole('button',{name:'Bitácora',exact:true}).click();
+ await page.getByLabel('Buscar novedades').fill('inexistente');
+ await expect(page.getByRole('heading',{name:'No hay novedades que coincidan'})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+ await logout(page);await login(page,'viewer-demo');
+ await expect(page.getByRole('button',{name:'Registrar novedad',exact:true})).toHaveCount(0);
+ await expect(page.locator('#project-select option')).toHaveCount(1);
+ await page.getByRole('button',{name:'Bitácora',exact:true}).click();
+ await page.locator('.ticket-card').first().click();
+ await expect(page.locator('#case-action')).toHaveCount(0);
+});
+test('storage failure preserves the unsaved form and never reports success',async({page})=>{
+ await page.goto('./');await login(page);
+ await page.evaluate(()=>{Storage.prototype.setItem=function(){throw new DOMException('Full','QuotaExceededError');}});
+ await page.getByRole('button',{name:'Registrar novedad',exact:true}).first().click();
+ const form=page.locator('#new-case');
+ await form.locator('[name="title"]').fill('No perder borrador');
+ await form.locator('[name="area"]').selectOption({index:1});
+ await form.locator('[name="location"]').fill('Piscina');
+ await form.locator('[name="description"]').fill('Descripción conservada');
+ await form.locator('[name="assignee"]').selectOption('tecnico');
+ await form.getByRole('button',{name:'Guardar novedad'}).click();
+ await expect(form.locator('.error')).toContainText('No se pudo guardar');
+ await expect(form.locator('[name="title"]')).toHaveValue('No perder borrador');
+});

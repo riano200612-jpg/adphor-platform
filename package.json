@@ -1,17 +1,22 @@
 {
   "name": "adphor-platform",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "6.4.0"
+    "@fortawesome/fontawesome-free": "6.4.0",
+    "@supabase/supabase-js": "^2.118.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
+    "@playwright/test": "^1.64.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
