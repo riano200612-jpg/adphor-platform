@@ -1,4 +1,5 @@
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
+import { mountAgentHistory } from './ui-agent-history.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -45,7 +46,7 @@ async function refresh() {
   state.lastSync = new Date();
 }
 function shell() {
-  const nav = [['dashboard','chart-simple','Resumen'],['tickets','clipboard-list','Bitácora'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes']];
+  const nav = [['dashboard','chart-simple','Resumen'],['tickets','clipboard-list','Bitácora'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control"><label for="project-select">COPROPIEDAD</label><select id="project-select">${state.projects.map(p => option(p.id, p.name, state.projectId)).join('')}</select></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
   renderPage();
 }
@@ -93,6 +94,11 @@ function reportPage() {
 }
 function renderPage() {
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if (state.page === 'agent-history') {
+    $('page-content').innerHTML = '<div id="agent-history"></div>';
+    mountAgentHistory($('agent-history'), {repo, projectId: state.projectId, role: role()});
+    return;
+  }
   $('page-content').innerHTML = ({ dashboard, tickets: ticketsPage, mine: ticketsPage, areas: areasPage, reports: reportPage }[state.page] || dashboard)();
 }
 function openModal(html) { modalReturnFocus = document.activeElement; dialog.innerHTML = html; dialog.showModal(); dialog.querySelector('input,select,textarea,button')?.focus(); }

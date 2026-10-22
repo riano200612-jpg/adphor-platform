@@ -1,4 +1,6 @@
+import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
+import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
@@ -12,6 +14,27 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
+    async reviewAgentRun(projectId, runId, resultHash, decision, note) {
+      return submitAgentReview(client, {projectId, runId, resultHash, decision, note});
+    },
+    async runAgentRules(projectId, requestId) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('El servicio de asistentes no está conectado.');
+      const { session } = check(await client.auth.getSession());
+      return agentRuleRequest({origin, token:session?.access_token, projectId, requestId});
+    },
+    async agentRunDetail(projectId, runId) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('El servicio de asistentes no está conectado.');
+      const { session } = check(await client.auth.getSession());
+      return agentRuleRequest({origin, token:session?.access_token, projectId, runId});
+    },
+    async agentRuns(projectId, offset = 0) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('El servicio de asistentes todavía no está conectado a esta versión de la plataforma.');
+      const { session } = check(await client.auth.getSession());
+      return fetchAgentRuns({origin, token: session?.access_token, projectId, offset});
+    },
     async monthlyReport(project, month, finalize=false) {
       return check(await client.rpc(finalize ? 'finalize_monthly_report' : 'monthly_report', { project, report_month: `${month}-01` }));
     },
