@@ -2,10 +2,15 @@
 
 La navegación Historial del enjambre consulta GET /agent-runs usando la sesión
 actual de Supabase. No pide otra contraseña, no guarda tokens adicionales y no
-incluye acciones de aprobación, ejecución, cierre o envío. La API sigue verificando
+incluye acciones de aprobación, cierre o envío. El piloto añade ejecución por reglas
+solo para Administradores y consulta de borradores; ver [RULES_PILOT.md](RULES_PILOT.md).
+La API sigue verificando
 la identidad y RLS limita las filas. Admin y coordinator ven la pantalla.
 
-## Prueba local con el main.py creado por el usuario
+## Historial con el main.py anterior (solo lectura)
+
+Para ejecutar reglas, sustituir el comando de arranque por el indicado en
+[RULES_PILOT.md](RULES_PILOT.md); el main.py anterior no implementa POST ni detalles.
 
 Mantener FastAPI en 127.0.0.1:8000. En otra terminal, desde el repositorio:
 

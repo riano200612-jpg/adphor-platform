@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { agentApiOrigin, fetchAgentRuns } from '../src/js/services/agent-api.js';
-import { historyCards } from '../src/js/ui-agent-history.js';
+import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from '../src/js/services/agent-api.js';
+import { historyCards, draftCard } from '../src/js/ui-agent-history.js';
 
 test('HTTP is restricted to development loopback', () => {
   assert.equal(agentApiOrigin('http://localhost:5173', true), 'http://localhost:5173');
@@ -23,4 +23,16 @@ test('database strings are escaped before rendering', () => {
   const html = historyCards([{status:'<img onerror=alert(1)>',id:'<script>',engine_kind:'rules'}]);
   assert.equal(html.includes('<img'), false);
   assert.equal(html.includes('<script>'), false);
+});
+test('rule execution sends only project and idempotency key, never an approval', async () => {
+  const data = await agentRuleRequest({origin:'https://api.example.com',token:'test',projectId:'demo-01',requestId:'request-1',fetcher:async(url, options)=>{
+    assert.equal(options.method,'POST');
+    assert.deepEqual(JSON.parse(options.body),{project_id:'demo-01',request_id:'request-1'});
+    return {ok:true,json:async()=>({id:'request-1',saved:true})};
+  }});
+  assert.equal(data.saved,true);
+});
+test('detail rejects a different property and escapes draft HTML', async () => {
+  await assert.rejects(agentRuleRequest({origin:'https://api.example.com',token:'test',projectId:'demo-01',runId:'run-1',fetcher:async()=>({ok:true,json:async()=>({id:'run-1',project_id:'other',draft:'text'})})}), /borrador no válido/);
+  assert.equal(draftCard({draft:'<script>alert(1)</script>'}).includes('<script>'),false);
 });

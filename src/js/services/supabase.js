@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { agentApiOrigin, fetchAgentRuns } from './agent-api.js';
+import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
@@ -13,6 +13,18 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
+    async runAgentRules(projectId, requestId) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('El servicio de asistentes no está conectado.');
+      const { session } = check(await client.auth.getSession());
+      return agentRuleRequest({origin, token:session?.access_token, projectId, requestId});
+    },
+    async agentRunDetail(projectId, runId) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('El servicio de asistentes no está conectado.');
+      const { session } = check(await client.auth.getSession());
+      return agentRuleRequest({origin, token:session?.access_token, projectId, runId});
+    },
     async agentRuns(projectId, offset = 0) {
       const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
       if (!origin) throw new Error('El servicio de asistentes todavía no está conectado a esta versión de la plataforma.');

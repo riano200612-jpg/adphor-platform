@@ -27,7 +27,9 @@ se requiere analizar datos actuales.
 ## Integración pendiente
 
 El Worker actual sigue siendo de conexión/diagnóstico: no escribe en estas tablas.
-La interfaz todavía no consulta este registro. Los modelos ML/DL/PLN no están activos.
+La interfaz consulta el historial y permite ejecutar el piloto por reglas mediante
+`backend.local_api:app`; ver [RULES_PILOT.md](RULES_PILOT.md). Los modelos ML/DL/PLN
+no están activos. La persistencia del piloto requiere configurar su escritor privado.
 
 La escritura de resultados está reservada a un backend confiable; no se ha instalado
 ninguna clave privada. `service_role` tiene INSERT limitado sobre agent_runs, pero
