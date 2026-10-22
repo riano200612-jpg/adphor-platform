@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import date
 from math import exp, isfinite
 
-from .ml_dataset import EjemploML, preparar_particiones
+from .ml_dataset import EjemploML, preparar_particiones, DatasetNoApto
 from .ml_features import VariablesRiesgo
 
 
@@ -69,13 +69,34 @@ class InformeEntrenamiento:
     habilitado_produccion: bool = False
 
 
-def entrenar_y_evaluar(
-    ejemplos: tuple[EjemploML, ...]
-) -> InformeEntrenamiento:
-    particion = preparar_particiones(ejemplos)
+def ajustar_modelo(
+    entrenamiento: tuple[EjemploML, ...]
+) -> ModeloMLOffline:
+    """Entrena exclusivamente con ejemplos históricos aprobados."""
+    if not isinstance(entrenamiento, tuple) or any(
+        not isinstance(x, EjemploML) for x in entrenamiento
+    ):
+        raise TypeError("Ejemplos de entrenamiento inválidos.")
+
+    if len(entrenamiento) < 80:
+        raise DatasetNoApto("Menos de 80 ejemplos para entrenar.")
+
+    if len({x.propiedad_id for x in entrenamiento}) != 1:
+        raise DatasetNoApto("Copropiedades mezcladas.")
+
+    if len({x.caso_id for x in entrenamiento}) != len(entrenamiento):
+        raise DatasetNoApto("Casos duplicados.")
+
+    if any(x.validado_por_admin is not True for x in entrenamiento):
+        raise DatasetNoApto("Existen etiquetas sin validar.")
+
+    if {x.escalamiento_confirmado_7d for x in entrenamiento} != {
+        True, False
+    }:
+        raise DatasetNoApto("Se necesitan ambas clases.")
 
     train = sorted(
-        particion.entrenamiento,
+        entrenamiento,
         key=lambda x: (x.fecha_corte, x.caso_id)
     )
     vectores = [_vector(x.variables) for x in train]
@@ -109,7 +130,15 @@ def entrenar_y_evaluar(
             for w, g in zip(pesos, gradientes)
         ]
 
-    modelo = ModeloMLOffline(tuple(pesos), sesgo)
+    return ModeloMLOffline(tuple(pesos), sesgo)
+
+
+def entrenar_y_evaluar(
+    ejemplos: tuple[EjemploML, ...]
+) -> InformeEntrenamiento:
+    particion = preparar_particiones(ejemplos)
+
+    modelo = ajustar_modelo(particion.entrenamiento)
     tp = tn = fp = fn = 0
 
     for ejemplo in particion.validacion:
@@ -141,7 +170,7 @@ def entrenar_y_evaluar(
     return InformeEntrenamiento(
         modelo,
         metricas,
-        n,
+        len(particion.entrenamiento),
         len(particion.validacion),
         particion.inicio_validacion
     )
