@@ -2,6 +2,8 @@ import unittest
 from dataclasses import replace
 from datetime import date, datetime, timezone, timedelta
 from hashlib import sha256
+from io import BytesIO
+from PIL import Image
 
 from adphor_ai.domain import Caso, Entrada, EstadoCaso
 from adphor_ai.dl_evidence import (
@@ -14,7 +16,10 @@ class EvidenciaDLTests(unittest.TestCase):
         self.fecha = datetime(
             2026, 10, 22, 12, tzinfo=timezone.utc
         )
-        self.contenido = b"\x89PNG\r\n\x1a\n" + b"prueba"
+        buffer = BytesIO()
+        with Image.new("RGB", (32, 24), "blue") as image:
+            image.save(buffer, format="PNG")
+        self.contenido = buffer.getvalue()
 
         self.entrada = Entrada(
             "demo-01",
@@ -36,6 +41,12 @@ class EvidenciaDLTests(unittest.TestCase):
             sha256(self.contenido).hexdigest(),
             self.fecha,
         )
+
+    def test_rechaza_cabecera_png_sin_imagen(self):
+        fake = b"\x89PNG\r\n\x1a\nprueba"
+        evidence = replace(self.evidencia, tamano=len(fake), sha256_hex=sha256(fake).hexdigest())
+        with self.assertRaises(ValueError):
+            verificar_archivo(evidence, fake)
 
     def test_integridad_correcta(self):
         self.assertTrue(
