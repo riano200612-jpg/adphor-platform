@@ -75,3 +75,10 @@ modelo de subprocesos Linux; requiere backend compatible separado.
 Pruebas de esta etapa: 11 nuevas pruebas con procesos reales, incluyendo límite CPU,
 memoria, salida, timeout con reap del proceso, variables/descriptores no heredados,
 saturación, respuesta inválida, recuperación y rechazo de plataforma no soportada.
+
+## Siguiente etapa: contenedor offline
+
+La configuración y prueba reproducible están en
+[`containers/dl/README.md`](containers/dl/README.md). Su validación real requiere
+Docker en Linux y cgroup v2; no fue ejecutada en el entorno de edición. No conecta
+Storage, no cambia el backend activo y no habilita inferencia ni aprobación.
