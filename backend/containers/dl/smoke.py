@@ -4,12 +4,17 @@ Uses synthetic bytes only. Never import this tool into the application server.
 """
 import hashlib
 import json
+import os
+import select
 import subprocess
 import tempfile
 import uuid
 import zlib
 import struct
+import time
 
+MAX_OUTPUT_BYTES = 16 * 1024 * 1024 + 4096
+MAX_INPUT_BYTES = 10 * 1024 * 1024 + 1024
 IMAGE = 'adphor-dl-sandbox:test'
 
 
@@ -24,6 +29,9 @@ def command(name):
 
 
 def run(payload=b'', probe=None):
+    """Bound stdout *while the container runs*, not after it fills the host disk."""
+    if type(payload) is not bytes or len(payload) > MAX_INPUT_BYTES:
+        raise ValueError('Smoke-test input exceeds the allowed limit.')
     name = 'adphor-dl-smoke-' + uuid.uuid4().hex
     args = command(name)
     if probe is not None:
@@ -31,20 +39,42 @@ def run(payload=b'', probe=None):
     args += [IMAGE]
     if probe is not None:
         args += ['-I', '-B', '-c', probe]
+
     try:
-        # stdout stored on disk, never accumulated as an unbounded RAM pipe.
-        with tempfile.TemporaryFile() as output:
-            result = subprocess.run(args, input=payload, stdout=output,
-                                    stderr=subprocess.DEVNULL, timeout=20)
-            output.seek(0)
-            data = output.read(16 * 1024 * 1024 + 4097)
-            assert len(data) <= 16 * 1024 * 1024 + 4096
-            return result.returncode, data
+        # Feed input from a regular temporary file: no blocked stdin writer.
+        with tempfile.TemporaryFile() as source:
+            source.write(payload)
+            source.seek(0)
+            process = subprocess.Popen(args, stdin=source, stdout=subprocess.PIPE,
+                                       stderr=subprocess.DEVNULL)
+            try:
+                deadline = time.monotonic() + 20
+                captured = bytearray()
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise subprocess.TimeoutExpired(args, 20)
+                    ready, _, _ = select.select([process.stdout], [], [], remaining)
+                    if not ready:
+                        raise subprocess.TimeoutExpired(args, 20)
+                    chunk = os.read(process.stdout.fileno(), 65536)
+                    if not chunk:
+                        break
+                    if len(captured) + len(chunk) > MAX_OUTPUT_BYTES:
+                        raise RuntimeError('Docker stdout output quota exceeded.')
+                    captured.extend(chunk)
+                remaining = max(0.001, deadline - time.monotonic())
+                status = process.wait(timeout=remaining)
+                return status, bytes(captured)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=3)
+                process.stdout.close()
     finally:
-        # Killing docker CLI on timeout alone does NOT stop its container.
+        # Killing the Docker client alone does NOT stop the container.
         subprocess.run(['docker', 'rm', '-f', name], stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, timeout=10, check=False)
-
 
 def png():
     def chunk(kind, data):
@@ -109,7 +139,16 @@ def main():
     assert prepared.startswith(b'\x89PNG\r\n\x1a\n')
     code, _ = run(b'{}\ninvalid')
     assert code != 0, 'Malformed input accepted'
-    print('DL container: isolation, valid PNG and malformed input passed')
+
+    # A compromised decoder must not be able to fill the runner disk with stdout.
+    flood = "import os\nfor _ in range(350): os.write(1, b'x' * 65536)\n"
+    try:
+        run(probe=flood)
+    except RuntimeError as error:
+        assert 'output quota' in str(error)
+    else:
+        raise AssertionError('Unbounded Docker stdout accepted')
+    print('DL container: isolation, synthetic PNG, invalid input and stdout quota passed')
 
 
 if __name__ == '__main__':
