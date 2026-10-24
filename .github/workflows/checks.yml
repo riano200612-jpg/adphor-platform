@@ -34,10 +34,31 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: backend/requirements-fastapi.txt
+          cache-dependency-path: |
+            backend/requirements-fastapi.txt
+            backend/requirements-dl.txt
       - name: Install dependencies
-        run: python -m pip install -r backend/requirements-fastapi.txt
+        run: python -m pip install -r backend/requirements-fastapi.txt -r backend/requirements-dl.txt
       - name: Run Python tests
         run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
       - name: Compile Python modules
         run: python -m compileall -q backend/src
+
+  dl-container-acceptance:
+    name: DL container acceptance (offline)
+    # Experimental only: never run this Docker image on main or other PRs.
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/dl-evidencias-v1' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Linux cgroup v2 and Docker
+        run: |
+          test -f /sys/fs/cgroup/cgroup.controllers
+          docker version
+      - name: Build experimental offline decoder image
+        run: docker build -f backend/containers/dl/Dockerfile -t adphor-dl-sandbox:test .
+      - name: Probe isolation and synthetic image processing
+        run: python3 backend/containers/dl/smoke.py
