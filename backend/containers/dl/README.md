@@ -1,9 +1,11 @@
 # Contenedor DL: prueba de aceptación offline
 
-Estado: configuración experimental preparada; **no ejecutada en el entorno de
-edición**, que no dispone de Docker/Podman. No sustituye a `dl_isolation`, no está
-conectada a FastAPI ni a Storage y no habilita modelos. Los 62 tests existentes
-pasan; esto NO demuestra que los controles del contenedor funcionen.
+Estado: configuración experimental **ejecutada en GitHub Actions, Ubuntu 24.04
+con Docker y cgroup v2**, como prueba de aceptación offline en el PR #7. La
+prueba cubre aislamiento de ejecución, PNG sintético, rechazo de mensajes
+incorrectos y cuota de stdout. No sustituye a `dl_isolation`, no está
+conectada a FastAPI ni a Storage y no habilita modelos. El job aprobado NO
+equivale a un sandbox de producción certificado.
 
 En un host Linux de pruebas con Docker y cgroup v2, desde la raíz del repositorio:
 
@@ -28,14 +30,16 @@ socket Docker; además procesa un PNG sintético y rechaza un mensaje inválido.
 Falla explícitamente si el host no presenta los límites esperados.
 
 El límite de espera es 20 segundos por prueba. En `finally` elimina su contenedor
-por nombre aleatorio; no basta matar el CLI de Docker. La salida va a un archivo
-temporal y se lee con límite. Este runner es una herramienta para entradas
-sintéticas confiables, **no un adaptador público**: un decoder comprometido podría
-llenar el disco de stdout antes del timeout. Para admitir fotos externas falta
-un broker con cuota de salida durante streaming, control de concurrencia global,
-limpieza recuperable tras caída del supervisor y pruebas adversariales. No exponer
-el daemon/socket Docker al servidor de aplicaciones. Ejecutar estas pruebas solo
-en un host de laboratorio; no cambian cuentas ni datos de Supabase.
+por nombre aleatorio; no basta matar el CLI de Docker. El runner lee stdout en
+streaming, con cuota de 16 MiB + 4096 bytes en memoria, y mata el cliente
+Docker y elimina el contenedor si se supera. La prueba incluye un proceso que
+intenta emitir más de 20 MiB de stdout. Este runner sigue siendo una herramienta
+de aceptación para entradas sintéticas, **no un adaptador público**. Antes de
+admitir fotos externas falta incorporar esta cuota en el broker real, controlar
+la concurrencia agregada entre procesos, recuperar contenedores huérfanos tras
+caída del supervisor y ampliar pruebas adversariales. No exponer el daemon/socket
+Docker al servidor de aplicaciones. Ejecutar estas pruebas solo en un host
+de laboratorio; no cambian cuentas ni datos de Supabase.
 
 Contenedores comparten kernel: esto no garantiza aislamiento ante vulnerabilidades
 del kernel/runtime. Antes de producción: host dedicado y actualizado, imagen
