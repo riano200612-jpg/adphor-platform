@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>ADPHOR · Porto Castello · Vista QA</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#133640;background:#eef5f6}body{margin:0}header{background:#103b49;color:white;padding:1.6rem max(1rem,calc((100vw - 1080px)/2))}main{max-width:1080px;margin:auto;padding:1rem}h1{margin:.4rem 0}.tag{color:#ffd57e;font-weight:700}.notice{background:#fff4d6;padding:1rem;border-radius:.6rem;border-left:4px solid #b78a17}.layout{display:grid;grid-template-columns:2fr 1fr;gap:1rem}.panel{background:white;padding:1rem;border-radius:1rem;margin-top:1rem;box-shadow:0 1px 8px #173b4422}button{background:#176479;color:white;border:0;border-radius:.5rem;padding:.6rem .8rem;cursor:pointer}button:focus-visible{outline:3px solid #d59616;outline-offset:2px}.entry{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid #e2ebec;padding:.8rem 0}.level{font-weight:700}.alta{color:#ab3030}.media{color:#9c650e}.baja{color:#197858}label{display:block;margin:.7rem 0}input,textarea,select{padding:.55rem;max-width:100%;box-sizing:border-box}#preview img,#preview video{max-width:100%;max-height:180px}#preview audio{max-width:100%}@media(max-width:680px){.layout{grid-template-columns:1fr}.entry{flex-direction:column}}</style></head>
+<body><header><div class="tag">ADPHOR · VISTA DEMOSTRATIVA LOCAL</div><h1>Porto Castello · Centro de control</h1><p>Agenda inteligente · Gerencia · Evidencias</p></header>
+<main><p class="notice"><strong>Demostración con datos ficticios.</strong> No hay conexión con Supabase, autenticación productiva ni envío de notificaciones. Las decisiones aquí no afectan reuniones reales.</p>
+<div class="layout"><section class="panel"><h2>Agenda y criticidad</h2><div id="meetings"></div>
+<h3>Simular solicitud de reunión</h3><form id="meeting-form"><label>Asunto <input name="title" required maxlength="100" placeholder="Asunto de la reunión"></label>
+<label>Inicio <input name="start" type="datetime-local" required></label><label>Fin <input name="end" type="datetime-local" required></label>
+<label><input name="management" type="checkbox"> Requiere gerencia</label><button>Evaluar agenda</button></form><p id="result" role="status" aria-live="polite"></p></section>
+<aside><section class="panel"><h2>Panel de gerencia</h2><div id="alerts" aria-live="polite">No hay solicitudes pendientes.</div></section>
+<section class="panel"><h2>Evidencias multimedia</h2><input id="file" type="file" accept=".png,.jpg,.jpeg,.webp,.mp4,.mov,.mp3,.wav,.m4a,.pdf,.docx,.xlsx"><div id="preview"></div></section></aside></div></main>
+<script type="module">
+import {meetingGate} from '../src/js/components/porto-meeting-guard.js';
+import {validatePortoFile} from '../src/js/components/porto-media.js';
+const $=s=>document.querySelector(s);
+const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sample=[{title:'Junta extraordinaria (ejemplo)',level:'alta'},{title:'Seguimiento de PQRS (ejemplo)',level:'media'},{title:'Revisión operativa (ejemplo)',level:'baja'}];
+$('#meetings').innerHTML=sample.map(m=>'<div class="entry"><strong>'+escape(m.title)+'</strong><span class="level '+m.level+'">'+m.level.toUpperCase()+'</span></div>').join('');
+$('#meeting-form').addEventListener('submit',e=>{e.preventDefault();const d=new FormData(e.target),start=d.get('start'),end=d.get('end'),title=d.get('title');const out=$('#result');const at=new Date(start),until=new Date(end);
+if(!Number.isFinite(until.getTime())||until<=at){out.textContent='Horario inválido: el final debe ser posterior al inicio.';return;}
+const gate=meetingGate({start:at,now:new Date(),conflicts:[],isCritical:!!d.get('management')});
+if(!gate.allowed){out.textContent='Solicitud retenida: '+gate.reason;if(gate.requestException){const alert=document.createElement('div');alert.className='entry';const strong=document.createElement('strong');strong.textContent=title;const controls=document.createElement('div');for(const action of ['Aceptar','Rechazar']){const b=document.createElement('button');b.type='button';b.textContent=action;b.addEventListener('click',()=>{out.textContent='Simulación: '+action.toLowerCase()+' solicitud. Sin registro real.';alert.remove()});controls.append(b)}alert.append(strong,controls);$('#alerts').replaceChildren(alert)}}
+else out.textContent='Horario preliminarmente aceptable en simulación. No se guardó ninguna reunión.';});
+let objectUrl;
+$('#file').addEventListener('change',e=>{const parent=$('#preview');parent.replaceChildren();if(objectUrl)URL.revokeObjectURL(objectUrl);const f=e.target.files[0];if(!f)return;try{const kind=validatePortoFile(f);const p=document.createElement('p');p.textContent=f.name+' · '+Math.round(f.size/1024)+' KB';parent.append(p);if(['image','video','audio','pdf'].includes(kind)){objectUrl=URL.createObjectURL(f);const node=document.createElement(kind==='image'?'img':kind==='pdf'?'iframe':kind);node.src=objectUrl;if(kind==='video'||kind==='audio')node.controls=true;if(kind==='pdf'){node.title='Vista previa PDF';node.sandbox='';}parent.append(node)}else{const p=document.createElement('p');p.textContent='Vista previa de Office requiere conversión segura en servidor.';parent.append(p)}}catch(err){parent.textContent=err.message}});
+</script></body></html>
