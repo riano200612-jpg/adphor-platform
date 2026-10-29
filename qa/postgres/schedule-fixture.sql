@@ -11,7 +11,7 @@ CREATE TABLE porto_qa.meetings (
   CHECK(ends_at > starts_at),
   CONSTRAINT management_no_overlap EXCLUDE USING gist (
     project_id WITH =,
-    tstzrange(starts_at - interval '15 minutes', ends_at + interval '15 minutes','[)') WITH &&
+    tstzrange(starts_at, ends_at + interval '15 minutes','[)') WITH &&
   ) WHERE (status='scheduled' AND requires_management)
 );
 INSERT INTO porto_qa.meetings(project_id,starts_at,ends_at,requires_management)
@@ -26,7 +26,7 @@ BEGIN
   END;
 END $$;
 INSERT INTO porto_qa.meetings(project_id,starts_at,ends_at,requires_management)
-VALUES ('porto-castello','2026-11-03 11:31+00','2026-11-03 12:00+00',true),
+VALUES ('porto-castello','2026-11-03 11:15+00','2026-11-03 12:00+00',true),
        ('other-property','2026-11-03 10:30+00','2026-11-03 11:30+00',true);
 DO $$
 BEGIN
