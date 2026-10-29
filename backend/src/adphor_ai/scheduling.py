@@ -61,3 +61,27 @@ def authorize_change(meeting: dict, actor_role: str, management_approval: bool) 
         actor_role not in ("superadmin", "administrator") or not management_approval
     ):
         raise PermissionError("Requiere autorización administrativa superior y acto de aprobación")
+
+
+def validate_meeting_request(start: datetime, end: datetime, now: datetime,
+                             existing: Iterable[dict], participants: Iterable[str],
+                             requires_management: bool, actor_role: str = "viewer",
+                             approval: bool = False, meeting: dict | None = None) -> dict:
+    """Validación preliminar en backend; revalidar transaccionalmente al guardar."""
+    if now.tzinfo is None or start.tzinfo is None or end.tzinfo is None:
+        raise ValueError("La fecha debe incluir zona horaria")
+    if end <= start or start <= now:
+        return {"allowed": False, "reason": "Horario inválido o pasado"}
+    conflicts = validate_slot(start, end, existing, participants, requires_management)
+    if conflicts:
+        return {"allowed": False, "reason": "Conflictos de agenda", "conflicts": conflicts}
+    if meeting is not None:
+        try:
+            authorize_change(meeting, actor_role, approval)
+        except PermissionError:
+            return {"allowed": False, "reason": "Autorización superior requerida",
+                    "request_exception": True}
+    if start - now < timedelta(hours=24) and not approval:
+        return {"allowed": False, "reason": "Ventana inferior a 24 horas",
+                "request_exception": True}
+    return {"allowed": True}
