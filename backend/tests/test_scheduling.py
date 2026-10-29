@@ -6,7 +6,28 @@ T = timezone.utc
 def at(h, m=0):
     return datetime(2026, 11, 3, h, m, tzinfo=T)
 
+from adphor_ai.scheduling import validate_meeting_request
+
 class SchedulingTests(unittest.TestCase):
+    def test_backend_24h_gate(self):
+        now = at(10)
+        result = validate_meeting_request(at(11), at(12), now, [], [], False)
+        self.assertFalse(result["allowed"])
+        self.assertTrue(result["request_exception"])
+
+    def test_backend_exception_after_approval(self):
+        result = validate_meeting_request(at(11), at(12), at(10), [], [], False,
+                                          actor_role="admin", approval=True)
+        self.assertTrue(result["allowed"])
+
+    def test_backend_conflict_even_with_approval(self):
+        existing = [{"id": 1, "starts_at": at(10), "ends_at": at(11),
+                     "requires_management": True, "participants": [], "status": "scheduled"}]
+        result = validate_meeting_request(at(10,30), at(11,30), at(9), existing, [],
+                                          True, actor_role="admin", approval=True)
+        self.assertFalse(result["allowed"])
+        self.assertTrue(result["conflicts"])
+
     def test_critical_priority(self):
         self.assertEqual(classify_priority("Riesgo estructural en torre A")["priority_level"], "alto")
 
