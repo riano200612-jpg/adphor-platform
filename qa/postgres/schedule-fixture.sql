@@ -15,11 +15,11 @@ CREATE TABLE porto_qa.meetings (
     tstzrange(starts_at, protected_ends_at,'[)') WITH &&
   ) WHERE (status='scheduled' AND requires_management)
 );
-CREATE FUNCTION porto_qa.set_protected_end() RETURNS trigger LANGUAGE plpgsql AS $
+CREATE FUNCTION porto_qa.set_protected_end() RETURNS trigger LANGUAGE plpgsql AS $porto$
 BEGIN
   NEW.protected_ends_at := NEW.ends_at + interval '15 minutes';
   RETURN NEW;
-END $;
+END $porto$;
 CREATE TRIGGER meeting_protected_end BEFORE INSERT OR UPDATE ON porto_qa.meetings
 FOR EACH ROW EXECUTE FUNCTION porto_qa.set_protected_end();
 INSERT INTO porto_qa.meetings(project_id,starts_at,ends_at,requires_management)
