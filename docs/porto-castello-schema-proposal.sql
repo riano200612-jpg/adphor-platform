@@ -1,0 +1,44 @@
+-- PROPUESTA DE ESQUEMA QA — NO EJECUTAR EN SUPABASE CON DATOS REALES.
+-- Adaptar a nombres, roles, multi-tenant y RLS existentes tras auditoría.
+-- La detección final de colisiones debe ocurrir dentro de una transacción/función
+-- PostgreSQL con bloqueo adecuado; una comprobación en Python no evita carreras.
+--
+-- ALTER TABLE public.meetings
+--   ADD COLUMN priority_level text NOT NULL DEFAULT 'bajo'
+--     CHECK (priority_level IN ('alto','medio','bajo')),
+--   ADD COLUMN requires_management boolean NOT NULL DEFAULT false,
+--   ADD COLUMN ai_conflict_checked boolean NOT NULL DEFAULT false,
+--   ADD COLUMN ai_conflict_checked_at timestamptz,
+--   ADD COLUMN management_presence_status text NOT NULL DEFAULT 'not_required'
+--     CHECK (management_presence_status IN ('not_required','required','confirmed')),
+--   ADD COLUMN approved_by uuid REFERENCES auth.users(id),
+--   ADD COLUMN approved_at timestamptz,
+--   ADD COLUMN ai_priority_reason text;
+--
+-- Alternativa de diseño: almacenar y auditar participantes por reunión, incluidas
+-- invitaciones obligatorias de gerencia; fechas starts_at/ends_at TIMESTAMPTZ.
+-- Una exclusión por rango para el recurso gerencia impide solapamientos,
+-- pero el margen debe representarse en el rango protegido:
+--
+-- CREATE EXTENSION IF NOT EXISTS btree_gist;
+-- ALTER TABLE public.meetings
+-- ADD CONSTRAINT no_management_conflict
+-- EXCLUDE USING gist (
+--   project_id WITH =,
+--   tstzrange(starts_at - interval '15 minutes',
+--             ends_at + interval '15 minutes', '[)') WITH &&
+-- )
+-- WHERE (requires_management AND status = 'scheduled');
+--
+-- NOTA: validación exacta requiere revisar tipos reales de project_id/status,
+-- restricciones antiguas, reprogramaciones, administradores y zona horaria.
+-- Revisar si solo ciertos estados deben bloquear y si gerencia es persona
+-- o recurso compartido entre copropiedades. Crear pruebas de concurrencia.
+--
+-- Archivos: bucket privado separado 'porto-qa-media' y tabla de metadatos con
+-- project_id, uploaded_by, storage_path, mime_type, bytes, sha256, created_at,
+-- ticket_id/meeting_id (según relación), scan_status y deleted_at.
+-- RLS por membresía efectiva de copropiedad, nunca permiso global por login.
+-- No exponer el bucket públicamente ni claves service_role en frontend.
+-- Carga: PNG/JPEG/WEBP, MP4/MOV, MP3/WAV/M4A, PDF/DOCX/XLSX; MIME real,
+-- límites por tamaño, cuarentena/antivirus; previews seguras y URLs temporales.
