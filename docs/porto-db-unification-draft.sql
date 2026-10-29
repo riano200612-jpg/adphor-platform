@@ -6,7 +6,7 @@ begin;
 create schema if not exists adphor_db;
 create table if not exists adphor_db.meetings (
  id uuid primary key default gen_random_uuid(),
- project_id bigint not null, -- AJUSTAR al tipo real de public.projects.id
+ project_id text not null references public.projects(id), -- public.projects.id confirmado como text
  title text not null,
  agenda text,
  starts_at timestamptz not null,
@@ -33,7 +33,7 @@ create table if not exists adphor_db.meeting_attendees (
 create table if not exists adphor_db.meeting_exception_requests (
  id uuid primary key default gen_random_uuid(),
  meeting_id uuid references adphor_db.meetings(id),
- project_id bigint not null,
+ project_id text not null references public.projects(id),
  requested_by uuid not null,
  reason text not null,
  proposed_start timestamptz not null,
@@ -46,7 +46,7 @@ create table if not exists adphor_db.meeting_exception_requests (
 );
 create table if not exists adphor_db.media_assets (
  id uuid primary key default gen_random_uuid(),
- project_id bigint not null,
+ project_id text not null references public.projects(id),
  ticket_id text,
  meeting_id uuid references adphor_db.meetings(id),
  storage_path text not null unique,
@@ -59,7 +59,7 @@ create table if not exists adphor_db.media_assets (
 );
 create table if not exists adphor_db.ai_events (
  id uuid primary key default gen_random_uuid(),
- project_id bigint not null,
+ project_id text not null references public.projects(id),
  event_type text not null,
  source_id text not null,
  payload jsonb not null default '{}'::jsonb,
@@ -70,7 +70,7 @@ create table if not exists adphor_db.ai_events (
 );
 create table if not exists adphor_db.knowledge_documents (
  id uuid primary key default gen_random_uuid(),
- project_id bigint not null,
+ project_id text not null references public.projects(id),
  source_type text not null,
  source_id text not null,
  content_hash text not null,
