@@ -16,7 +16,8 @@ export function scheduleDemoMeeting(projectId,fields,now=Date.now()){
  const id=fields.id||crypto.randomUUID(),previous=rows.find(x=>x.id===id&&x.project_id===projectId);
  if(previous&&previous.status==='cancelled')throw Error('No se puede reprogramar una reunión cancelada.');
  const history=[...(previous?.history||[]),{action:previous?'rescheduled':'created',at:new Date(now).toISOString(),previous_start:previous?.start||null,previous_end:previous?.end||null}];
- const result={id,history,project_id:projectId,title:fields.title.trim(),start:start.toISOString(),end:end.toISOString(),
+ const metadata=Object.fromEntries(['subject','meetingType','subType','modality','specification','delegate','attendees','notes','duration'].map(k=>[k,String(fields[k]??previous?.[k]??'')]));
+ const result={...metadata,id,history,project_id:projectId,title:fields.title.trim(),start:start.toISOString(),end:end.toISOString(),
    priority,management,status:late?'pending_management':'scheduled',version:(previous?.version||0)+1,
    updated_at:new Date(now).toISOString()};
  save([result,...rows.filter(x=>x.id!==id)]);

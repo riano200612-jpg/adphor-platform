@@ -6,10 +6,8 @@ from unittest.mock import patch
 import httpx
 from fastapi.testclient import TestClient
 
-os.environ.setdefault('SUPABASE_URL','https://test.supabase.co')
-os.environ.setdefault('SUPABASE_PUBLISHABLE_KEY','sb_publishable_test')
-os.environ.setdefault('FRONTEND_ORIGIN','https://adphor-platform.pages.dev')
 from backend.local_api import app
+from backend.src.adphor_ai.gateway import Configuracion
 from backend.src.adphor_ai.rules import run_rules, PENDING
 
 USER = '11111111-1111-4111-8111-111111111111'
@@ -49,6 +47,12 @@ class RulesTests(unittest.TestCase):
 
 class APITests(unittest.TestCase):
     def setUp(self):
+        # Bind fixtures per test, independent of module import order or host credentials.
+        settings=patch.multiple('backend.local_api',BASE='https://test.supabase.co',
+            KEY='sb_publishable_test',Config=Configuracion('https://test.supabase.co',
+                'sb_publishable_test','https://qa.example.invalid'))
+        settings.start()
+        self.addCleanup(settings.stop)
         self.role = 'admin'
         self.inserts = []
         self.reads = 0

@@ -8,10 +8,10 @@ if (process.env.CF_PAGES || process.env.WORKERS_CI) {
 
 export default defineConfig({
   base: '/adphor-platform/',
-  server: { port: 8000, host: true, proxy: process.env.VITE_AGENTS_API_URL === 'http://localhost:5173' ? {
+  server: { port: 8000, host: '127.0.0.1', proxy: process.env.VITE_AGENTS_API_URL === 'http://localhost:5173' ? {
     '/agent-runs': { target: 'http://127.0.0.1:8000', changeOrigin: true },
   } : undefined },
-  preview: { port: 8000, host: true },
+  preview: { port: 8000, host: '127.0.0.1' },
   build: { outDir: 'dist', emptyOutDir: true, sourcemap: false, target: 'es2020',
     rollupOptions: { input: {
       main: fileURLToPath(new URL('./index.html', import.meta.url)),

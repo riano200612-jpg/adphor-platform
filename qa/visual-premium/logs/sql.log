@@ -1,0 +1,2 @@
+40 fictitious properties / 400 PQRS persisted and scoped; elapsed 240 ms (local smoke measurement, NOT production capacity).
+30 SQL checks PASS: migration twice, lifecycle, tenant isolation, history, revocation, durable reopen. Synthetic SQL claims, NOT Supabase JWT or browser E2E.
