@@ -25,3 +25,17 @@ export function parseClientLocalDateTime(date,time) {
   if(!Number.isFinite(value.getTime())||value.getFullYear()!==Number(date.slice(0,4))||value.getMonth()+1!==Number(date.slice(5,7))||value.getDate()!==Number(date.slice(8,10)))throw Error('Fecha inválida.');
   return value;
 }
+
+/** Client's duration defaults; manual hours override within supported bounds. */
+export function meetingDurationHours(type, manualHours) {
+  const explicit = manualHours === '' || manualHours === null || manualHours === undefined ? null : Number(manualHours);
+  if (explicit !== null) {
+    if (!Number.isFinite(explicit) || explicit < 0.25 || explicit > 12) throw Error('Duración fuera de rango (0,25 a 12 horas).');
+    return explicit;
+  }
+  const value=String(type||'');
+  return value.includes('Asamblea') ? 5 : value.includes('Comité') ? 3 : 4;
+}
+export function expectedMeetMode(modality,status) {
+  return /virtual|mixta/i.test(String(modality||'')) && /confirmad/i.test(String(status||''));
+}
