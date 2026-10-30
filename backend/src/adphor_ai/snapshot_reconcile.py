@@ -20,6 +20,14 @@ PROJECTIONS = {
     },
 }
 
+HEADERS = {
+    'Copropiedades': {0: 'ID_Copropiedad', 1: 'Copropiedad'},
+    'PQRS': {0: 'ID Caso', 1: 'Fecha_Registro', 8: 'Estado'},
+    'Registros': {0: 'ID_Registro', 1: 'Fecha_Registro', 2: 'Copropiedad',
+                  5: 'Tipo', 7: 'Fecha_Evento', 8: 'Hora Inicio Estimada',
+                  9: 'Modalidad', 10: 'Estado'},
+}
+
 
 def _str(value):
     return "" if value is None else str(value)
@@ -36,19 +44,28 @@ def compare_snapshot(source_sheet, drive_values, db_rows):
         raise ValueError("Unsupported source sheet")
     if not drive_values:
         raise ValueError("Drive sheet lacks headers")
+    headers = drive_values[0]
+    if not isinstance(headers, (list, tuple)) or any(
+        i >= len(headers) or headers[i] != label for i, label in HEADERS[source_sheet].items()
+    ):
+        raise ValueError('Source headers changed; projection must be reviewed')
     colmap = PROJECTIONS[source_sheet]
     rows = {}
     for obj in db_rows:
         number = obj["source_row"]
-        if not isinstance(number, int) or number < 2 or number in rows:
+        if type(number) is not int or number < 2 or number in rows:
             raise ValueError("Invalid or repeated source row index in SQL snapshot")
         if not isinstance(obj.get("payload"), dict):
             raise ValueError("SQL snapshot missing JSON payload")
+        if 'source_record_id' not in obj or not (set(colmap)-{'source_record_id'}).issubset(obj['payload']):
+            raise ValueError('SQL snapshot missing projected fields')
         rows[number] = obj
 
     changed = {}
     source_found = set()
     for number, fields in enumerate(drive_values[1:], start=2):
+        if not isinstance(fields, (list, tuple)):
+            raise ValueError('Source row must be a cell array')
         if not any(_str(v).strip() for v in fields):
             continue
         source_found.add(number)

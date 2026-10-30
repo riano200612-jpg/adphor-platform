@@ -1,5 +1,10 @@
+import { mountProjectSelector, chooseProject, projectPreference } from './ui-project-selector.js';
+import { mountMeetingAssessment } from './ui-meeting-assessment.js';
+import { mountPqrs } from './ui-pqrs.js';
+import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import { mountAgentHistory } from './ui-agent-history.js';
+import { mountTenantConsultation } from './ui-tenant-consultation.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -42,12 +47,19 @@ function loginScreen() {
 async function refresh() {
   const data = await repo.load();
   Object.assign(state, data);
-  if (!state.projects.some(p => p.id === state.projectId)) state.projectId = state.projects[0]?.id || '';
+  state.projectId = chooseProject(state.projects, state.projectId || projectPreference(sessionStorage,state.user?.id));
+  projectPreference(sessionStorage,state.user?.id,state.projectId);
   state.lastSync = new Date();
 }
 function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['tickets','clipboard-list','Bitácora'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control"><label for="project-select">COPROPIEDAD</label><select id="project-select">${state.projects.map(p => option(p.id, p.name, state.projectId)).join('')}</select></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
+  if (portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) nav.push(['pqrs','inbox','PQRS'],['meetings','calendar','Reuniones']);
+  if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
+  mountProjectSelector($('project-control'), {projects:state.projects, selected:state.projectId, onChange(id) {
+    state.projectId=id; state.filters={}; monthlyResult=null; monthlyKey='';
+    projectPreference(sessionStorage,state.user?.id,id); shell();
+  }});
   renderPage();
 }
 function heading(title, subtitle, actions = '') { return `<div class="page-heading"><div><p class="eyebrow">${esc(project()?.name || 'ADPHOR')}</p><h1>${title}</h1><p class="muted">${subtitle}</p></div><div class="heading-actions">${actions}</div></div>`; }
@@ -94,6 +106,17 @@ function reportPage() {
 }
 function renderPage() {
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if (state.page === 'meetings' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) {
+    mountMeetingAssessment($('page-content'),{repo,projectId:state.projectId});return;
+  }
+  if (state.page === 'pqrs' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) {
+    mountPqrs($('page-content'), {repository:repo.porto,projectId:state.projectId,members:team(),role:role()});return;
+  }
+  if (state.page === 'consultation' && import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') {
+    $('page-content').innerHTML = '<div id="tenant-consultation"></div>';
+    mountTenantConsultation($('tenant-consultation'), {repo, projectId: state.projectId});
+    return;
+  }
   if (state.page === 'agent-history') {
     $('page-content').innerHTML = '<div id="agent-history"></div>';
     mountAgentHistory($('agent-history'), {repo, projectId: state.projectId, role: role()});
@@ -208,7 +231,6 @@ document.addEventListener('click', async event => {
 });
 document.addEventListener('change', event => {
   const el = event.target;
-  if (el.id === 'project-select') { state.projectId = el.value; state.filters = {}; shell(); }
   if (el.id.startsWith('filter-')) { state.filters[el.id.replace('filter-','')] = el.value; $('ticket-results').innerHTML = ticketResults(); }
   if (el.id === 'report-month') { state.reportMonth = el.value; renderPage(); }
   if (el.name === 'action') actionFields(el.value, state.tickets.find(t => t.id === el.form.dataset.id));

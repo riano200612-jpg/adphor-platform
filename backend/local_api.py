@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.src.adphor_ai.gateway import Configuracion
 from backend.src.adphor_ai.rules import run_rules, PENDING
+from backend.src.adphor_ai.meeting_api import build_meeting_router
+from backend.src.adphor_ai.tenant_consultation import build_router, ConsultationSettings
 
 load_dotenv(override=False)
 BASE = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -88,6 +90,29 @@ async def require_role(request, actor, project, allowed):
     if not isinstance(rows, list) or len(rows) != 1 or rows[0]["role"] not in allowed:
         raise HTTPException(403, "Tu perfil no puede realizar esta acción en la copropiedad.")
 
+
+# Default: disabled; staging + synthetic fixtures only; no real data adapter.
+app.include_router(build_router(
+    identity_dependency=identity, membership_checker=require_role,
+    settings=ConsultationSettings(
+        deployment=os.getenv("ADPHOR_DEPLOYMENT", "production"),
+        mode=os.getenv("ADPHOR_CONSULTATION_MODE", "disabled"),
+        supabase_url=BASE,
+        staging_project_ref=os.getenv("ADPHOR_STAGING_PROJECT_REF", ""),
+        frontend_origin=ORIGIN,
+    ),
+))
+
+app.include_router(build_meeting_router(
+    identity_dependency=identity, membership_checker=require_role,
+    settings=ConsultationSettings(
+        deployment=os.getenv("ADPHOR_DEPLOYMENT", "production"),
+        mode=os.getenv("ADPHOR_CONSULTATION_MODE", "disabled"),
+        supabase_url=BASE,
+        staging_project_ref=os.getenv("ADPHOR_STAGING_PROJECT_REF", ""),
+        frontend_origin=ORIGIN,
+    ),
+))
 
 async def snapshot(request, actor, project):
     async def pages(table, select, order):

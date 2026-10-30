@@ -24,3 +24,9 @@ dialog{padding:0;border:0;border-radius:16px;width:min(740px,calc(100vw - 28px))
 @media print{html,body{background:white!important}.executive-detail .executive-columns{margin-bottom:15px}.executive-detail h4{margin:10px 0;font-weight:700}.executive-detail .executive-bar{margin:9px 0}.executive-detail .executive-section-title{margin-top:15px}.executive-detail .executive-reconcile{margin:14px 0;padding:9px 14px}.executive-detail .executive-reconcile strong{margin:5px 0;font-size:21px}.executive-detail .executive-notes{font-size:9px}.executive-detail .executive-notes>span{margin-top:10px}.executive-comparison{break-inside:avoid;margin-bottom:14px}}
 .executive-chart-data{font-size:12px;margin:12px 0}.executive-chart-data summary{cursor:pointer;color:#087e82;font-weight:650;padding:8px 0}.executive-chart-data summary:focus-visible{outline:3px solid #1aa5a5;outline-offset:3px}
 @media print{@page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-family:Arial,sans-serif;font-size:8pt;color:#526871}}}
+
+/* Authorized project catalog: keep the existing institutional palette. */
+.project-control{display:flex;flex-direction:column;gap:3px;max-width:350px}
+.project-control input[type=search]{min-width:0;width:100%;padding:5px 8px;font-size:12px}
+.project-control small{font-size:10px;color:#526670}
+@media(max-width:600px){.project-control{max-width:190px}.project-control select{max-width:190px;width:100%}}

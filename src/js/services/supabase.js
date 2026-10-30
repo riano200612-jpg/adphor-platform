@@ -1,6 +1,8 @@
+import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
 import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
+import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
@@ -14,6 +16,28 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
+    porto: createPortoRepository(client, {url, enabled:import.meta.env.VITE_PORTO_QA_ENABLED, stagingRef:import.meta.env.VITE_PORTO_STAGING_REF}),
+    async assessMeeting(projectId, fields) {
+      if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Evaluación solo disponible en QA aislado.');
+      const origin=agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL,import.meta.env.DEV);
+      if(!origin) throw Error('API no configurada.');
+      const {session}=check(await client.auth.getSession());
+      if(!session?.access_token) throw Error('Sesión requerida.');
+      const response=await fetch(new URL('/meetings/assess',origin),{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},
+        body:JSON.stringify({subject:fields.subject,notes:fields.notes,management_requested:fields.management_requested,project_id:projectId}),credentials:'omit',redirect:'error',
+        cache:'no-store',signal:AbortSignal.timeout(12000)});
+      if(!response.ok) throw Error(`Evaluación rechazada (${response.status}).`);
+      const data=await response.json();
+      if(data.project_id!==projectId || data.engine_kind!=='rules' || data.persisted!==false || data.booking_authorized!==false || data.notifications_sent!==false) throw Error('Respuesta de evaluación inválida.');
+      return data;
+    },
+    async consultationSummary(projectId) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error("El servicio de consultas no está conectado.");
+      const { session } = check(await client.auth.getSession());
+      return fetchTenantSummary({ origin, token: session?.access_token, projectId });
+    },
     async reviewAgentRun(projectId, runId, resultHash, decision, note) {
       return submitAgentReview(client, {projectId, runId, resultHash, decision, note});
     },
