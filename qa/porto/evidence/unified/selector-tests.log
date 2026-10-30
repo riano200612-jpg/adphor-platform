@@ -1,0 +1,57 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> adphor-platform@3.0.0 test
+> node --test tests/*.test.js
+
+✔ HTTP is restricted to development loopback (0.939029ms)
+✔ request uses the session token, scopes the query and rejects mixed properties (0.772352ms)
+✔ authentication failures cannot appear as empty success (0.212514ms)
+✔ database strings are escaped before rendering (0.259524ms)
+✔ rule execution sends only project and idempotency key, never an approval (1.00727ms)
+✔ detail rejects a different property and escapes draft HTML (0.294315ms)
+✔ review writes only decision fields; actor and timestamp come from database (2.061419ms)
+✔ invalid decision and oversized notes never reach database (0.574139ms)
+✔ permission and concurrent decision failures do not report success or overwrite (0.502743ms)
+✔ review controls require enabled human review and disappear after decision (13.517183ms)
+Informe de 10.000 casos sintéticos en PostgreSQL local: 94 ms
+✔ PostgreSQL: enforce isolation, actor identity, evidence, transitions and concurrency (4494.983734ms)
+✔ conserva rutas legadas del portal (0.81442ms)
+✔ normaliza prioridad de administradoras (0.259454ms)
+✔ no autoriza otra copropiedad (0.153197ms)
+✔ production is blocked even with enabled flag (0.782107ms)
+✔ unconfigured QA remains disabled (0.112326ms)
+✔ different reference is rejected (0.298211ms)
+✔ exact staging gate (0.117975ms)
+✔ gate rejects before touching client (1.348775ms)
+✔ no session cannot query data (0.232443ms)
+✔ 40 dynamic projects: search and retained selection (1.070573ms)
+✔ revoked or forged selection cannot add a property (0.14188ms)
+✔ preferences isolated per user, never treated as authorization (0.18261ms)
+✔ unavailable browser storage does not break navigation (0.197422ms)
+✔ closed months compare the same measures, not unique cases vs closure events (21.729579ms)
+✔ Colombia month boundary prevents comparing a partial month as complete (2.027338ms)
+✔ zero baseline, missing reference and year change do not invent percentages (1.695738ms)
+✔ synthetic tenant summary is accepted (1.580869ms)
+✔ cross-tenant response is rejected (0.406742ms)
+✔ real source is rejected (0.20945ms)
+✔ agent enabled response is rejected (0.197281ms)
+✔ invalid totals are rejected (0.183982ms)
+✔ invalid project id is rejected before fetch (0.193696ms)
+✔ missing JWT denied before fetch (0.126838ms)
+✔ 403 is not converted to empty results (0.171023ms)
+✔ 503 stays blocked (0.307324ms)
+✔ 401 requires authentication (0.35173ms)
+✔ full workflow requires photographic intervention and coordinator verification (13.265771ms)
+✔ viewer and unassigned technician cannot advance a case (0.918929ms)
+✔ assignment validates project membership and deadlines (0.833613ms)
+✔ filters normalize accents, scope mine and count actual records (0.684773ms)
+✔ creation rejects empty text, invalid areas and outsiders (0.747886ms)
+✔ uploads limit count, size and media types (0.222519ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4640.591588

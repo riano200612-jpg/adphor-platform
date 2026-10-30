@@ -1,4 +1,5 @@
 """Local ASGI API. Rules have no credentials; a separate writer only inserts runs."""
+from backend.src.adphor_ai.mfa_guard import require_enrolled_mfa
 import asyncio
 import os
 from contextlib import asynccontextmanager
@@ -15,6 +16,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.src.adphor_ai.gateway import Configuracion
 from backend.src.adphor_ai.rules import run_rules, PENDING
+from backend.src.adphor_ai.meeting_api import build_meeting_router
+from backend.src.adphor_ai.tenant_consultation import build_router, ConsultationSettings
 
 load_dotenv(override=False)
 BASE = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -79,6 +82,7 @@ async def identity(request: Request, credentials: Annotated[HTTPAuthorizationCre
     user = await call(request, credentials.credentials, "/auth/v1/user")
     if not isinstance(user, dict) or not user.get("id"):
         raise HTTPException(401, "Sesión inválida.")
+    require_enrolled_mfa(user, credentials.credentials)
     return {"id": user["id"], "token": credentials.credentials}
 
 
@@ -88,6 +92,29 @@ async def require_role(request, actor, project, allowed):
     if not isinstance(rows, list) or len(rows) != 1 or rows[0]["role"] not in allowed:
         raise HTTPException(403, "Tu perfil no puede realizar esta acción en la copropiedad.")
 
+
+# Default: disabled; staging + synthetic fixtures only; no real data adapter.
+app.include_router(build_router(
+    identity_dependency=identity, membership_checker=require_role,
+    settings=ConsultationSettings(
+        deployment=os.getenv("ADPHOR_DEPLOYMENT", "production"),
+        mode=os.getenv("ADPHOR_CONSULTATION_MODE", "disabled"),
+        supabase_url=BASE,
+        staging_project_ref=os.getenv("ADPHOR_STAGING_PROJECT_REF", ""),
+        frontend_origin=ORIGIN,
+    ),
+))
+
+app.include_router(build_meeting_router(
+    identity_dependency=identity, membership_checker=require_role,
+    settings=ConsultationSettings(
+        deployment=os.getenv("ADPHOR_DEPLOYMENT", "production"),
+        mode=os.getenv("ADPHOR_CONSULTATION_MODE", "disabled"),
+        supabase_url=BASE,
+        staging_project_ref=os.getenv("ADPHOR_STAGING_PROJECT_REF", ""),
+        frontend_origin=ORIGIN,
+    ),
+))
 
 async def snapshot(request, actor, project):
     async def pages(table, select, order):
@@ -172,3 +199,29 @@ async def execute_rules(body: RunRequest, request: Request, actor: Annotated[dic
     except TimeoutError:
         raise HTTPException(504, "La ejecución tardó demasiado. Reintenta la misma solicitud.") from None
     return {"id":run_id, "saved":True, "status":PENDING}
+
+# Read-only, authenticated endpoints for the isolated Porto PostgreSQL QA schema.
+# Database writes remain behind reviewed RLS/triggers; production project is refused.
+from fastapi import Query as _Query
+
+@app.get("/qa/projects/{project_id}/meetings")
+async def qa_meetings(project_id: str, request: Request, actor: Annotated[dict, Depends(identity)],
+                      limit: int = _Query(default=50,ge=1,le=100)):
+    if os.environ.get("ADPHOR_ISOLATED_QA") != "true" or BASE.endswith("oqizvirqjwbbhyyjpthq.supabase.co"):
+        raise HTTPException(503, "Consulta disponible únicamente en Supabase QA aislado.")
+    await require_role(request,actor,project_id,("admin","coordinator","viewer","technician"))
+    records=await call(request,actor["token"],"/rest/v1/pilot_meetings",params={
+        "select":"id,project_id,title,starts_at,ends_at,status,version",
+        "project_id":f"eq.{project_id}","order":"starts_at.asc","limit":str(limit)})
+    return {"items":records,"read_only":True}
+
+@app.get("/qa/projects/{project_id}/pqrs")
+async def qa_pqrs(project_id: str, request: Request, actor: Annotated[dict, Depends(identity)],
+                  limit: int = _Query(default=50,ge=1,le=100)):
+    if os.environ.get("ADPHOR_ISOLATED_QA") != "true" or BASE.endswith("oqizvirqjwbbhyyjpthq.supabase.co"):
+        raise HTTPException(503, "Consulta disponible únicamente en Supabase QA aislado.")
+    await require_role(request,actor,project_id,("admin","coordinator","viewer","technician"))
+    records=await call(request,actor["token"],"/rest/v1/pilot_pqrs",params={
+        "select":"id,project_id,kind,subject,status,priority,version,created_at",
+        "project_id":f"eq.{project_id}","order":"created_at.desc","limit":str(limit)})
+    return {"items":records,"read_only":True}

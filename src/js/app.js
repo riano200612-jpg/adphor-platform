@@ -1,5 +1,11 @@
+import { createDemoPortoRepository, assessDemoMeeting } from './services/demo-porto.js';
+import { mountProjectSelector, chooseProject, projectPreference } from './ui-project-selector.js';
+import { mountMeetingAssessment } from './ui-meeting-assessment.js';
+import { mountPqrs } from './ui-pqrs.js';
+import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import { mountAgentHistory } from './ui-agent-history.js';
+import { mountTenantConsultation } from './ui-tenant-consultation.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -10,6 +16,8 @@ const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const invalidConfig = Boolean(url) !== Boolean(key);
 const repo = url && key ? createCloudRepository(url, key) : createDemoRepository();
+const demoPorto = repo.mode === 'demo' ? createDemoPortoRepository() : null;
+const portoVisible = () => repo.mode === 'demo' || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
 const $ = id => document.getElementById(id);
 const root = $('root');
 const dialog = $('case-dialog');
@@ -39,15 +47,25 @@ function reportError(error) { toast(error.message || 'No se pudo completar la op
 function loginScreen() {
   root.innerHTML = `<main id="main" class="login-shell"><section class="login-story"><div class="brand">${icon('building')} ADPHOR<span>S.A.S.</span></div><div><p class="eyebrow">ADMINISTRACIÓN DE PROPIEDAD HORIZONTAL</p><h1>Cada novedad,<br>en buenas manos.</h1><p>Un equipo conectado. Un responsable por tarea.<br>El mantenimiento de tus copropiedades, bajo control.</p><div class="login-steps"><span>01 · Registrar</span><span>02 · Atender</span><span>03 · Verificar</span></div></div><small>Gestión operativa · Copropiedades y áreas de trabajo</small></section><section class="login-form-wrap"><form id="login-form"><span class="app-mark">${icon('building-shield')}</span><p class="eyebrow">BIENVENIDO A ADPHOR</p><h2>Tu centro de operaciones</h2><p class="muted">${repo.mode === 'demo' ? 'Explora el flujo completo con un perfil de prueba.' : 'Ingresa con la cuenta asignada por tu administrador.'}</p>${invalidConfig ? '<p class="notice danger">La configuración del servicio está incompleta. Completa ambas variables de Supabase antes de ingresar.</p>' : repo.mode === 'demo' ? `<div class="notice"><strong>Demostración local</strong><br>Los datos se guardan solo en este navegador. Usa información y fotografías de prueba.</div><label>Perfil de demostración<select name="profile">${DEMO_USERS.map(u => option(u.id, `${u.name} · ${ROLES[u.role]}`, '')).join('')}</select></label>` : '<label>Correo o usuario<input name="email" type="text" autocomplete="username" required></label><label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>'}<p id="login-error" role="alert" class="error"></p><button class="btn primary full" ${invalidConfig ? 'disabled' : ''}>${repo.mode === 'demo' ? 'Explorar demostración' : 'Ingresar'} ${icon('arrow-right')}</button><p class="login-foot">${repo.mode === 'demo' ? 'Puedes cambiar de perfil cerrando la sesión.' : '¿Necesitas una cuenta? Contacta al administrador de tu copropiedad.'}</p></form></section></main>`;
 }
+function mfaScreen() {
+  root.innerHTML='<main id="main" class="login-shell"><section class="login-form-wrap"><form id="mfa-form"><h2>Verificación adicional</h2><p>Ingresa el código de tu aplicación autenticadora.</p><label>Código<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label><p class="error" role="alert"></p><button type="submit">Verificar</button><button type="button" data-action="cancel-mfa">Volver al acceso</button></form></section></main>';
+}
 async function refresh() {
   const data = await repo.load();
   Object.assign(state, data);
-  if (!state.projects.some(p => p.id === state.projectId)) state.projectId = state.projects[0]?.id || '';
+  state.projectId = chooseProject(state.projects, state.projectId || projectPreference(sessionStorage,state.user?.id));
+  projectPreference(sessionStorage,state.user?.id,state.projectId);
   state.lastSync = new Date();
 }
 function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['tickets','clipboard-list','Bitácora'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control"><label for="project-select">COPROPIEDAD</label><select id="project-select">${state.projects.map(p => option(p.id, p.name, state.projectId)).join('')}</select></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
+  if (portoVisible()) nav.splice(1,0,['meetings','calendar','Reuniones'],['pqrs','inbox','PQRS']);
+  if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
+  mountProjectSelector($('project-control'), {projects:state.projects, selected:state.projectId, onChange(id) {
+    state.projectId=id; state.filters={}; monthlyResult=null; monthlyKey='';
+    projectPreference(sessionStorage,state.user?.id,id); shell();
+  }});
   renderPage();
 }
 function heading(title, subtitle, actions = '') { return `<div class="page-heading"><div><p class="eyebrow">${esc(project()?.name || 'ADPHOR')}</p><h1>${title}</h1><p class="muted">${subtitle}</p></div><div class="heading-actions">${actions}</div></div>`; }
@@ -94,6 +112,17 @@ function reportPage() {
 }
 function renderPage() {
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if (state.page === 'meetings' && portoVisible()) {
+    mountMeetingAssessment($('page-content'),{repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId});return;
+  }
+  if (state.page === 'pqrs' && portoVisible()) {
+    mountPqrs($('page-content'), {repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});return;
+  }
+  if (state.page === 'consultation' && import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') {
+    $('page-content').innerHTML = '<div id="tenant-consultation"></div>';
+    mountTenantConsultation($('tenant-consultation'), {repo, projectId: state.projectId});
+    return;
+  }
   if (state.page === 'agent-history') {
     $('page-content').innerHTML = '<div id="agent-history"></div>';
     mountAgentHistory($('agent-history'), {repo, projectId: state.projectId, role: role()});
@@ -135,15 +164,20 @@ async function submit(event) {
   event.preventDefault();
   if (busy) return;
   const form = event.target;
-  if (!['login-form','new-case','case-action'].includes(form.id)) return;
+  if (!['login-form','mfa-form','new-case','case-action'].includes(form.id)) return;
   const errorBox = form.querySelector('.error'); errorBox.textContent = '';
   const submitBtn = form.querySelector('button:not([type="button"])');
   busy = true; submitBtn.disabled = true; const label = submitBtn.innerHTML; submitBtn.textContent = 'Guardando…';
   try {
     const input = Object.fromEntries(new FormData(form));
     if (form.id === 'login-form') {
-      state.user = await repo.login(input);
+      const result = await repo.login(input);
+      if(result.mfaRequired) {mfaScreen();return;}
+      state.user = result;
       await refresh(); state.page = 'dashboard'; state.filters = {}; shell();
+    } else if(form.id === 'mfa-form') {
+      state.user=await repo.completeMfa(input.code);form.reset();
+      await refresh();state.page='dashboard';state.filters={};shell();
     } else {
       const files = [...(form.elements.photos?.files || [])]; validateFiles(files);
       const action = form.id === 'new-case' ? 'create' : input.action;
@@ -164,6 +198,7 @@ document.addEventListener('submit', submit);
 document.addEventListener('click', async event => {
   const el = event.target.closest('button,a[data-page]'); if (!el || busy) return;
   try {
+    if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;loginScreen();return;}
     if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
     if (el.dataset.view) { state.view = el.dataset.view; renderPage(); return; }
@@ -208,7 +243,6 @@ document.addEventListener('click', async event => {
 });
 document.addEventListener('change', event => {
   const el = event.target;
-  if (el.id === 'project-select') { state.projectId = el.value; state.filters = {}; shell(); }
   if (el.id.startsWith('filter-')) { state.filters[el.id.replace('filter-','')] = el.value; $('ticket-results').innerHTML = ticketResults(); }
   if (el.id === 'report-month') { state.reportMonth = el.value; renderPage(); }
   if (el.name === 'action') actionFields(el.value, state.tickets.find(t => t.id === el.form.dataset.id));
