@@ -19,3 +19,36 @@ test('selector component: 40 synthetic properties, filtering and safe names',asy
  await expect(root.locator('select')).toHaveValue('qa-40');
  await expect(root.getByRole('status')).toContainText('0 coincidencias');
 });
+
+test('application: 40 synthetic memberships, navigation, reload and restricted user',async({page})=>{
+ const projects=Array.from({length:40},(_,i)=>({id:`qa-${i+1}`,name:`Jardín Ficticio ${i+1}`,type:'QA',location:'Sintética',areas:['Área QA']}));
+ const seeds=Object.fromEntries(projects.map((p,i)=>[p.id,[{id:`case-${i+1}`,fecha:'2026-10-29T12:00:00Z',descripcion:`Caso exclusivo ${p.id}`,area:'Área QA',estado:'Pendiente'}]]));
+ await page.route('**/src/js/data/adphorData.js*',route=>route.fulfill({status:200,contentType:'application/javascript',body:`export const PROJECTS=${JSON.stringify(projects)};export const SEED_MINUTAS=${JSON.stringify(seeds)};`}));
+ const login=async(profile='admin-demo')=>{
+  await page.locator('[name=profile]').selectOption(profile);
+  await page.getByRole('button',{name:'Explorar demostración'}).click();
+  await expect(page.locator('#project-select')).toBeVisible();
+ };
+ await page.goto('./');await login();
+ await expect(page.locator('#project-select option')).toHaveCount(40);
+ await page.getByLabel('Buscar copropiedad').fill('JARDIN FICTICIO 40');
+ await page.locator('#project-select').selectOption('qa-40');
+ await page.getByRole('button',{name:'Bitácora',exact:true}).click();
+ await expect(page.locator('#project-select')).toHaveValue('qa-40');
+ await expect(page.locator('.ticket-card')).toHaveCount(1);
+ await expect(page.locator('.ticket-card')).toContainText('Caso exclusivo qa-40');
+ await page.getByRole('button',{name:'Informes',exact:true}).click();
+ await expect(page.locator('#project-select')).toHaveValue('qa-40');
+ await page.reload();await login();
+ await expect(page.locator('#project-select')).toHaveValue('qa-40');
+ await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
+ await page.evaluate(()=>sessionStorage.setItem('adphor.selected-project:viewer-demo','qa-40'));
+ await login('viewer-demo');
+ await expect(page.locator('#project-select option')).toHaveCount(1);
+ await expect(page.locator('#project-select')).toHaveValue('qa-1');
+ await page.getByRole('button',{name:'Bitácora',exact:true}).click();
+ await expect(page.locator('.ticket-card')).toContainText('Caso exclusivo qa-1');
+ await expect(page.locator('.ticket-card')).not.toContainText('Caso exclusivo qa-40');
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
