@@ -28,7 +28,14 @@ export function mountMeetingAssessment(root,{repo,projectId}) {
     const cancel=document.createElement('button');cancel.textContent='Cancelar';cancel.type='button';cancel.onclick=()=>{
       cancelDemoMeeting(projectId,m.id);if(editing===m.id)editing=null;status.textContent='Cancelación local registrada.';render();
     };
-    item.append(edit,cancel);
+    const google=document.createElement('button');google.type='button';google.textContent='Preparar en Google Calendar';google.onclick=()=>{
+      const compact=iso=>new Date(iso).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+      const params=new URLSearchParams({action:'TEMPLATE',text:m.title,
+        dates:compact(m.start)+'/'+compact(m.end),
+        details:'Propuesta ADPHOR QA. Confirmar manualmente en Google Calendar. Gerencia: '+(m.management?'requerida':'no requerida')});
+      window.open('https://calendar.google.com/calendar/render?'+params.toString(),'_blank','noopener,noreferrer');
+    };
+    item.append(edit,cancel,google);
    }
    list.append(item);
   }
