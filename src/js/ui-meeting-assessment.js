@@ -1,5 +1,5 @@
 import {buildClientMeetingTitle,meetingDurationHours} from './services/client-meeting-mapping.js';
-import {listDemoMeetings,scheduleDemoMeeting,cancelDemoMeeting} from './services/demo-calendar.js';
+import {listDemoMeetings,scheduleDemoMeeting,cancelDemoMeeting,historyDemoMeeting,decideDemoMeeting} from './services/demo-calendar.js';
 
 // This is an interactive local calendar in DEMO mode. Cloud mode remains assessment-only
 // until authenticated transactional booking is verified on isolated QA PostgreSQL.
@@ -36,7 +36,17 @@ export function mountMeetingAssessment(root,{repo,projectId}) {
         details:'Propuesta ADPHOR QA. Confirmar manualmente en Google Calendar. Gerencia: '+(m.management?'requerida':'no requerida')});
       window.open('https://calendar.google.com/calendar/render?'+params.toString(),'_blank','noopener,noreferrer');
     };
-    item.append(edit,cancel,google);
+    const history=document.createElement('button');history.type='button';history.textContent='Ver historial';history.onclick=()=>{const detail=document.createElement('pre');detail.textContent=historyDemoMeeting(projectId,m.id).map(h=>h.at+' · '+h.action+(h.reason?' · '+h.reason:'')).join('\\n');item.append(detail);history.disabled=true;};
+    item.append(edit,cancel,google,history);
+   }
+   if(m.status==='pending_management'){
+    const help=document.createElement('p');help.textContent='La decisión requiere un administrador o Gerencia; en esta demo no se comprueban roles reales.';item.append(help);
+    const reason=document.createElement('input');reason.placeholder='Motivo de la decisión';reason.maxLength=300;item.append(reason);
+    for(const [action,label] of [['approve','Aprobar (demo)'],['reject','Rechazar (demo)']]){
+      const button=document.createElement('button');button.type='button';button.textContent=label;
+      button.onclick=()=>{try{decideDemoMeeting(projectId,m.id,{role:'management',decision:action,reason:reason.value});status.textContent='Decisión registrada localmente, sin efectos externos.';render();}catch(e){status.textContent=e.message;}};
+      item.append(button);
+    }
    }
    list.append(item);
   }
