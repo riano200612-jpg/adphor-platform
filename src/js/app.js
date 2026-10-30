@@ -113,7 +113,7 @@ function reportPage() {
 function renderPage() {
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   if (state.page === 'meetings' && portoVisible()) {
-    mountMeetingAssessment($('page-content'),{repo:repo.mode==='demo'?{assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId});return;
+    mountMeetingAssessment($('page-content'),{repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId});return;
   }
   if (state.page === 'pqrs' && portoVisible()) {
     mountPqrs($('page-content'), {repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});return;
