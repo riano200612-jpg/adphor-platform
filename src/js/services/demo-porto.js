@@ -9,6 +9,7 @@ const read = () => {
 const save = rows => localStorage.setItem(key,JSON.stringify(rows));
 export function createDemoPortoRepository() {
   return {
+    localDemo:true,
     async list(projectId,status='') {
       return read().filter(x=>x.project_id===projectId && (!status || x.status===status))
         .sort((a,b)=>b.created_at.localeCompare(a.created_at));
@@ -22,7 +23,7 @@ export function createDemoPortoRepository() {
       }
       const row={id:crypto.randomUUID(),project_id:projectId,request_id:requestId,
         kind:fields.kind,subject:fields.subject.trim(),description:fields.description.trim(),
-        priority:'medio',status:'open',assignee:null,solution:'',version:1,
+        tower:String(fields.tower||'').trim(),apartment:String(fields.apartment||'').trim(),owner:String(fields.owner||'').trim(),priority:'medio',status:'open',assignee:null,solution:'',version:1,
         created_at:new Date().toISOString(),history:[{occurred_at:new Date().toISOString(),old_status:null,new_status:'open'}],
         responses:[]};
       save([row,...read()]);return row;
