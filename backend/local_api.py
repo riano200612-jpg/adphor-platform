@@ -1,4 +1,5 @@
 """Local ASGI API. Rules have no credentials; a separate writer only inserts runs."""
+from backend.src.adphor_ai.mfa_guard import require_enrolled_mfa
 import asyncio
 import os
 from contextlib import asynccontextmanager
@@ -81,6 +82,7 @@ async def identity(request: Request, credentials: Annotated[HTTPAuthorizationCre
     user = await call(request, credentials.credentials, "/auth/v1/user")
     if not isinstance(user, dict) or not user.get("id"):
         raise HTTPException(401, "Sesión inválida.")
+    require_enrolled_mfa(user, credentials.credentials)
     return {"id": user["id"], "token": credentials.credentials}
 
 

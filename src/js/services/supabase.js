@@ -1,3 +1,4 @@
+import { createManagedMfa } from './managed-mfa.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
@@ -6,6 +7,11 @@ import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
+  const mfa = createManagedMfa(client.auth);
+  async function finishLogin(id) {
+    const profile=check(await client.from('profiles').select('name').eq('id',id).single());
+    user={id,name:profile.name};return user;
+  }
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -66,12 +72,16 @@ export function createCloudRepository(url, key) {
     async login({ email, password }) {
       const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
       const data = check(await client.auth.signInWithPassword({ email: loginEmail, password }));
-      const profile = check(await client.from('profiles').select('name').eq('id', data.user.id).single());
-      user = { id: data.user.id, name: profile.name };
-      return user;
+      user=null;
+      try {
+        if(await mfa.begin(data.user.id))return {mfaRequired:true};
+        return await finishLogin(data.user.id);
+      } catch(error) {await client.auth.signOut();throw error;}
     },
-    async logout() { check(await client.auth.signOut()); user = null; },
+    async completeMfa(code) {return finishLogin(await mfa.complete(code));},
+    async logout() { mfa.clear();check(await client.auth.signOut()); user = null; },
     async load() {
+      if(!user)throw Error('Completa la autenticación.');
       const results = await Promise.all([
         allPages(() => client.from('projects').select('*').order('id')),
         allPages(() => client.from('memberships').select('project_id,user_id,role,profiles(name)').order('project_id').order('user_id')),

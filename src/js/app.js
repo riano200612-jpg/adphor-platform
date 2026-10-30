@@ -44,6 +44,9 @@ function reportError(error) { toast(error.message || 'No se pudo completar la op
 function loginScreen() {
   root.innerHTML = `<main id="main" class="login-shell"><section class="login-story"><div class="brand">${icon('building')} ADPHOR<span>S.A.S.</span></div><div><p class="eyebrow">ADMINISTRACIÓN DE PROPIEDAD HORIZONTAL</p><h1>Cada novedad,<br>en buenas manos.</h1><p>Un equipo conectado. Un responsable por tarea.<br>El mantenimiento de tus copropiedades, bajo control.</p><div class="login-steps"><span>01 · Registrar</span><span>02 · Atender</span><span>03 · Verificar</span></div></div><small>Gestión operativa · Copropiedades y áreas de trabajo</small></section><section class="login-form-wrap"><form id="login-form"><span class="app-mark">${icon('building-shield')}</span><p class="eyebrow">BIENVENIDO A ADPHOR</p><h2>Tu centro de operaciones</h2><p class="muted">${repo.mode === 'demo' ? 'Explora el flujo completo con un perfil de prueba.' : 'Ingresa con la cuenta asignada por tu administrador.'}</p>${invalidConfig ? '<p class="notice danger">La configuración del servicio está incompleta. Completa ambas variables de Supabase antes de ingresar.</p>' : repo.mode === 'demo' ? `<div class="notice"><strong>Demostración local</strong><br>Los datos se guardan solo en este navegador. Usa información y fotografías de prueba.</div><label>Perfil de demostración<select name="profile">${DEMO_USERS.map(u => option(u.id, `${u.name} · ${ROLES[u.role]}`, '')).join('')}</select></label>` : '<label>Correo o usuario<input name="email" type="text" autocomplete="username" required></label><label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>'}<p id="login-error" role="alert" class="error"></p><button class="btn primary full" ${invalidConfig ? 'disabled' : ''}>${repo.mode === 'demo' ? 'Explorar demostración' : 'Ingresar'} ${icon('arrow-right')}</button><p class="login-foot">${repo.mode === 'demo' ? 'Puedes cambiar de perfil cerrando la sesión.' : '¿Necesitas una cuenta? Contacta al administrador de tu copropiedad.'}</p></form></section></main>`;
 }
+function mfaScreen() {
+  root.innerHTML='<main id="main" class="login-shell"><section class="login-form-wrap"><form id="mfa-form"><h2>Verificación adicional</h2><p>Ingresa el código de tu aplicación autenticadora.</p><label>Código<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label><p class="error" role="alert"></p><button type="submit">Verificar</button><button type="button" data-action="cancel-mfa">Volver al acceso</button></form></section></main>';
+}
 async function refresh() {
   const data = await repo.load();
   Object.assign(state, data);
@@ -158,15 +161,20 @@ async function submit(event) {
   event.preventDefault();
   if (busy) return;
   const form = event.target;
-  if (!['login-form','new-case','case-action'].includes(form.id)) return;
+  if (!['login-form','mfa-form','new-case','case-action'].includes(form.id)) return;
   const errorBox = form.querySelector('.error'); errorBox.textContent = '';
   const submitBtn = form.querySelector('button:not([type="button"])');
   busy = true; submitBtn.disabled = true; const label = submitBtn.innerHTML; submitBtn.textContent = 'Guardando…';
   try {
     const input = Object.fromEntries(new FormData(form));
     if (form.id === 'login-form') {
-      state.user = await repo.login(input);
+      const result = await repo.login(input);
+      if(result.mfaRequired) {mfaScreen();return;}
+      state.user = result;
       await refresh(); state.page = 'dashboard'; state.filters = {}; shell();
+    } else if(form.id === 'mfa-form') {
+      state.user=await repo.completeMfa(input.code);form.reset();
+      await refresh();state.page='dashboard';state.filters={};shell();
     } else {
       const files = [...(form.elements.photos?.files || [])]; validateFiles(files);
       const action = form.id === 'new-case' ? 'create' : input.action;
@@ -187,6 +195,7 @@ document.addEventListener('submit', submit);
 document.addEventListener('click', async event => {
   const el = event.target.closest('button,a[data-page]'); if (!el || busy) return;
   try {
+    if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;loginScreen();return;}
     if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
     if (el.dataset.view) { state.view = el.dataset.view; renderPage(); return; }
