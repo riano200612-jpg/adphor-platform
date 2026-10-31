@@ -39,7 +39,7 @@ def build_evidence_router(*, identity_dependency, membership_checker, http_get, 
             raise HTTPException(413, "Archivo demasiado grande.")
         # Do not read or store any bytes until membership and case existence are verified.
         await membership_checker(request, actor, project_id,
-                                 ("admin", "coordinator", "technician", "viewer"))
+                                 ("admin", "coordinator", "technician"))
         table = "pilot_pqrs" if kind == "pqrs" else "tickets"
         rows = await http_get(request, actor["token"], f"/rest/v1/{table}",
                               params={"select": "id", "project_id": f"eq.{project_id}",
