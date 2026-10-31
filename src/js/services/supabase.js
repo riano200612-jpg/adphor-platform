@@ -8,7 +8,7 @@ import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
-  const mfa = createManagedMfa(client.auth);
+  const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true'});
   async function finishLogin(id) {
     const profile=check(await client.from('profiles').select('name').eq('id',id).single());
     user={id,name:profile.name};return user;
