@@ -9,3 +9,12 @@ test('fallback is neutral until client avatar is authorized',()=>{
  assert.doesNotMatch(loginAvatarMarkup(''),/https?:/);
  assert.match(loginAvatarMarkup('/assets/branding/miss-adphor.webp'),/<img/);
 });
+
+test('original corporate portrait is a real bundled WebP asset',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const photo=readFileSync(new URL('../public/assets/branding/miss-adphor.webp',import.meta.url));
+ assert.equal(photo.subarray(0,4).toString(),'RIFF');
+ assert.equal(photo.subarray(8,12).toString(),'WEBP');
+ const app=readFileSync(new URL('../src/js/app.js',import.meta.url),'utf8');
+ assert.match(app,/VITE_ADPHOR_AVATAR_PATH \|\| '\/assets\/branding\/miss-adphor\.webp'/);
+});
