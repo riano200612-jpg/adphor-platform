@@ -20,3 +20,11 @@ test('user can remove selected attachments and safely submit without upload',()=
  assert.match(ui,/evidenceInput\.value=''/);
  assert.match(ui,/clearEvidence\.hidden=!files\.length/);
 });
+
+test('local previews do not upload files and revoke object URLs on change or removal',()=>{
+ assert.match(ui,/URL\.createObjectURL\(file\)/);
+ assert.match(ui,/URL\.revokeObjectURL\(url\)/);
+ assert.match(ui,/clearPreviews\(\);/);
+ assert.match(ui,/pqrs-evidence-preview/);
+ assert.match(ui,/file\.type\.startsWith\('video\/\)/);
+});
