@@ -89,3 +89,25 @@
 
 /* Specificity exceeds .login-story p:not(.eyebrow) inherited light text. */
 .login-story p.miss-adphor-bubble:not(.eyebrow){color:#183149;background:#fff}
+
+
+/* Miss ADPHOR: contextual assistant integrated into the authenticated workspace */
+#miss-adphor-chat-root{position:fixed;right:20px;bottom:18px;z-index:50;font-size:14px}
+.miss-chat{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.miss-chat-toggle{display:flex;align-items:center;gap:10px;padding:7px 17px 7px 8px;border:1px solid #d2b650;border-radius:999px;background:#1b405c;color:#fff;font-weight:700;box-shadow:0 8px 30px #152f4770;cursor:pointer}
+.miss-chat-toggle img{width:42px;height:42px;object-fit:cover;object-position:top center;border-radius:50%;background:white}
+.miss-chat-panel{width:min(390px,calc(100vw - 28px));max-height:min(650px,75vh);display:flex;flex-direction:column;gap:10px;background:#fff;color:#20394e;border-radius:20px;padding:19px;border:1px solid #d8e0e8;box-shadow:0 16px 55px #11283f55}
+.miss-chat-panel[hidden]{display:none}
+.miss-chat-panel h2{font-size:20px;color:#264b6b;margin:0}
+.miss-chat-disclaimer{font-size:12px;color:#475d6d;margin:0}
+.miss-chat-messages{flex:1;min-height:90px;max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.miss-chat-msg{padding:10px 12px;border-radius:12px;margin:0;line-height:1.45;overflow-wrap:anywhere;white-space:pre-wrap}
+.miss-chat-msg.user{background:#ecf2f5;color:#20394e;align-self:flex-end}
+.miss-chat-msg.assistant{background:#f8f5e9;color:#243e51;align-self:flex-start}
+.miss-chat-form{display:flex;flex-direction:column;gap:8px}
+.miss-chat-form label{font-weight:600}
+.miss-chat-form input{width:100%;box-sizing:border-box}
+.miss-chat-form button,.miss-chat-jump{padding:10px 13px;border:0;border-radius:10px;background:#264b6b;color:#fff;font-weight:650;cursor:pointer}
+.miss-chat-quick{display:flex;gap:6px;flex-wrap:wrap;margin:0}
+.miss-chat-quick button{border:1px solid #b59c21;border-radius:20px;color:#264b6b;background:#fff;padding:7px 10px;cursor:pointer}
+@media(max-width:600px){#miss-adphor-chat-root{right:9px;bottom:10px}.miss-chat-panel{max-height:66vh;padding:12px}.miss-chat-toggle img{width:34px;height:34px}}
