@@ -50,9 +50,17 @@ def build_evidence_router(*, identity_dependency, membership_checker, http_get, 
                                       "id": f"eq.{case_id}", "limit": "1"})
         if not isinstance(rows, list) or len(rows) != 1:
             raise HTTPException(404, "Caso inexistente o no autorizado.")
-        payload = await request.body()
-        if not payload or len(payload) > MAX_BYTES:
-            raise HTTPException(413, "Archivo vacío o demasiado grande.")
+        # Read in bounded chunks: Content-Length may be absent or dishonest.
+        chunks = []
+        size = 0
+        async for chunk in request.stream():
+            size += len(chunk)
+            if size > MAX_BYTES:
+                raise HTTPException(413, "Archivo demasiado grande.")
+            chunks.append(chunk)
+        if size == 0:
+            raise HTTPException(413, "Archivo vacío.")
+        payload = b"".join(chunks)
         if not matches_evidence_signature(mime, payload):
             raise HTTPException(415, "El contenido no corresponde al tipo de archivo declarado.")
         key = f"{project_id}/{kind}/{case_id}/{uuid4().hex}.{CONTENT_TYPES[mime]}"
