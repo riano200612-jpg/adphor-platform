@@ -111,3 +111,11 @@
 .miss-chat-quick{display:flex;gap:6px;flex-wrap:wrap;margin:0}
 .miss-chat-quick button{border:1px solid #b59c21;border-radius:20px;color:#264b6b;background:#fff;padding:7px 10px;cursor:pointer}
 @media(max-width:600px){#miss-adphor-chat-root{right:9px;bottom:10px}.miss-chat-panel{max-height:66vh;padding:12px}.miss-chat-toggle img{width:34px;height:34px}}
+
+/* Hour-by-hour meeting proposals in calendar day view. */
+.calendar-grid.day{display:block;max-width:100%}
+.calendar-grid.day .calendar-day{display:block;width:100%;text-align:left;margin-bottom:8px}
+.calendar-day-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-top:10px}
+.calendar-slot{border:1px solid #bed0db;border-radius:10px;padding:12px;text-align:left;background:#fff;color:#20394e;cursor:pointer;min-height:46px}
+.calendar-slot:hover:not(:disabled){border-color:#a78b20;background:#fffaf0}
+.calendar-slot.occupied{border-color:#e4dcd6;background:#f4f1ef;color:#5b666d;cursor:not-allowed}
