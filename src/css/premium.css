@@ -27,3 +27,18 @@
 .qa-staff-carousel:focus-within{scroll-behavior:smooth}
 @media(max-width:600px){.qa-staff-card{flex-basis:154px}.qa-staff-carousel{gap:10px}}
 @media(prefers-reduced-motion:reduce){.qa-staff-carousel{scroll-behavior:auto}}
+
+
+/* José Portal Team identity: original avatar asset stays private pending authorized import. */
+.client-avatar-frame{width:min(260px,75%);display:flex;flex-direction:column;align-items:center;gap:10px;padding:17px;border:1px solid #e5c86a66;border-radius:22px;background:#ffffff12;box-shadow:inset 0 1px #fff3,0 10px 28px #02152430;margin:18px 0;color:#f9f4e3}
+.client-avatar-symbol{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#456f8a,#16344e);border:3px solid #b59c21;color:#f8ebbc;font-size:36px}
+.client-avatar-frame strong{letter-spacing:.05em;font-size:13px;font-weight:650}
+.qa-guided-workflow{padding:22px 24px;margin:16px 0 22px;border:1px solid #d7e2eb;border-radius:18px;background:linear-gradient(125deg,#ffffff,#f4f8fa);box-shadow:0 8px 20px #264b6b0a}
+.qa-guided-workflow h2{font-size:20px;margin:0 0 4px;color:#264b6b}
+.qa-guided-workflow p{font-size:13px;color:#526575;margin:0 0 16px}
+.qa-guided-workflow ol{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0;padding:0}
+.qa-guided-workflow li{display:flex;flex-direction:column;gap:5px;padding:14px;background:#fff;border:1px solid #e1e7ec;border-top:3px solid #b59c21;border-radius:12px;min-width:0}
+.qa-guided-workflow li strong{font-size:13px;color:#264b6b}
+.qa-guided-workflow li span{font-size:12px;color:#526575;line-height:1.5}
+@media(max-width:850px){.qa-guided-workflow ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.qa-guided-workflow ol{grid-template-columns:1fr}.client-avatar-frame{width:100%}}
