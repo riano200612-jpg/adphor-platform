@@ -33,7 +33,8 @@ class EvidenceQaTests(unittest.TestCase):
         self.client=TestClient(app)
         self.path="/qa/projects/qa-prop/cases/case-1/evidence"
         self.env=patch.dict(os.environ,{"ADPHOR_ISOLATED_QA":"true",
-                  "ADPHOR_QA_EVIDENCE_BUCKET":"adphor-private-qa"})
+                  "ADPHOR_QA_EVIDENCE_BUCKET":"adphor-private-qa",
+                  "ADPHOR_QA_PRIVATE_BUCKET_VERIFIED":"true"})
         self.env.start()
     def tearDown(self):
         self.env.stop()
