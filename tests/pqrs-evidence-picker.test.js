@@ -26,5 +26,5 @@ test('local previews do not upload files and revoke object URLs on change or rem
  assert.match(ui,/URL\.revokeObjectURL\(url\)/);
  assert.match(ui,/clearPreviews\(\);/);
  assert.match(ui,/pqrs-evidence-preview/);
- assert.match(ui,/file\.type\.startsWith\('video\/\)/);
+ assert.ok(ui.includes("file.type.startsWith('video/')"));
 });
