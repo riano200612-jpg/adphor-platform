@@ -26,3 +26,11 @@
 - Calendar, PQRS, Recorridos, Mantenimiento y Enjambre unidos por identidad y copropiedad, con persistencia y pruebas E2E.
 - Cloudflare Access comprobado y CI exitoso sobre SHA desplegado.
 - Para pruebas de correo/WhatsApp: simulación restringida a destinos QA, sin envíos reales.
+
+## Conciliación puntual de la fuente Master (solo metadatos, sin datos personales)
+- Hoja `Copropiedades`: **40 filas no vacías** en `A1:AD1000` de `master_portalADPHOR_demo_murano`.
+- Hoja `Delegados`: **45 filas no vacías** en el mismo rango.
+- Hoja `Reuniones`: **16 filas no vacías** en el mismo rango.
+- Estos conteos identifican **la fuente concreta consultada**, no todos los respaldos y no equivalen a registros válidos, únicos o elegibles. Reconciliar IDs y otros maestros antes de importar.
+- Supabase ADPHOR actual: **1 proyecto**. Diferencia no conciliada; **0 registros certificados como migrados de esta fuente a QA aislado**.
+- Copropiedades/delegados y registros completos de reuniones: NO almacenados en GitHub ni en datos de demostración.
