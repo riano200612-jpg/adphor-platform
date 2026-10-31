@@ -56,3 +56,8 @@
 @media(max-width:480px){.pqrs-local-preview{width:110px;height:90px}}
 
 .client-avatar-image{width:96px;height:96px;object-fit:contain;border-radius:50%;background:#fff;border:2px solid #b59c21;box-shadow:0 8px 24px #0002}
+
+/* José's original Miss ADPHOR is a portrait, not a circular icon. */
+.client-avatar-frame:has(.client-avatar-image){width:min(300px,90%);padding:12px;background:transparent;box-shadow:none;border-color:#b59c2160}
+.client-avatar-image{width:min(220px,100%);height:270px;object-fit:contain;object-position:center;border:0;border-radius:0;background:transparent;box-shadow:none}
+@media(max-width:700px){.client-avatar-frame:has(.client-avatar-image){width:195px;margin:8px auto}.client-avatar-image{height:170px;width:140px}}
