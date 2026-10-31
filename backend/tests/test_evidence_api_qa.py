@@ -62,4 +62,22 @@ class EvidenceQaTests(unittest.TestCase):
         r=self.client.post(self.path,data=b"<html>",headers={"content-type":"text/html"})
         self.assertEqual(r.status_code,415)
         self.assertEqual(len(self.storage.calls),0)
+    def test_unverified_bucket_blocks_before_membership_or_storage(self):
+        with patch.dict(os.environ,{"ADPHOR_QA_PRIVATE_BUCKET_VERIFIED":"false"}):
+            r=self.client.post(self.path,data=b"testbytes",
+                               headers={"content-type":"image/png"})
+        self.assertEqual(r.status_code,503)
+        self.assertEqual(self.membership_calls,0)
+        self.assertEqual(self.storage.calls,[])
+    def test_oversized_declared_length_rejected_before_storage(self):
+        r=self.client.post(self.path,data=b"testbytes",
+                           headers={"content-type":"image/png","content-length":str(20*1024*1024+1)})
+        self.assertEqual(r.status_code,413)
+        self.assertEqual(self.storage.calls,[])
+    def test_storage_response_does_not_pretend_metadata_persisted(self):
+        r=self.client.post(self.path,data=b"testbytes",
+                           headers={"content-type":"application/pdf"})
+        self.assertEqual(r.status_code,200)
+        self.assertIs(r.json()["metadata_linked"],False)
+        self.assertIs(r.json()["notifications_sent"],False)
 if __name__=="__main__": unittest.main()
