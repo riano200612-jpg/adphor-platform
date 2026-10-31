@@ -54,3 +54,5 @@
 .pqrs-evidence-preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .pqrs-local-preview{width:136px;height:104px;object-fit:cover;border-radius:10px;border:1px solid #d5e0e7;background:#132d42}
 @media(max-width:480px){.pqrs-local-preview{width:110px;height:90px}}
+
+.client-avatar-image{width:96px;height:96px;object-fit:contain;border-radius:50%;background:#fff;border:2px solid #b59c21;box-shadow:0 8px 24px #0002}
