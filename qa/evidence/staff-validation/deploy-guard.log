@@ -1,0 +1,10 @@
+✔ unapproved cloud build blocked: CF_PAGES (266.04178ms)
+✔ unapproved cloud build blocked: WORKERS_CI (949.963176ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1398.960615
