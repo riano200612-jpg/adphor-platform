@@ -24,8 +24,16 @@ export function answerMissAdphor(question, context={}) {
  if(/pqrs|peticion|reclamo|queja|sugerencia/.test(q))return go('pqrs','Abre PQRS para registrar o consultar solicitudes. La carga real de archivos sigue pendiente de habilitar Storage privado; no confirmaré adjuntos que no se hayan guardado.');
  if(/reunion|calendario|agenda|meet/.test(q))return go('meetings','Abre Reuniones para ver la agenda disponible. La sincronización con el calendario original de José todavía no está certificada.');
  if(/recorrido|inspeccion|visita/.test(q))return go('recorridos','En Recorridos puedes registrar una novedad, asignar seguimiento según tu rol y verificar avances. Las evidencias multimedia requieren almacenamiento privado.');
- if(/enjambre|agente|inteligencia|informe ia|modelo/.test(q))return go('agent-history','El enjambre analiza operaciones, evidencias e informes mediante reglas o modelos según la ejecución. Consulta su historial para verificar fuentes, método y decisiones. Ningún agente puede cerrar o enviar automáticamente.');
+ if(/enjambre|agente|inteligencia|informe ia|modelo|miss adphor/.test(q)){
+  if(!['admin','coordinator'].includes(role))return {text:'Soy Miss ADPHOR, la interfaz de asistencia de la plataforma. Puedo orientarte sobre tus solicitudes autorizadas, pero los análisis internos del enjambre son exclusivos de Administración y Coordinación. Mis respuestas actuales son reglas, no un modelo entrenado.',page:null};
+  return go('agent-history','Soy Miss ADPHOR, la interfaz unificada del enjambre de Operaciones, Análisis e Informes. Puedes consultar ejecuciones y borradores autorizados en Historial del enjambre. El análisis por reglas está disponible; no hay un modelo entrenado validado en producción. Ningún agente cierra casos ni envía informes automáticamente.');
+ }
  if(/informe|reporte|grafica/.test(q))return go('reports','Abre Informes para consultar los indicadores disponibles de la copropiedad seleccionada. Comprueba período y origen antes de presentar resultados.');
+ if(/soy (propietario|copropietario)|residente|administracion|gerencia|gerente|coordinador|tecnico/.test(q)){
+   if(['admin','coordinator'].includes(role))return {text:'Te acompaño en la gestión administrativa de '+name+'. Puedes consultar bitácoras, reuniones, indicadores y el historial de análisis. Las decisiones finales requieren autorización humana.',page:null};
+   if(role==='technician')return {text:'Te ayudo a revisar tareas y novedades de '+name+'. Las asignaciones y cierres requieren los permisos de tu cargo.',page:null};
+   return {text:'Puedo guiarte por las opciones que tu sesión tenga autorizadas en '+name+'. No tengo acceso a expedientes o análisis de otras personas.',page:null};
+ }
  if(/permiso|rol|puedo hacer/.test(q))return {text:`Tu rol actual es ${role}. Los permisos de escritura se verifican en el backend; yo solo puedo orientarte.`,page:null};
  return {text:'Puedo ayudarte con Bitácora, PQRS, Recorridos, Reuniones, Informes y el enjambre. No tengo una respuesta verificada para esa consulta; reformúlala o abre el módulo correspondiente.',page:null};
 }
