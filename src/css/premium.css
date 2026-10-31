@@ -83,3 +83,6 @@
 .qa-recorrido-journey-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 @media(max-width:830px){.qa-recorrido-journey ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.qa-recorrido-journey ol{grid-template-columns:1fr}.qa-recorrido-journey{padding:17px}}
+
+/* Override login-story generic paragraph color for WCAG AA contrast. */
+.login-story .miss-adphor-bubble{color:#183149;background:#fff;border-color:#c4b063}
