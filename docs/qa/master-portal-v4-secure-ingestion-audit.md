@@ -36,3 +36,35 @@ El archivo contiene decenas de miles de filas **serializadas** en catálogos. Es
 
 ## Estado de esta entrega
 **Inventario del archivo realizado; cero filas importadas por esta operación.** No se modificó Supabase ni Google Apps Script, no se enviaron notificaciones y no se publicó contenido personal.
+
+## Conteo estructural de filas con valor (incluye encabezados)
+Inspección de valores serializados en XLSX, **no** validación de registros únicos ni activos. Celdas con texto inline o fórmulas sin resultado cacheado pueden requerir revisión adicional.
+
+| Hoja | Filas con valor |
+|---|---:|
+| 0_Copropiedades | 41 |
+| 0_Info Copropiedades | 41 |
+| 1_Colaboradores | 45 |
+| Residentes_History | 18 |
+| Reuniones | 17 |
+| Historial Edicion Reuniones | 1 |
+| Residentes | 6 |
+| Copia de Reuniones | 470 |
+| Métricas Reuniones Meet | 1 |
+| Visitas | 23 |
+| PQRS | 31 |
+| PQRS_Master | 38 |
+| PreguntasRecuperacion | 13 |
+| Hoja 11 | 2 |
+| Copia de PQRS_Master | 10 |
+| PQRS_Log | 150 |
+| Hoja 7 | 41 |
+| Historial PQRS | 0 |
+| Temp | 13 |
+| Logs | 0 |
+| Historial Ediciones Test | 41 |
+| Archive_Registros | 17 |
+| Registros_Test | 55 |
+| Copia de Archive_Registros | 17 |
+
+La diferencia entre `Reuniones` (17) y `Copia de Reuniones` (470) **exige** conciliación histórica; no fusionar por concatenación. `PreguntasRecuperacion` es confidencial y se excluye del pipeline de importación.
