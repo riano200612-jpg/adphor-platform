@@ -6,6 +6,7 @@ import os
 import re
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request
+from .evidence_signatures import matches_evidence_signature
 
 MAX_BYTES = 20 * 1024 * 1024
 CONTENT_TYPES = {
@@ -52,6 +53,8 @@ def build_evidence_router(*, identity_dependency, membership_checker, http_get, 
         payload = await request.body()
         if not payload or len(payload) > MAX_BYTES:
             raise HTTPException(413, "Archivo vacío o demasiado grande.")
+        if not matches_evidence_signature(mime, payload):
+            raise HTTPException(415, "El contenido no corresponde al tipo de archivo declarado.")
         key = f"{project_id}/{kind}/{case_id}/{uuid4().hex}.{CONTENT_TYPES[mime]}"
         headers = {"apikey": publishable_key, "Authorization": "Bearer " + actor["token"],
                    "Content-Type": mime, "x-upsert": "false"}
