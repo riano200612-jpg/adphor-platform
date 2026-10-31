@@ -89,6 +89,18 @@ class EvidenceQaTests(unittest.TestCase):
                            headers={"content-type":"image/png","content-length":str(20*1024*1024+1)})
         self.assertEqual(r.status_code,413)
         self.assertEqual(self.storage.calls,[])
+    def test_oversize_body_is_rejected_even_without_trusting_declared_size(self):
+        # A real request with oversized bytes must fail before Storage receives them.
+        oversized = PNG_QA + b"x" * (20 * 1024 * 1024)
+        r = self.client.post(self.path, content=oversized,
+                             headers={"content-type": "image/png"})
+        self.assertEqual(r.status_code, 413)
+        self.assertEqual(self.storage.calls, [])
+    def test_zero_length_body_rejected(self):
+        r = self.client.post(self.path, content=b"",
+                             headers={"content-type": "image/png"})
+        self.assertEqual(r.status_code, 413)
+        self.assertEqual(self.storage.calls, [])
     def test_storage_response_does_not_pretend_metadata_persisted(self):
         r=self.client.post(self.path,data=PNG_QA,
                            headers={"content-type":"image/png"})
