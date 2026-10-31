@@ -35,6 +35,7 @@ class EvidenceQaTests(unittest.TestCase):
         self.client=TestClient(app)
         self.path="/qa/projects/qa-prop/cases/case-1/evidence"
         self.env=patch.dict(os.environ,{"ADPHOR_ISOLATED_QA":"true",
+                  "ADPHOR_QA_EVIDENCE_UPLOAD_ENABLED":"true",
                   "ADPHOR_QA_EVIDENCE_BUCKET":"adphor-private-qa",
                   "ADPHOR_QA_PRIVATE_BUCKET_VERIFIED":"true"})
         self.env.start()
@@ -68,6 +69,12 @@ class EvidenceQaTests(unittest.TestCase):
         r=self.client.post(self.path,data=b"<html>",headers={"content-type":"text/html"})
         self.assertEqual(r.status_code,415)
         self.assertEqual(len(self.storage.calls),0)
+    def test_upload_disabled_by_default(self):
+        with patch.dict(os.environ,{"ADPHOR_QA_EVIDENCE_UPLOAD_ENABLED":"false"}):
+            r=self.client.post(self.path,data=b"testbytes",headers={"content-type":"image/png"})
+        self.assertEqual(r.status_code,503)
+        self.assertEqual(self.membership_calls,0)
+        self.assertEqual(self.storage.calls,[])
     def test_unverified_bucket_blocks_before_membership_or_storage(self):
         with patch.dict(os.environ,{"ADPHOR_QA_PRIVATE_BUCKET_VERIFIED":"false"}):
             r=self.client.post(self.path,data=b"testbytes",
