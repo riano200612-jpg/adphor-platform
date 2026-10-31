@@ -9,3 +9,10 @@ test('day navigation increments one day and retains selected property scope',()=
  assert.match(s,/getRows\(\)/);
  assert.match(s,/form\.elements\.start\.value=key\+'T09:00'/);
 });
+
+test('day agenda offers hourly proposals and prevents booking directly on occupied slots',()=>{
+ assert.match(s,/for\(let hour=7;hour<=20;hour\+\+\)/);
+ assert.match(s,/button\.disabled=Boolean\(occupied\.length\)/);
+ assert.match(s,/form\.elements\.start\.value=day\+'T'\+time/);
+ assert.match(s,/calendar-day-slots/);
+});
