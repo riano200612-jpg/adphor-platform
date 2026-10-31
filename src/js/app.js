@@ -61,7 +61,7 @@ async function refresh() {
   state.lastSync = new Date();
 }
 function shell() {
-  const nav = [['dashboard','chart-simple','Resumen'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
+  const nav = [['dashboard','chart-simple','Resumen'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   if (portoVisible()) nav.splice(1,0,['meetings','calendar','Reuniones'],['pqrs','inbox','PQRS']);
   if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
@@ -125,6 +125,18 @@ function renderPage() {
   if (state.page === 'consultation' && import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') {
     $('page-content').innerHTML = '<div id="tenant-consultation"></div>';
     mountTenantConsultation($('tenant-consultation'), {repo, projectId: state.projectId});
+    return;
+  }
+  if (state.page === 'recorridos') {
+    const people=team();
+    const assigned=rows();
+    $('page-content').innerHTML = heading('Recorridos y novedades','Registra hallazgos por área y asigna seguimiento hasta la verificación y cierre.',newButton())
+      + '<section class="panel"><p class="eyebrow">EQUIPO RESPONSABLE</p><h2>Responsables de atención</h2><p>Selecciona una novedad para consultar o asignar seguimiento según tu rol.</p><div class="qa-staff-carousel" aria-label="Equipo disponible">'
+      + people.map(p=>'<div class="qa-staff-card"><span class="qa-staff-avatar" aria-hidden="true">'+esc(initials(p.name||'Equipo'))+'</span><strong>'+esc(p.name||'Equipo')+'</strong><small>'+esc(p.role||'Personal autorizado')+'</small></div>').join('')
+      + '</div></section>'
+      + '<section class="panel"><h2>Novedades para seguimiento</h2><p class="muted">Se muestran registros de la copropiedad seleccionada. Los cierres requieren verificación humana.</p>'
+      + (assigned.length?'<div class="attention-list">'+assigned.slice(0,20).map(t=>'<button data-ticket="'+esc(t.id)+'"><strong>'+esc(t.title)+'</strong><small>'+esc(person(t.assignee))+'</small>'+badge(t)+'</button>').join('')+'</div>':empty('Todavía no hay novedades registradas.',newButton()))
+      + '<p class="notice">Audio y video: pendientes de almacenamiento privado y control de permisos. Utiliza las evidencias admitidas por la bitácora actual.</p></section>';
     return;
   }
   if (state.page === 'agent-history') {
