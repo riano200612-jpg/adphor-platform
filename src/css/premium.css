@@ -17,3 +17,13 @@
 @media(max-width:580px){.sidebar nav button{flex:0 0 auto;min-width:66px;padding:10px 9px}.sidebar nav button:last-child{min-width:130px}}
 .badge{color:#465f6e}.badge.status-0{color:#735214}.badge.status-1{color:#315e7d}.badge.status-2{color:#694c8c}.badge.status-3{color:var(--success)}th,td small,.report-numbers span,.report-title p:not(.eyebrow),.report-note{color:#536575}.report-numbers span{font-size:12px}th{font-size:12px}.executive-header{border-color:var(--brand)}.table-title{font-size:13px}.stat small{font-size:11px}.section-heading p,.card-location,.mini-user,.due{font-size:11px}
 .pqrs-actions{position:static;backdrop-filter:none}.meeting-page button[aria-pressed=true]{background:var(--brand);color:white;border-color:var(--brand)}.pqrs-cases article{overflow-wrap:anywhere}.agent-state{display:inline-block;padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:12px;background:#edf2f6;color:var(--brand)}.agent-state.pending{background:#f8f1d9;color:#725a13}.agent-state.approved{background:#e5f0e9;color:#285840}.agent-state.rejected,.agent-state.error{background:#f8e9e4;color:#8d402e}
+
+
+/* Recorridos / staff selector: privacy-preserving, responsive ADPHOR style */
+.qa-staff-carousel{display:flex;gap:14px;overflow-x:auto;padding:14px 2px 18px;scroll-snap-type:x mandatory}
+.qa-staff-card{flex:0 0 176px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;scroll-snap-align:start;padding:18px 12px;border:1px solid #d7e1e9;border-radius:18px;background:linear-gradient(150deg,#ffffffed,#edf3f7e5);box-shadow:0 8px 20px #264b6b0b;color:#264b6b}
+.qa-staff-card small{font-size:12px;color:#506476}
+.qa-staff-avatar{display:grid;place-items:center;width:62px;height:62px;border:3px solid #b59c21;border-radius:50%;background:#264b6b;color:white;font-size:18px;font-weight:700}
+.qa-staff-carousel:focus-within{scroll-behavior:smooth}
+@media(max-width:600px){.qa-staff-card{flex-basis:154px}.qa-staff-carousel{gap:10px}}
+@media(prefers-reduced-motion:reduce){.qa-staff-carousel{scroll-behavior:auto}}
