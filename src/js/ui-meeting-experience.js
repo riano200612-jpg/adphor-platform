@@ -37,9 +37,26 @@ export function enhanceMeetings(root,{form,list,projectName,demo,getRows}){
  function draw(){const grid=calendar.querySelector('[data-calendar]');grid.replaceChildren();if(!demo){grid.textContent='Agenda no disponible. Se requiere conexión validada a PostgreSQL QA.';return;}
  calendar.querySelector('[data-month]').textContent=new Intl.DateTimeFormat('es-CO',{month:'long',year:'numeric',timeZone:'UTC'}).format(cursor);
  const start=new Date(cursor);if(mode==='month')start.setUTCDate(1);if(mode!=='day')start.setUTCDate(start.getUTCDate()-(start.getUTCDay()+6)%7);
- const wrap=document.createElement('div');wrap.className='calendar-grid '+mode;for(const day of ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']){const n=document.createElement('div');n.className='calendar-weekday';n.textContent=day;wrap.append(n);}
+ const wrap=document.createElement('div');wrap.className='calendar-grid '+mode;if(mode!=='day')for(const day of ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']){const n=document.createElement('div');n.className='calendar-weekday';n.textContent=day;wrap.append(n);}
  const rows=getRows().filter(r=>r.status!=='cancelled'&&r.status!=='rejected');
- for(let i=0;i<(mode==='month'?42:mode==='week'?7:1);i++){const d=new Date(start);d.setUTCDate(start.getUTCDate()+i);const key=d.toISOString().slice(0,10),b=document.createElement('button');b.type='button';b.className='calendar-day'+(d.getUTCMonth()!==cursor.getUTCMonth()?' outside':'')+(key===dateKey(new Date())?' today':'');b.textContent=String(d.getUTCDate());const events=rows.filter(r=>dateKey(r.start)===key);b.setAttribute('aria-label',`${key}, ${events.length} reuniones. Agendar`);for(const event of events.slice(0,2)){const badge=document.createElement('small');badge.textContent=event.title;badge.title=event.title;b.append(badge);}if(events.length>2){const n=document.createElement('small');n.textContent=`+${events.length-2} más`;b.append(n);}b.onclick=()=>{clear.click();open();form.elements.start.value=key+'T09:00';};wrap.append(b);}grid.append(wrap);}
+ for(let i=0;i<(mode==='month'?42:mode==='week'?7:1);i++){const d=new Date(start);d.setUTCDate(start.getUTCDate()+i);const key=d.toISOString().slice(0,10),b=document.createElement('button');b.type='button';b.className='calendar-day'+(d.getUTCMonth()!==cursor.getUTCMonth()?' outside':'')+(key===dateKey(new Date())?' today':'');b.textContent=String(d.getUTCDate());const events=rows.filter(r=>dateKey(r.start)===key);b.setAttribute('aria-label',`${key}, ${events.length} reuniones. Agendar`);for(const event of events.slice(0,2)){const badge=document.createElement('small');badge.textContent=event.title;badge.title=event.title;b.append(badge);}if(events.length>2){const n=document.createElement('small');n.textContent=`+${events.length-2} más`;b.append(n);}b.onclick=()=>{clear.click();open();form.elements.start.value=key+'T09:00';};wrap.append(b);}grid.append(wrap);
+ if(mode==='day'){
+  const day=start.toISOString().slice(0,10),slots=document.createElement('div');slots.className='calendar-day-slots';slots.setAttribute('aria-label','Horarios disponibles para solicitar');
+  const dayEvents=rows.filter(r=>dateKey(r.start)===day);
+  for(let hour=7;hour<=20;hour++){
+    const time=String(hour).padStart(2,'0')+':00';
+    const begin=bogotaInstant(day+'T'+time).getTime(),end=begin+60*60*1000;
+    const occupied=dayEvents.filter(r=>new Date(r.start).getTime()<end&&new Date(r.end).getTime()>begin);
+    const button=document.createElement('button');button.type='button';button.className='calendar-slot'+(occupied.length?' occupied':'');
+    button.textContent=time+(occupied.length?' · '+occupied.map(e=>e.title).join(', '):' · Solicitar reunión');
+    button.setAttribute('aria-label',time+(occupied.length?' ocupado; seleccionar otro horario':' disponible para propuesta de reunión'));
+    button.disabled=Boolean(occupied.length);
+    button.onclick=()=>{clear.click();open();form.elements.start.value=day+'T'+time;};
+    slots.append(button);
+  }
+  grid.append(slots);
+ }
+}
  calendar.querySelector('[data-prev]').onclick=()=>{mode==='month'?cursor.setUTCMonth(cursor.getUTCMonth()-1,1):cursor.setUTCDate(cursor.getUTCDate()-(mode==='day'?1:7));draw();};calendar.querySelector('[data-next]').onclick=()=>{mode==='month'?cursor.setUTCMonth(cursor.getUTCMonth()+1,1):cursor.setUTCDate(cursor.getUTCDate()+(mode==='day'?1:7));draw();};calendar.querySelector('[data-today]').onclick=()=>{cursor=new Date(dateKey(new Date())+'T12:00:00Z');draw();};calendar.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;calendar.querySelectorAll('[data-mode]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));draw();});
  show(0,false);oldPanel.hidden=true;draw();
  return {draw,open,reset(){show(0,false);oldPanel.hidden=true;root.querySelector('[data-schedule]').focus();}};
