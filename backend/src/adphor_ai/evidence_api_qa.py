@@ -23,6 +23,9 @@ def build_evidence_router(*, identity_dependency, membership_checker, http_get, 
         if (os.getenv("ADPHOR_ISOLATED_QA") != "true" or
             base_url.rstrip("/").endswith("oqizvirqjwbbhyyjpthq.supabase.co")):
             raise HTTPException(503, "Carga disponible solo en un entorno QA aislado.")
+        # Deployment owner must verify bucket.public=false and Storage RLS before opt-in.
+        if os.getenv("ADPHOR_QA_PRIVATE_BUCKET_VERIFIED") != "true":
+            raise HTTPException(503, "Políticas del bucket privado QA pendientes de validar.")
         bucket = os.getenv("ADPHOR_QA_EVIDENCE_BUCKET", "")
         if not re.fullmatch(r"[a-z0-9-]{3,63}", bucket):
             raise HTTPException(503, "Bucket privado QA no configurado.")
