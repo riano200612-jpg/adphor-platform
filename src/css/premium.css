@@ -86,3 +86,6 @@
 
 /* Override login-story generic paragraph color for WCAG AA contrast. */
 .login-story .miss-adphor-bubble{color:#183149;background:#fff;border-color:#c4b063}
+
+/* Specificity exceeds .login-story p:not(.eyebrow) inherited light text. */
+.login-story p.miss-adphor-bubble:not(.eyebrow){color:#183149;background:#fff}
