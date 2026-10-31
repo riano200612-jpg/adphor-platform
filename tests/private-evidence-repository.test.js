@@ -9,7 +9,7 @@ test('requires verified private storage acknowledgement with matching tenant and
 });
 test('rejects public or wrong-property response',async()=>{
  const repo=createPrivateEvidenceRepository({putCaseEvidence:async()=>({id:'e1',project_id:'p2',case_id:'c1',visibility:'public'})});
- await assert.rejects(repo.uploadEvidence({projectId:'p1',caseId:'c1',kind:'pqrs',files:[{}]}),/no confirmó/);
+ await assert.rejects(repo.uploadEvidence({projectId:'p1',caseId:'c1',kind:'pqrs',files:[{}]}),/Confirmación inválida: 0 de 1 archivos confirmados/);
 });
 test('without API integration, fail closed',()=>{
  assert.throws(()=>createPrivateEvidenceRepository({}),/no disponible/);
