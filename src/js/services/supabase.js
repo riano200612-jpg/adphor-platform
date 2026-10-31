@@ -1,4 +1,5 @@
 import { createManagedMfa } from './managed-mfa.js';
+import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
@@ -88,7 +89,7 @@ export function createCloudRepository(url, key) {
         allPages(() => client.from('tickets').select('*').order('created_at', { ascending: false }).order('id')),
       ]);
       const [projects, members, tickets] = results;
-      return { projects, members: members.map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets };
+      return { projects:assignedProjects(projects,members,user.id), members:assignedMembers(members,user.id,projects).map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets:assignedTickets(tickets,user.id,members,projects) };
     },
     async save(action, payload) { return check(await client.rpc('ticket_command', { command: action, payload })); },
     async upload(files, projectId, ticketId) {
