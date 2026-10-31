@@ -8,9 +8,14 @@ export function createPrivateEvidenceRepository(api) {
    if(!Array.isArray(files)||!files.length)throw Error('Archivos requeridos');
    const results=[];
    for(const file of files) {
-    const result=await api.putCaseEvidence({projectId,caseId,kind,file});
+    let result;
+    try {
+      result=await api.putCaseEvidence({projectId,caseId,kind,file});
+    } catch {
+      throw Error('Carga interrumpida: '+results.length+' de '+files.length+' archivos confirmados. Revisa las evidencias del caso antes de reintentar.');
+    }
     if(result?.project_id!==projectId||result?.case_id!==caseId||result?.visibility!=='private'||!result?.id)
-      throw Error('El servidor no confirmó almacenamiento privado. No se confirmó la carga.');
+      throw Error('Confirmación inválida: '+results.length+' de '+files.length+' archivos confirmados. Verifica el historial antes de reintentar.');
     results.push({id:result.id,project_id:projectId,case_id:caseId,visibility:'private'});
    }
    return results;
