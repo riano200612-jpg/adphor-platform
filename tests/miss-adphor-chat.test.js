@@ -27,3 +27,19 @@ test('assistant mounted in signed-in portal and uses original portrait',()=>{
  assert.match(ui,/assets\/branding\/miss-adphor\.webp/);
  assert.match(ui,/textContent=text/);
 });
+
+test('Miss ADPHOR does not reveal internal agent history to residents or viewers',()=>{
+ const reply=answerMissAdphor('¿Qué hace el enjambre?',{...context,role:'viewer'});
+ assert.equal(reply.page,null);
+ assert.match(reply.text,/exclusivos de Administración y Coordinación/);
+});
+test('management may navigate to agent history but cannot automate decisions',()=>{
+ const reply=answerMissAdphor('Miss ADPHOR y el enjambre',{...context,role:'admin'});
+ assert.equal(reply.page,'agent-history');
+ assert.match(reply.text,/no hay un modelo entrenado validado/);
+});
+test('role-specific guidance avoids unsupported resident records',()=>{
+ const reply=answerMissAdphor('soy copropietario',{...context,role:'viewer'});
+ assert.equal(reply.page,null);
+ assert.match(reply.text,/sesión tenga autorizadas/);
+});
