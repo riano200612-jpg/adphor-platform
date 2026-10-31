@@ -14,3 +14,17 @@ test('rejects public or wrong-property response',async()=>{
 test('without API integration, fail closed',()=>{
  assert.throws(()=>createPrivateEvidenceRepository({}),/no disponible/);
 });
+
+test('partial uploads report confirmed count instead of claiming all-or-nothing',async()=>{
+ let calls=0;
+ const api={putCaseEvidence:async()=>{calls++;if(calls===2)throw Error('network');return {id:'e1',project_id:'p1',case_id:'c1',visibility:'private'};}};
+ const repo=createPrivateEvidenceRepository(api);
+ await assert.rejects(repo.uploadEvidence({projectId:'p1',caseId:'c1',kind:'pqrs',files:[{},{}]}),/1 de 2 archivos confirmados/);
+ assert.equal(calls,2);
+});
+test('invalid acknowledgment after prior successful upload warns user to check before retry',async()=>{
+ let calls=0;
+ const api={putCaseEvidence:async()=>{calls++;return calls===1?{id:'e1',project_id:'p1',case_id:'c1',visibility:'private'}:{id:'e2',project_id:'p2',case_id:'c1',visibility:'private'};}};
+ const repo=createPrivateEvidenceRepository(api);
+ await assert.rejects(repo.uploadEvidence({projectId:'p1',caseId:'c1',kind:'pqrs',files:[{},{}]}),/1 de 2 archivos confirmados/);
+});
