@@ -61,3 +61,12 @@
 .client-avatar-frame:has(.client-avatar-image){width:min(300px,90%);padding:12px;background:transparent;box-shadow:none;border-color:#b59c2160}
 .client-avatar-image{width:min(220px,100%);height:270px;object-fit:contain;object-position:center;border:0;border-radius:0;background:transparent;box-shadow:none}
 @media(max-width:700px){.client-avatar-frame:has(.client-avatar-image){width:195px;margin:8px auto}.client-avatar-image{height:170px;width:140px}}
+
+
+/* José's avatar interaction, adapted for an accessible and restrained premium login. */
+.miss-adphor-bubble{color:#263e56;background:#fff;border:1px solid #e0d5a2;border-radius:13px;padding:12px 14px;max-width:280px;font-size:13px;line-height:1.5;text-align:center;margin:4px auto;box-shadow:0 8px 22px #00000012}
+.miss-adphor-hello{border:1px solid #c7af47;border-radius:999px;padding:9px 15px;color:#f8ecbb;background:#183a53;cursor:pointer;font-weight:650;min-height:40px}
+.miss-adphor-hello:hover{background:#305c75}
+.miss-adphor-hello:focus-visible{outline:3px solid #ebcf5e;outline-offset:3px}
+.client-avatar-frame:has(.client-avatar-image){width:min(340px,94%)}
+@media(max-width:700px){.client-avatar-frame:has(.client-avatar-image){width:min(290px,96%)}.miss-adphor-bubble{font-size:12px}}
