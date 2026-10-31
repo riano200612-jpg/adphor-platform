@@ -70,3 +70,16 @@
 .miss-adphor-hello:focus-visible{outline:3px solid #ebcf5e;outline-offset:3px}
 .client-avatar-frame:has(.client-avatar-image){width:min(340px,94%)}
 @media(max-width:700px){.client-avatar-frame:has(.client-avatar-image){width:min(290px,96%)}.miss-adphor-bubble{font-size:12px}}
+
+
+/* Unified Recorridos flow inside existing ADPHOR operations workspace */
+.qa-recorrido-journey{padding:24px;border:1px solid #d5e0e8;border-radius:20px;background:linear-gradient(140deg,#fff,#f5f8fa);box-shadow:0 10px 30px #23466210;margin:20px 0}
+.qa-recorrido-journey-header h2{margin:0 0 5px;color:#264b6b;font-size:20px}
+.qa-recorrido-journey-header p{margin:0 0 18px;color:#536575}
+.qa-recorrido-journey ol{padding:0;margin:0 0 20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;list-style:none}
+.qa-recorrido-journey li{display:flex;flex-direction:column;gap:7px;background:white;border-radius:13px;border:1px solid #e1e7ec;border-top:3px solid #b59c21;padding:15px}
+.qa-recorrido-journey li strong{font-size:13px;color:#264b6b}
+.qa-recorrido-journey li span{font-size:12px;color:#536575;line-height:1.45}
+.qa-recorrido-journey-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+@media(max-width:830px){.qa-recorrido-journey ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.qa-recorrido-journey ol{grid-template-columns:1fr}.qa-recorrido-journey{padding:17px}}
