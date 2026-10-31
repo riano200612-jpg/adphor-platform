@@ -11,3 +11,10 @@ test('PQRS must never silently submit selected files without private storage',()
  assert.match(ui,/delete payload.evidence/);
  assert.match(ui,/file.size>20\*1024\*1024/);
 });
+
+test('user can remove selected attachments and safely submit without upload',()=>{
+ assert.match(ui,/data-clear-evidence/);
+ assert.match(ui,/clearEvidence\.onclick=/);
+ assert.match(ui,/evidenceInput\.value=''/);
+ assert.match(ui,/clearEvidence\.hidden=!files\.length/);
+});
