@@ -12,3 +12,16 @@ test('rejects malformed date and duplicate',()=>{
  const x=prepareLegacyMeetingRows(rows,{projectIdByLegacyName:{Porto:'qa-porto'}});
  assert.equal(x.meetings.length,1);assert.equal(x.rejected.length,2);
 });
+
+test('accepts Colombian date and AM/PM formats from Sheets without time-zone conversion',()=>{
+ const rows=[headers,['R-3','Porto','Consejo','11/11/2026','7:30 p. m.','Confirmado'],['R-4','Porto','Asamblea','2026-11-12','12:00 AM','Pendiente']];
+ // A localized AM/PM suffix should not be silently guessed if unsupported.
+ const r=prepareLegacyMeetingRows(rows,{projectIdByLegacyName:{Porto:'qa-porto'}});
+ assert.equal(r.meetings.find(x=>x.legacy_id==='R-4').start_local,'00:00');
+ assert.equal(r.rejected.length,1);
+});
+test('normalizes day-first calendar dates',()=>{
+ const r=prepareLegacyMeetingRows([headers,['R-5','Porto','Comité','13/11/2026','9:05 pm','Confirmado']],{projectIdByLegacyName:{Porto:'qa-porto'}});
+ assert.equal(r.meetings[0].event_date,'2026-11-13');
+ assert.equal(r.meetings[0].start_local,'21:05');
+});
