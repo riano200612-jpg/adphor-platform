@@ -17,10 +17,12 @@ class EvidenceQaTests(unittest.TestCase):
         self.storage=FakeStorage()
         self.case_exists=True
         self.membership_calls=0
+        self.allowed_roles=[]
         async def identity():
             return {"id":"user-qa","token":"test-token"}
         async def membership(request,actor,project,allowed):
             self.membership_calls+=1
+            self.allowed_roles.append(tuple(allowed))
             if project!="qa-prop": raise RuntimeError("unexpected scope")
         async def read(request,token,path,params=None):
             return [{"id":"case-1"}] if self.case_exists else []
@@ -47,6 +49,10 @@ class EvidenceQaTests(unittest.TestCase):
         self.assertFalse(r.json()["notifications_sent"])
         self.assertEqual(len(self.storage.calls),1)
         self.assertIn("/qa-prop/pqrs/case-1/",self.storage.calls[0][0])
+    def test_viewer_role_is_not_permitted_to_upload(self):
+        r=self.client.post(self.path,data=b"testbytes",headers={"content-type":"image/png"})
+        self.assertEqual(r.status_code,200)
+        self.assertNotIn("viewer",self.allowed_roles[-1])
     def test_missing_case_does_not_upload(self):
         self.case_exists=False
         r=self.client.post(self.path,data=b"testbytes",headers={"content-type":"image/png"})
