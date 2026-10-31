@@ -14,7 +14,7 @@ export function createPrivateEvidenceRepository(api) {
     } catch {
       throw Error('Carga interrumpida: '+results.length+' de '+files.length+' archivos confirmados. Revisa las evidencias del caso antes de reintentar.');
     }
-    if(result?.project_id!==projectId||result?.case_id!==caseId||result?.visibility!=='private'||!result?.id)
+    if(result?.project_id!==projectId||result?.case_id!==caseId||result?.visibility!=='private'||result?.storage_written!==true||result?.metadata_linked!==true||!result?.id)
       throw Error('Confirmación inválida: '+results.length+' de '+files.length+' archivos confirmados. Verifica el historial antes de reintentar.');
     results.push({id:result.id,project_id:projectId,case_id:caseId,visibility:'private'});
    }
