@@ -1,6 +1,6 @@
 import {enhanceMeetings,bogotaInput,bogotaInstant} from './ui-meeting-experience.js';
 import {buildClientMeetingTitle,meetingDurationHours} from './services/client-meeting-mapping.js';
-import {listDemoMeetings,scheduleDemoMeeting,cancelDemoMeeting,historyDemoMeeting,decideDemoMeeting} from './services/demo-calendar.js';
+import {listDemoMeetings,scheduleDemoMeeting,cancelDemoMeeting,historyDemoMeeting,decideDemoMeeting,seedDemoMeetingScenarios} from './services/demo-calendar.js';
 
 // This is an interactive local calendar in DEMO mode. Cloud mode remains assessment-only
 // until authenticated transactional booking is verified on isolated QA PostgreSQL.
@@ -14,6 +14,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  root.querySelector('form').append(escort);
  const form=root.querySelector('form'),status=root.querySelector('[role=status]'),notice=root.querySelector('[data-notice]'),list=root.querySelector('[data-list]');
  notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'CONECTIVIDAD PENDIENTE: evaluación por reglas solamente. La reserva real requiere backend transaccional y autorización.';
+ if(demo){const load=document.createElement('button');load.type='button';load.className='btn secondary';load.textContent='Cargar 3 reuniones de simulación';load.setAttribute('data-demo-scenarios','');notice.after(load);load.onclick=()=>{try{const n=seedDemoMeetingScenarios(projectId);status.textContent=n?n+' reuniones FICTICIAS añadidas únicamente a este navegador.':'Los escenarios de simulación ya estaban cargados.';render();}catch(error){status.textContent=error.message;}};}
  let editing=null, experience;
  function render(){
   experience?.draw();
