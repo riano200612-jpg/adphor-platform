@@ -133,7 +133,7 @@ function renderPage() {
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   if (state.page === 'meetings' && portoVisible()) {
-    mountMeetingAssessment($('page-content'),{projectName:project().name,role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId});return;
+    mountMeetingAssessment($('page-content'),{projectName:project().name,role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
   }
   if (state.page === 'pqrs' && portoVisible()) {
     mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});return;
