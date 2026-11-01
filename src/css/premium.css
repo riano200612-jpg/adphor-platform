@@ -119,3 +119,13 @@
 .calendar-slot{border:1px solid #bed0db;border-radius:10px;padding:12px;text-align:left;background:#fff;color:#20394e;cursor:pointer;min-height:46px}
 .calendar-slot:hover:not(:disabled){border-color:#a78b20;background:#fffaf0}
 .calendar-slot.occupied{border-color:#e4dcd6;background:#f4f1ef;color:#5b666d;cursor:not-allowed}
+
+/* ADPHOR meeting accompaniment: only authorized team options, never global employees. */
+.meeting-escorts{border:1px solid #d9e2e9;border-radius:14px;padding:14px;margin:12px 0}
+.meeting-escorts legend{font-weight:750;color:#264b6b}
+.meeting-escort-carousel{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 0 12px}
+.meeting-escort-card{min-width:175px;max-width:210px;flex:0 0 auto;display:flex;flex-direction:column;gap:8px;align-items:flex-start;border:1px solid #c7d6df;border-radius:13px;padding:13px;background:white;cursor:pointer;scroll-snap-align:start}
+.meeting-escort-card:has(input:checked){background:#f7f3e5;border-color:#a98e29;box-shadow:inset 0 0 0 1px #a98e29}
+.meeting-escort-card input{accent-color:#264b6b}
+.meeting-escort-card strong{font-size:13px;line-height:1.35}
+.meeting-escort-card small{font-size:12px;color:#526779}
