@@ -20,6 +20,7 @@ export default defineConfig({
       main: fileURLToPath(new URL('./index.html', import.meta.url)),
       ...(process.env.ADPHOR_BUILD_QA_DEMOS === 'true' ? {
         'qa/cliente': fileURLToPath(new URL('./qa/cliente.html', import.meta.url)),
+        'qa/simulacion-operativa': fileURLToPath(new URL('./qa/simulacion-operativa.html', import.meta.url)),
       } : {}),
     } },
   },
