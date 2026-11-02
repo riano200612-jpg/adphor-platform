@@ -31,6 +31,7 @@ test('application: 40 synthetic memberships, navigation, reload and restricted u
  };
  await page.goto('./');await login();
  await expect(page.locator('#project-select option')).toHaveCount(40);
+ await page.getByRole('button',{name:'Copropiedades',exact:true}).click();await expect(page.locator('.property-card')).toHaveCount(40);await page.getByLabel('Buscar en el catálogo').fill('JARDIN FICTICIO 40');await expect(page.locator('.property-card')).toHaveCount(1);await page.getByRole('button',{name:'Abrir ficha operativa →'}).click();await expect(page.locator('#project-select')).toHaveValue('qa-40');
  await page.getByLabel('Buscar copropiedad').fill('JARDIN FICTICIO 40');
  await page.locator('#project-select').selectOption('qa-40');
  await page.getByRole('button',{name:'Bitácora',exact:true}).click();

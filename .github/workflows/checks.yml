@@ -22,10 +22,12 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: browser-test-results
-          path: test-results/
+          path: |
+            test-results/
+            qa/visual-premium/
 
   python-tests:
     name: Python unit tests

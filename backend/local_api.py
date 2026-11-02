@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.src.adphor_ai.gateway import Configuracion
 from backend.src.adphor_ai.rules import run_rules, PENDING
 from backend.src.adphor_ai.meeting_api import build_meeting_router
+from backend.src.adphor_ai.evidence_api_qa import build_evidence_router
 from backend.src.adphor_ai.tenant_consultation import build_router, ConsultationSettings
 
 load_dotenv(override=False)
@@ -114,6 +115,12 @@ app.include_router(build_meeting_router(
         staging_project_ref=os.getenv("ADPHOR_STAGING_PROJECT_REF", ""),
         frontend_origin=ORIGIN,
     ),
+))
+
+# Storage writes use only the end-user JWT, enforced by Storage RLS.
+app.include_router(build_evidence_router(
+    identity_dependency=identity, membership_checker=require_role,
+    http_get=call, base_url=BASE, publishable_key=KEY,
 ))
 
 async def snapshot(request, actor, project):

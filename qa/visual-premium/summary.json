@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-30",
+  "screens_evaluated": 15,
+  "violations": 0,
+  "manual_review_items": 17,
+  "scope": "local synthetic UI only; not hosted authorization certification",
+  "screenshots": {
+    "after-mobile-dashboard.png": "a5e0f9b6d9941a81b77e6c54c68e1d4cc48689bba73bccb3ab156eb114e2269f",
+    "after-mobile-meetings.png": "d993aedf5f3df24c0a2b815d0eb24db1ad0c32f0486ac092ddb386c281498f59",
+    "after-reports.png": "be21acb4c6ef2c906d4df5afd6cd0a5284d1f7b464897bfb5c95024272410e45",
+    "after-mobile-properties.png": "3623406b119de52313c02102e7305cc1d5a41bdfc12bfaa0b4ea5f7483b95fad",
+    "before-meetings.png": "176180dd8fa56382c990d936c00bcf46d8f458f0d9ed269c31f9d6a1d4d70528",
+    "after-pqrs-error.png": "adfb4285f7528c7e05af9ac9555117286bbba2187852b1424680f98b07fe50af",
+    "before-pqrs.png": "07d62bec0ecd21c40d42c1ca005521392bf82efb9c828813210578976941b0f8",
+    "after-mobile-agents.png": "f8fe56db7ddee0697ab1c072d396e45feb5bf89ae06ccb9f9015f075c223d5ae",
+    "after-mobile-pqrs.png": "5477d6f89d91eec79e6122611801762de515b8414bf9794225b0e5b42e9e2f81",
+    "after-login.png": "05406b531ad11ed7ef06e1158b5704543732c55a533a9c5307bbab5eb0575386",
+    "after-mobile-login.png": "74eccf194e0b379a5bd3d4993fd22634fd1fe5c50f1c878c1662605809fc5b3a",
+    "before-dashboard.png": "36d0e84ba5bf6f3182f574d3be4984aa745c8e293c778a7bba4c145c44195cbc",
+    "after-pqrs.png": "0b31b0c564db34ac015fba050f2709df88959856ac256ae6d601036fe7bd8419",
+    "after-pqrs-saved.png": "f600189f96c226a66d57931355607b826e020d11cf41f6e916fd77e2b3268301",
+    "after-mobile-reports.png": "e0319bfe011b9355cb77a5d888881b9f42a6d2877cf85932a29bbd5c5ec0445d",
+    "before-login.png": "294e3c7074f628ae14c8d941599d9c9edfbd8f2220f68a83bb5f040c5471b8c0",
+    "after-agents.png": "b9c34cf5e885be3cafdf95b5831836b8a3b470edbfe9ca32a3ac002d47bce730",
+    "after-dashboard.png": "b335d25eb61a005b33b61a40a524e85825b61068a6d944dc2086b8cef671aa6e",
+    "after-properties.png": "73f62766db6bf5858acb85bc5b73e2396eb4bc86f04dc1d65a46b93ecabadc11",
+    "after-meetings.png": "3bb637a559de75f0f85d1b6f3f4ebd5affdfc911082a9c562e3221f0bdc2dc58",
+    "after-meeting-review.png": "d355f19554528ecd259eee129e101a928ebbe6b230ab999019e81c1425671698"
+  }
+}

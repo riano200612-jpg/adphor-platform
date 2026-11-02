@@ -1,5 +1,5 @@
 // Managed TOTP only: no generation, storage, logging, enrollment or account resets.
-export function createManagedMfa(auth) {
+export function createManagedMfa(auth, {required=false}={}) {
   let pending=null, checking=false;
   const read=result=>{if(result.error)throw Error('No se pudo verificar la autenticación.');return result.data;};
   return {
@@ -8,7 +8,10 @@ export function createManagedMfa(auth) {
       pending=null;
       const data=read(await auth.mfa.listFactors());
       const factors=(data.all || []).filter(f=>f.status==='verified');
-      if(!factors.length)return false;
+      if(!factors.length){
+        if(required)throw Error('El acceso requiere MFA. Solicita al administrador registrar un factor antes de continuar.');
+        return false;
+      }
       const factor=factors.find(f=>f.factor_type==='totp');
       if(!factor)throw Error('El factor configurado requiere un método de acceso compatible.');
       pending={userId,factorId:factor.id};return true;

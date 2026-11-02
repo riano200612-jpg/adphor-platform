@@ -1,4 +1,5 @@
 import { createManagedMfa } from './managed-mfa.js';
+import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
@@ -7,7 +8,7 @@ import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
-  const mfa = createManagedMfa(client.auth);
+  const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true'});
   async function finishLogin(id) {
     const profile=check(await client.from('profiles').select('name').eq('id',id).single());
     user={id,name:profile.name};return user;
@@ -88,7 +89,7 @@ export function createCloudRepository(url, key) {
         allPages(() => client.from('tickets').select('*').order('created_at', { ascending: false }).order('id')),
       ]);
       const [projects, members, tickets] = results;
-      return { projects, members: members.map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets };
+      return { projects:assignedProjects(projects,members,user.id), members:assignedMembers(members,user.id,projects).map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets:assignedTickets(tickets,user.id,members,projects) };
     },
     async save(action, payload) { return check(await client.rpc('ticket_command', { command: action, payload })); },
     async upload(files, projectId, ticketId) {
