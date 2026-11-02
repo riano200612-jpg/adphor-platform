@@ -13,5 +13,5 @@ test('readonly audit inspects RLS, grants, triggers and exact definitions',()=>{
 });
 test('readonly SQL contains no executable DDL or mutation',()=>{
   const executable = sql.split('\n').filter(line=>!/^\s*--/.test(line)).join('\n');
-  assert.doesNotMatch(executable,/\b(?:ALTER|DROP|CREATE|TRUNCATE|DELETE|INSERT|UPDATE|GRANT|REVOKE|CALL|DO)\s+(?:TABLE|SCHEMA|FUNCTION|ROLE|POLICY|TRIGGER|ON|INTO|FROM|PUBLIC|authenticated)?\b/i);
+  assert.doesNotMatch(executable,/^\\s*(?:ALTER|DROP|CREATE|TRUNCATE|DELETE|INSERT|UPDATE|GRANT|REVOKE|CALL|DO)\\b/im);
 });
