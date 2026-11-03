@@ -65,6 +65,26 @@ export async function loadClientSourceZip(file){
    quarantined:data['meeting_history_quarantine.jsonl'],pqrs:data['pqrs_history.jsonl'],
    delegates:data['delegates_directory_no_credentials.jsonl']};
 }
+// Exact, accent-insensitive name match only; never infer a person's identity from an image.
+export function staffNameKey(value){
+ return String(value||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+   .toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+export function staffForProject(project,delegates){
+ if(!project||!Array.isArray(delegates))return [];
+ const ids=[project.ID_Delegado,project.ID_Coordinador]
+   .filter(x=>x!==null&&x!==undefined&&String(x).trim()!==''&&String(x)!=='0')
+   .map(String);
+ return delegates.filter(x=>ids.includes(String(x.ID_Delegado)));
+}
+export function photoForStaff(person,entries){
+ const expected=staffNameKey(person?.Delegado);if(!expected)return null;
+ return (Array.isArray(entries)?entries:[]).find(x=>{
+   if(!/^media\/fotosColaboradores\//i.test(x.name)||!\/\.(jpg|jpeg|png|webp)$/i.test(x.name))return false;
+   const base=x.name.split('/').pop().replace(/\.[^.]+$/,'').replace(/^\d+\.\s*/,'');
+   return staffNameKey(base)===expected;
+ })||null;
+}
 const safeDay=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):'';
 const safeClock=v=>/^\d{2}:\d{2}/.test(String(v||''))?String(v).slice(0,5):'';
 export function selectProjectMeetings(rows,id){
@@ -139,29 +159,37 @@ export function mountClientSourceReview(root){
    if(rows.length>70)listHost.append(text('p','Se muestran las 70 más recientes.','muted'));
    pqrsHost.replaceChildren(text('h2','PQRS del archivo · '+records.pqrs.length),
       text('p','Los 29 expedientes no tienen relación unívoca de copropiedad certificada. Para proteger la privacidad se muestran únicamente cifras; no se muestran detalles ni se permiten respuestas.','notice'));
-   const delegate=records.delegates.find(d=>String(d.ID_Delegado)===String(p.ID_Delegado));
-   peopleHost.replaceChildren(text('h2','Acompañamiento · Directorio histórico'),
-    text('p','Persona asociada en el archivo maestro; todavía no corresponde a una membresía o permiso operativo.','notice'));
-   simpleCard(peopleHost,delegate?.Delegado||p.Delegado||'Sin vinculación homologada',
-      delegate?.['Leyenda Rol']||delegate?.Rol||'Rol pendiente');
-   const photos=text('div','','meeting-escort-carousel');peopleHost.append(photos);
-   if(photoIndex && photoData){
-      const items=[...photoIndex.values()].filter(x=>/^media\/fotosColaboradores\//i.test(x.name)
-       && /\.(jpe?g|png|webp)$/i.test(x.name)).slice(0,60);
-      photos.append(text('p','Fotos del ZIP privado · '+items.length+' archivos. Las fotografías son vistas temporales locales, no enlaces públicos.','muted'));
-      for(const entry of items){
-        const card=text('article','','meeting-escort-card');
-        const display=entry.name.split('/').pop().replace(/\.[^.]+$/,'');
-        const image=document.createElement('img');image.alt='Fotografía del archivo de colaboradores';image.loading='lazy';
-        image.width=92;image.height=92;
-        const matching=entry.name.toLowerCase().endsWith('.png')?'image/png':'image/jpeg';
-        extractZip(photoData,entry,8*1024*1024).then(bytes=>{
-          if(!card.isConnected)return;
-          const uri=URL.createObjectURL(new Blob([bytes],{type:matching}));previewUrls.push(uri);image.src=uri;
-        }).catch(()=>{});
-        card.append(image,text('small',display));photos.append(card);
-      }
-   }else photos.append(text('p','Para ver las fotografías reales, selecciona el ZIP multimedia.','muted'));
+   const assigned=staffForProject(p,records.delegates);
+   peopleHost.replaceChildren(text('h2','Personal asignado · Fotografía, rol y sector'),
+    text('p','Solo se muestran personas relacionadas por ID con esta copropiedad en el maestro. La asignación operativa, disponibilidad y responsabilidades deben validarse en el sistema de personal.','notice'));
+   const photos=text('div','','meeting-escort-carousel');photos.setAttribute('role','list');peopleHost.append(photos);
+   if(!assigned.length){photos.append(text('p','No hay personal vinculado de forma inequívoca a esta copropiedad.','muted'));}
+   for(const person of assigned){
+     const card=text('article','','meeting-escort-card');card.setAttribute('role','listitem');
+     card.append(text('strong',person.Delegado||'Sin nombre'));
+     const roleDetail=person['Leyenda Rol']||person.Rol||'Cargo no definido';
+     card.append(text('small','Cargo / función registrada: '+roleDetail));
+     if(person['Sector Coordinado']&&person['Sector Coordinado']!=='NA')
+       card.append(text('small','Sector: '+person['Sector Coordinado']));
+     card.append(text('small','Relación con copropiedad: '+p.Copropiedad));
+     if(person.Estado)card.append(text('small','Estado en origen: '+person.Estado));
+     const entry=photoIndex?photoForStaff(person,[...photoIndex.values()]):null;
+     if(entry&&photoData){
+       const image=document.createElement('img');
+       image.alt='Fotografía aportada del colaborador '+person.Delegado;image.loading='lazy';
+       image.width=92;image.height=92;
+       card.prepend(image);
+       const mime=/\.png$/i.test(entry.name)?'image/png':/\.webp$/i.test(entry.name)?'image/webp':'image/jpeg';
+       extractZip(photoData,entry,8*1024*1024).then(bytes=>{
+         if(!card.isConnected)return;
+         const uri=URL.createObjectURL(new Blob([bytes],{type:mime}));previewUrls.push(uri);image.src=uri;
+       }).catch(()=>card.append(text('small','No se pudo abrir la fotografía autorizada.')));
+     }else card.append(text('small','Sin fotografía vinculada en el ZIP seleccionado.'));
+     const assign=text('button','Asignar novedad');assign.type='button';assign.className='btn secondary';assign.disabled=true;
+     assign.title='Pendiente de autorización y validación de responsabilidades en backend';
+     card.append(assign);photos.append(card);
+   }
+   if(!photoIndex)peopleHost.append(text('p','Carga el ZIP multimedia del cliente para mostrar fotografías vinculadas a los nombres.','muted'));
   };
   select.onchange=makeView;makeView();
  }
