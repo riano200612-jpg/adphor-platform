@@ -10,7 +10,8 @@ if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !protectedStaging) {
 }
 
 export default defineConfig({
-  base: '/adphor-platform/',
+  // Cloudflare Pages sirve desde la raiz; GitHub Pages mantiene su subruta histórica.
+  base: process.env.CF_PAGES === '1' ? '/' : '/adphor-platform/',
   server: { port: 8000, host: '127.0.0.1', proxy: process.env.VITE_AGENTS_API_URL === 'http://localhost:5173' ? {
     '/agent-runs': { target: 'http://127.0.0.1:8000', changeOrigin: true },
   } : undefined },
