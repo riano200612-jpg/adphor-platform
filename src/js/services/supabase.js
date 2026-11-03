@@ -24,6 +24,24 @@ export function createCloudRepository(url, key) {
   }
   return {
     porto: createPortoRepository(client, {url, enabled:import.meta.env.VITE_PORTO_QA_ENABLED, stagingRef:import.meta.env.VITE_PORTO_STAGING_REF}),
+    // Historical data is readable only when an isolated QA project is explicitly enabled.
+    // Source status alone never proves a Google Calendar reservation.
+    async listVerifiedQaMeetings(projectId) {
+      if(!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) return [];
+      if(!user) throw Error('Sesión necesaria.');
+      const result=await client.from('qa_meeting_events')
+        .select('id,project_id,title,source_status,start_at,end_at,is_calendar_verified')
+        .eq('project_id',projectId).eq('is_calendar_verified',true)
+        .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(500);
+      return check(result);
+    },
+    async listQaPqrsHistory(projectId) {
+      if(!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) return [];
+      if(!user) throw Error('Sesión necesaria.');
+      return check(await client.from('qa_pqrs_history')
+        .select('id,project_id,source_id,subject,source_status,source_created_at')
+        .eq('project_id',projectId).order('source_created_at',{ascending:false}).limit(200));
+    },
     async assessMeeting(projectId, fields) {
       if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Evaluación solo disponible en QA aislado.');
       const origin=agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL,import.meta.env.DEV);
