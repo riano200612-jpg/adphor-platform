@@ -12,6 +12,13 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  const options=[{id:'',name:'Sin acompañamiento requerido',role:''},...members.filter(m=>m.project_id===projectId&&m.name&&['admin','coordinator','technician'].includes(m.role)).map(m=>({id:m.user_id,name:m.name,role:m.role}))];
  options.forEach((person,i)=>{const label=document.createElement('label');label.className='meeting-escort-card';const radio=document.createElement('input');radio.type='radio';radio.name='escort_id';radio.value=person.id;radio.checked=i===0;label.append(radio);const name=document.createElement('strong');name.textContent=person.name;label.append(name);if(person.role){const roleLabel=document.createElement('small');roleLabel.textContent=person.role;label.append(roleLabel);}escortChoices.append(label);});
  root.querySelector('form').append(escort);
+ if(role==='admin' && !demo){
+   const help=document.createElement('div');help.className='panel';
+   const title=document.createElement('h3');title.textContent='Fotografías, dependencias y funciones del equipo';
+   const note=document.createElement('p');note.textContent='El carrusel de fotos reales del sábado está en el visor privado del cliente. Carga una vez el ZIP de datos y el multimedia para relacionar copropiedad, responsable, cargo, sector y foto. No se han publicado fotos ni creado asignaciones automáticas.';
+   const action=document.createElement('button');action.type='button';action.className='btn secondary';action.dataset.page='qa-source';action.textContent='Ver equipo y fotografías reales';
+   help.append(title,note,action);escort.after(help);
+ }
  const form=root.querySelector('form'),status=root.querySelector('[role=status]'),notice=root.querySelector('[data-notice]'),list=root.querySelector('[data-list]');
  notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'VISTA DE REVISIÓN: formulario, calendario y carrusel habilitados visualmente; todavía NO hay reuniones reales importadas ni backend transaccional autorizado. No se enviarán invitaciones.';
  if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La tabla operativa de reuniones aún no existe en esta base de datos.';}}
