@@ -5,6 +5,7 @@ import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isMa
 import { createDemoRepository, DEMO_USERS } from './services/demo.js';
 import { createCloudRepository } from './services/supabase.js';
 import { mountClientLegacyBridge } from './ui-client-legacy-bridge.js';
+import { mountClientSourceReview } from './ui-client-source-review.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -47,7 +48,7 @@ async function refresh() {
 }
 function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['tickets','clipboard-list','Bitácora'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes']];
-  if(repo.mode==='cloud' && role()==='admin')nav.push(['legacy-client','calendar-days','Portal y reuniones originales']);
+  if(repo.mode==='cloud' && role()==='admin'){nav.push(['legacy-client','calendar-days','Portal y reuniones originales']);nav.push(['client-sources','database','Datos reales del cliente']);}
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' ? 'Entorno de demostración' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control"><label for="project-select">COPROPIEDAD</label><select id="project-select">${state.projects.map(p => option(p.id, p.name, state.projectId)).join('')}</select></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : project()?.is_demo ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div>`;
   renderPage();
 }
@@ -96,6 +97,9 @@ function reportPage() {
 function renderPage() {
   if(state.page==='legacy-client' && repo.mode==='cloud' && role()==='admin'){
     mountClientLegacyBridge($('page-content'));return;
+  }
+  if(state.page==='client-sources' && repo.mode==='cloud' && role()==='admin'){
+    mountClientSourceReview($('page-content'));return;
   }
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   $('page-content').innerHTML = ({ dashboard, tickets: ticketsPage, mine: ticketsPage, areas: areasPage, reports: reportPage }[state.page] || dashboard)();
