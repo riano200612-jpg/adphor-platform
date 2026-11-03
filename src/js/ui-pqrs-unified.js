@@ -30,7 +30,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  frame.referrerPolicy='strict-origin-when-cross-origin';
  frame.loading='lazy';frame.style.width='100%';frame.style.minHeight='780px';frame.style.border='1px solid #cbd5d1';frame.style.borderRadius='12px';
  const fallback=el('p','Si el formulario original solicita otra autenticación o no aparece dentro de la página, utiliza «Abrir en pestaña segura».');fallback.className='muted';
- const launch=el('button','Abrir en pestaña segura');launch.type='button';launch.className='btn secondary';
+ const launch=el('button','Abrir formulario de radicación');launch.type='button';launch.className='btn primary';launch.setAttribute('data-pqrs-action','');
  let selected='owners',currentUrl='';
  let saved='';
  try{const v=JSON.parse(storage.getItem(CONFIG_KEY)||'{}');saved=typeof v.portal==='string'?v.portal:'';}catch{}
@@ -49,6 +49,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
    catch(err){notice.textContent=err.message;return '';}
  }
  function draw(){
+   launch.textContent=selected==='owners'?'Abrir formulario de radicación y evidencias':selected==='tracking'?'Abrir consulta de radicado':'Abrir portal autorizado de empleados';
    const base=resolveBase();currentUrl='';
    if(!base){
      notice.textContent='Falta vincular el enlace /exec del Portal original del cliente. Los envíos y adjuntos no se habilitarán hasta configurarlo.';
@@ -56,7 +57,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
      return;
    }
    try{currentUrl=pqrsPortalRoute(base,selected);frame.src=currentUrl;preview.replaceChildren(frame,fallback);launch.disabled=false;
-       notice.textContent='Conectado al despliegue original configurado. Los radicados y evidencias se conservan en su almacenamiento existente, no en este navegador.';}
+       notice.textContent='Enlace del Portal original configurado. Verifica su inicio de sesión y que el radicado y los adjuntos se confirmen dentro del formulario antes de cerrar la página. Este acceso no prueba por sí solo que el servidor respondió correctamente.';}
    catch(err){notice.textContent=err.message;launch.disabled=true;}
  }
  for(const [id,label] of tabs){
