@@ -16,7 +16,7 @@ export function unifiedModuleStatus({mode='demo',portoEnabled=false}={}) {
     available: true,
     note: m.id==='meetings'&&!portoEnabled ?
       'Formulario y carrusel disponibles; sin calendario real ni reservas persistentes' :
-      m.id==='pqrs'&&!portoEnabled ? 'Resumen histórico del origen; radicación y consulta operativa bloqueadas' :
+      m.id==='pqrs'&&!portoEnabled ? 'Propietarios, consulta y empleados: abre el Portal original conectado mediante /exec; sin enlace no hay radicación' :
       m.id==='recorridos' ? 'Seguimiento de novedades; formulario de visitas independiente pendiente' :
       m.id==='tickets' ? 'Fotografías de mantenimiento; biblioteca multimedia pendiente' :
       m.id==='dashboard' ? 'Panel de datos autorizados' :
