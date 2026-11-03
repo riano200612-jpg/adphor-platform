@@ -117,6 +117,7 @@ function simpleCard(root,title,details){
  const card=text('article','','panel');card.append(text('h4',title),text('p',details,'muted'));root.append(card);return card;
 }
 export function mountClientSourceReview(root){
+ root.classList.add('source-review');
  root.replaceChildren();
  const host=text('section','','panel');
  host.append(text('p','REVISIÓN PRIVADA · ADMINISTRADOR','eyebrow'),
@@ -124,9 +125,9 @@ export function mountClientSourceReview(root){
    text('p','Carga temporal en este navegador. No se envían archivos, no se guardan datos en Supabase ni se crean reuniones/PQRS. Cierra o recarga para borrar la vista.','notice'));
  const pkg=text('input');pkg.type='file';pkg.accept='.zip,application/zip';pkg.setAttribute('aria-label','Seleccionar paquete privado conciliado');
  const photo=text('input');photo.type='file';photo.accept='.zip,application/zip';photo.setAttribute('aria-label','Seleccionar ZIP multimedia de colaboradores (opcional)');
- host.append(text('label','1. Paquete ADPHOR_QA_PAQUETE_PRIVADO_CONCILIADO_20261103.zip'),pkg,
+ host.append(text('p','Para ver las fotos del sábado hay que seleccionar LOS DOS ZIP: (1) datos conciliados (2) multimedia. Ninguno sale de esta pestaña.','notice'),text('label','1. Paquete ADPHOR_QA_PAQUETE_PRIVADO_CONCILIADO_20261103.zip'),pkg,
    text('label','2. ZIP multimedia, opcional (se procesa localmente)'),photo);
- const state=text('p','Selecciona primero el paquete conciliado.','muted');state.setAttribute('role','status');host.append(state);
+ const state=text('p','Selecciona primero el paquete conciliado y después el ZIP multimedia para activar las fotografías.','muted');state.setAttribute('role','status');host.append(state);
  const content=text('div');root.append(host,content);
  let records=null,photoData=null,photoIndex=null,previewUrls=[];
  const clearUrls=()=>{for(const u of previewUrls)URL.revokeObjectURL(u);previewUrls=[];};
@@ -189,7 +190,7 @@ export function mountClientSourceReview(root){
      assign.title='Pendiente de autorización y validación de responsabilidades en backend';
      card.append(assign);photos.append(card);
    }
-   if(!photoIndex)peopleHost.append(text('p','Carga el ZIP multimedia del cliente para mostrar fotografías vinculadas a los nombres.','muted'));
+   if(!photoIndex)peopleHost.append(text('p','Fotografías pendientes: selecciona el segundo ZIP multimedia en el formulario superior. No se publican ni se guardan permanentemente.','notice'));
   };
   select.onchange=makeView;makeView();
  }
