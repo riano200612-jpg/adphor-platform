@@ -1,6 +1,7 @@
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
+import '../css/client-source-review.css';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
 import { createDemoRepository, DEMO_USERS } from './services/demo.js';
 import { createCloudRepository } from './services/supabase.js';
