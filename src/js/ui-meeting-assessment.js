@@ -78,6 +78,6 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    editing=null;form.reset();render();experience.reset();
   }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
  };
- experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>listDemoMeetings(projectId)});
+ experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>demo?listDemoMeetings(projectId):[]});
  render();
 }
