@@ -8,7 +8,7 @@ test('centro incluye los siete accesos y no inventa permisos operativos',()=>{
   assert.equal(gated.find(x=>x.id==='meetings').available,true);
   assert.match(gated.find(x=>x.id==='meetings').note,/sin calendario real/i);
   assert.equal(gated.find(x=>x.id==='pqrs').available,true);
-  assert.match(gated.find(x=>x.id==='pqrs').note,/radicación.*bloqueadas/i);
+  assert.match(gated.find(x=>x.id==='pqrs').note,/sin enlace no hay radicación/i);
   assert.equal(gated.find(x=>x.id==='reports').available,true);
   assert.equal(unifiedModuleStatus({portoEnabled:true}).find(x=>x.id==='pqrs').available,true);
 });
