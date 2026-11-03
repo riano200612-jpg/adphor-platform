@@ -1,7 +1,6 @@
 // ADPHOR unified PQRS interface. Retain the client's operational Apps Script
 // until the authenticated PostgreSQL API and private object storage are certified.
 import {normalizeAppsScriptExecUrl} from './ui-client-legacy-bridge.js';
-import {mountPqrsSourceStatus} from './ui-pqrs-source-status.js';
 const CONFIG_KEY='adphor-client-exec-links-v1';
 const ROUTES=Object.freeze({owners:'form',tracking:'status',staff:'portal-team'});
 export function sourcePortalUrl({environment='',stored=''}={}){
@@ -80,8 +79,10 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  page.append(eyebrow,heading,intro,choices,notice,config,panel);
  panel.append(preview,launch);
  root.append(page);
- const historic=el('section');root.append(historic);
- mountPqrsSourceStatus(historic,{repo,projectId});
+ const historic=el('section');historic.className='panel';
+ historic.append(el('h2','29 PQRS identificadas en el archivo histórico'),
+   el('p','Corte del 3 de noviembre de 2026. Estas PQRS aún no están homologadas por copropiedad en PostgreSQL; los nuevos radicados se consultan en el Portal original cuando esté conectado.'));
+ root.append(historic);
  const first=choices.querySelector('button');if(first)first.setAttribute('aria-pressed','true');
  draw();
 }
