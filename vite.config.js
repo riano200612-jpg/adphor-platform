@@ -3,7 +3,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 // QA branch: cloud deployment is blocked until Access and staging are verified.
 const protectedStaging = process.env.CF_PAGES === '1'
-  && ['qa/premium-ux-20261030','qa/cliente-integracion-verificada-20261102'].includes(process.env.CF_PAGES_BRANCH)
+  && ['qa/premium-ux-20261030','qa/cliente-integracion-verificada-20261102','qa/cliente-preview-real-readonly-20261103'].includes(process.env.CF_PAGES_BRANCH)
   && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true';
 if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !protectedStaging) {
   throw new Error('QA_DEPLOY_BLOCKED: protected staging opt-in and matching branch required');
