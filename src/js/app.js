@@ -143,7 +143,7 @@ function renderPage() {
   }
   if (state.page === 'pqrs') {
     if(portoVisible()) mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});
-    else mountPqrsSourceStatus($('page-content'));
+    else mountPqrsSourceStatus($('page-content'),{repo,projectId:state.projectId});
     return;
   }
   if (state.page === 'consultation' && import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') {
