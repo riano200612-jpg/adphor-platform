@@ -21,7 +21,9 @@ import { createCloudRepository } from './services/supabase.js';
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const invalidConfig = Boolean(url) !== Boolean(key);
-const repo = url && key ? createCloudRepository(url, key) : createDemoRepository();
+// Protected QA can inspect real historical data on a separate read-only page without allowing main-app writes.
+const qaReadonly = import.meta.env.VITE_ADPHOR_QA_READONLY === 'true';
+const repo = !qaReadonly && url && key ? createCloudRepository(url, key) : createDemoRepository();
 const demoPorto = repo.mode === 'demo' ? createDemoPortoRepository() : null;
 const portoVisible = () => repo.mode === 'demo' || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
 const $ = id => document.getElementById(id);
