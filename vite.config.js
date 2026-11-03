@@ -12,7 +12,12 @@ if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !pro
   throw new Error('QA_DEPLOY_BLOCKED: expected production branch or explicitly protected QA staging');
 }
 
+// Cloudflare Pages automatically provides CF_PAGES_COMMIT_SHA for each build.
+// Only expose an actual hexadecimal commit identifier. Never expose build secrets.
+const buildSha = /^[a-f0-9]{40}$/i.test(process.env.CF_PAGES_COMMIT_SHA || '')
+  ? process.env.CF_PAGES_COMMIT_SHA.toLowerCase() : '';
 export default defineConfig({
+  define: { __ADPHOR_BUILD_SHA__: JSON.stringify(buildSha) },
   // Cloudflare Pages sirve desde la raiz; GitHub Pages mantiene su subruta histórica.
   base: process.env.CF_PAGES === '1' ? '/' : '/adphor-platform/',
   server: { port: 8000, host: '127.0.0.1', proxy: process.env.VITE_AGENTS_API_URL === 'http://localhost:5173' ? {
