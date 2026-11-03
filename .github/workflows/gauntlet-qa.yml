@@ -1,0 +1,59 @@
+name: ADPHOR Gauntlet QA
+on:
+  pull_request:
+    paths:
+      - 'qa/gauntlet-gates.js'
+      - 'qa/simulacion-operativa.html'
+      - 'tests/gauntlet-gates.test.js'
+      - 'tests/qa-build-config.test.js'
+      - 'tests/readonly-rpc-gauntlet.test.js'
+      - 'tests/agent-effect-contract.test.js'
+      - 'tests/qa-jose-identity.test.js'
+      - 'tests/meeting-slots.test.js'
+      - 'qa/meeting-slots.mjs'
+      - 'tests/qa-companion-carousel.test.js'
+      - 'tests/qa-real-readonly.test.js'
+      - 'qa/datos-reales.html'
+      - 'qa/security/agent-effect-contract.js'
+      - 'qa/security/readonly-rpc-gauntlet.sql'
+      - 'vite.config.js'
+      - '.github/workflows/gauntlet-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Gauntlet regression checks
+        run: node --test tests/gauntlet-gates.test.js tests/qa-build-config.test.js tests/readonly-rpc-gauntlet.test.js tests/agent-effect-contract.test.js tests/qa-jose-identity.test.js tests/meeting-slots.test.js tests/qa-companion-carousel.test.js tests/qa-real-readonly.test.js
+      - name: Normal build (simulation excluded)
+        run: npm run build
+      - name: Opt-in synthetic demo build
+        env:
+          ADPHOR_BUILD_QA_DEMOS: 'true'
+        run: |
+          npm run build
+          test -f dist/qa/simulacion-operativa.html
+          test -f dist/qa/datos-reales.html
+          test -f dist/qa/cliente.html
+      - name: Guard cloud deployment still blocks without Access
+        env:
+          CF_PAGES: '1'
+          CF_PAGES_BRANCH: 'qa/cliente-integracion-verificada-20261102'
+        run: |
+          if npm run build > /tmp/adphor-guard.log 2>&1; then
+            echo 'ERROR: unprotected cloud build unexpectedly succeeded'
+            exit 1
+          fi
+          grep -q 'QA_DEPLOY_BLOCKED' /tmp/adphor-guard.log
