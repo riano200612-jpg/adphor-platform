@@ -1,12 +1,15 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
-// QA branch: cloud deployment is blocked until Access and staging are verified.
+// Public production branch may build the same vetted modern UI as protected QA.
+// Other QA branches still require the explicit Access/staging build opt-in.
+const productionPages = process.env.CF_PAGES === '1'
+  && process.env.CF_PAGES_BRANCH === 'codex/flujo-mantenimiento';
 const protectedStaging = process.env.CF_PAGES === '1'
   && ['qa/premium-ux-20261030','qa/cliente-integracion-verificada-20261102','qa/cliente-preview-real-readonly-20261103','qa/p1-integracion-modulos-gate-20261103'].includes(process.env.CF_PAGES_BRANCH)
   && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true';
-if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !protectedStaging) {
-  throw new Error('QA_DEPLOY_BLOCKED: protected staging opt-in and matching branch required');
+if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !protectedStaging) {
+  throw new Error('DEPLOY_BLOCKED: expected production branch or explicitly protected QA staging');
 }
 
 export default defineConfig({
