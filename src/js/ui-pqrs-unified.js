@@ -19,7 +19,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  const page=el('section');page.className='panel pqrs-page';
  const eyebrow=el('p','CENTRO DE ATENCIÓN · ADPHOR');eyebrow.className='eyebrow';
  const heading=el('h1','PQRS para propietarios y colaboradores');
- const intro=el('p','Radica solicitudes, adjunta fotografías, videos o documentos y consulta el estado desde los formularios originales del cliente, sin perder sus radicados.');intro.className='muted';
+ const intro=el('p','Accede al formulario original para radicar y adjuntar evidencias, consultar un radicado o ingresar al portal de empleados. El formulario original admite un adjunto de hasta 10 MB; la carga múltiple del nuevo diseño requiere un servicio privado certificado.');intro.className='muted';
  const notice=el('p');notice.className='notice';notice.setAttribute('role','status');
  const choices=el('div');choices.className='module-grid';
  const panel=el('div');panel.className='panel';
@@ -27,9 +27,9 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  const frame=document.createElement('iframe');
  frame.title='Portal PQRS original de ADPHOR · formulario con radicación y evidencias';
  frame.setAttribute('sandbox','allow-scripts allow-forms allow-same-origin allow-popups allow-downloads');
- frame.referrerPolicy='strict-origin-when-cross-origin';
+ frame.referrerPolicy='strict-origin-when-cross-origin';frame.allow='microphone; camera';
  frame.loading='lazy';frame.style.width='100%';frame.style.minHeight='780px';frame.style.border='1px solid #cbd5d1';frame.style.borderRadius='12px';
- const fallback=el('p','Si el formulario original solicita otra autenticación o no aparece dentro de la página, utiliza «Abrir en pestaña segura».');fallback.className='muted';
+ const fallback=el('p','El original permite un archivo por radicación (máximo 10 MB). Para varios adjuntos el cliente indicó combinarlos en PDF. Si la cámara, el micrófono o el inicio de sesión no funcionan en el marco, abre el formulario en su propia pestaña.');fallback.className='muted';
  const launch=el('button','Abrir formulario de radicación');launch.type='button';launch.className='btn primary';launch.setAttribute('data-pqrs-action','');
  let selected='owners',currentUrl='';
  let saved='';
