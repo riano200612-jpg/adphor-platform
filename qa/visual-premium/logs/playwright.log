@@ -1,0 +1,26 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> adphor-platform@3.0.0 test:e2e
+> playwright test
+
+[WebServer] (node:77) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+[WebServer] (node:90) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 9 tests using 1 worker
+
+(node:108) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/e2e/premium.spec.js:9:1 › premium desktop: visual evidence, navigation and WCAG automated checks (5.2s)
+  ✓  2 tests/e2e/premium.spec.js:15:1 › premium meetings: guided booking, timezone, reschedule, cancellation and local reload (2.2s)
+  ✓  3 tests/e2e/premium.spec.js:31:1 › premium PQRS: visible submit, receipt, persisted local case, response disclosure and error without fake success (1.9s)
+  ✓  4 tests/e2e/premium.spec.js:39:1 › premium mobile: 390px, reduced motion, catalog search, modules and visible controls (4.0s)
+  ✓  5 tests/e2e/project-selector.spec.js:2:1 › selector component: 40 synthetic properties, filtering and safe names (489ms)
+  ✓  6 tests/e2e/project-selector.spec.js:23:1 › application: 40 synthetic memberships, navigation, reload and restricted user (1.3s)
+  ✓  7 tests/e2e/workflow.spec.js:17:1 › create, technician intervention with evidence, coordinator closure, history and report (2.4s)
+  ✓  8 tests/e2e/workflow.spec.js:53:1 › filters, empty project, read-only profile and mobile layout (669ms)
+  ✓  9 tests/e2e/workflow.spec.js:68:1 › storage failure preserves the unsaved form and never reports success (703ms)
+
+  9 passed (20.2s)

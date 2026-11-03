@@ -1,0 +1,1 @@
+24 SQL checks PASS: migration twice, lifecycle, tenant isolation, history, revocation, durable reopen. Synthetic SQL claims, NOT Supabase JWT or browser E2E.

@@ -1,0 +1,2 @@
+DEFECT REPRODUCED: original OTP function accepts empty code and timestamp. Synthetic in-memory fixture; no real login attempted.
+DEFECT REPRODUCED through completarLoginConOTP: synthetic user reaches login_complete without PIN or nonempty OTP in this invocation. Original deployment reachability NOT tested.

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+
+.venv-workers/
+node_modules/
+python_modules/
+pylock.toml

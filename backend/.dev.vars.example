@@ -1,0 +1,2 @@
+# Solo desarrollo local. Copiar a .dev.vars y nunca subir el archivo real.
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_REEMPLAZAR

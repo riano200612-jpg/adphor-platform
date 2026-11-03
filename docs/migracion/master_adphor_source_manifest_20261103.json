@@ -1,0 +1,155 @@
+{
+  "schema_version": "2026-11-03.1",
+  "source": {
+    "title": "Master_ADPHOR",
+    "kind": "google-sheets",
+    "spreadsheet_id": "1b398nS41DkHiFVu1kMgFu6JO2opZPx8ZT3libxkRIXo",
+    "verified": "metadata and source headers, not all records"
+  },
+  "destination": {
+    "mode": "isolated-QA-only",
+    "production_ref_read_only": "oqizvirqjwbbhyyjpthq"
+  },
+  "sheets": [
+    {
+      "name": "Copropiedades",
+      "id": "ID_Copropiedad",
+      "fields": [
+        "Copropiedad",
+        "ID_Delegado",
+        "Sector"
+      ],
+      "target": "project_catalog",
+      "needs": "approved ID mapping"
+    },
+    {
+      "name": "Info Copropiedades",
+      "id": "ID_Copropiedad",
+      "fields": [
+        "Copropiedad",
+        "Tipo",
+        "Total Unidades",
+        "Periodicidad Consejos"
+      ],
+      "target": "project_details",
+      "needs": "privacy review"
+    },
+    {
+      "name": "Registros",
+      "id": "ID_Registro",
+      "fields": [
+        "Fecha_Registro",
+        "Copropiedad",
+        "Tipo",
+        "Fecha_Evento",
+        "Modalidad",
+        "Estado",
+        "Duración Estimada"
+      ],
+      "target": "meeting_history",
+      "needs": "history only; not confirmed meetings"
+    },
+    {
+      "name": "Métricas Reuniones Meet",
+      "id": "ID_Registro",
+      "fields": [
+        "Fecha",
+        "Hora",
+        "Duración Real"
+      ],
+      "target": "meeting_metrics",
+      "needs": "join to verified Registros"
+    },
+    {
+      "name": "Visitas",
+      "id": "ID_Visita",
+      "fields": [
+        "ID_Copropiedad",
+        "Propósito",
+        "Planificada",
+        "Emergencia",
+        "Resultado",
+        "Fecha Inicio"
+      ],
+      "target": "visits",
+      "needs": "source coverage validation"
+    },
+    {
+      "name": "PQRS",
+      "id": "ID Caso",
+      "fields": [
+        "Fecha_Registro",
+        "ID_Delegado",
+        "Motivo",
+        "Estado",
+        "Prioridad Manual",
+        "Fecha Cierre"
+      ],
+      "target": "pqrs",
+      "needs": "project mapping approved"
+    },
+    {
+      "name": "Delegados",
+      "id": "ID_Delegado",
+      "fields": [
+        "Delegado",
+        "Rol",
+        "Estado",
+        "Sector Coordinado"
+      ],
+      "target": "private_staff_directory",
+      "needs": "no credentials or automatic user creation"
+    },
+    {
+      "name": "Historial Ediciones",
+      "id": "ID_Edición",
+      "fields": [
+        "ID_Original",
+        "Fecha_Edición",
+        "Acción",
+        "Motivo"
+      ],
+      "target": "meeting_history_audit",
+      "needs": "preserve duplicates/history"
+    }
+  ],
+  "excluded_sheets": [
+    "PIN",
+    "Backup_Delegados",
+    "Copia de Delegados 3",
+    "Copia de Delegados 2",
+    "Copia de Delegados 1",
+    "Copia de Delegados",
+    "Copia de Registros",
+    "Historial Ediciones Test",
+    "Registros_Test",
+    "Copia de Archive_Registros"
+  ],
+  "blocked_columns_globally": [
+    "PIN",
+    "Contraseña",
+    "Password",
+    "OTP",
+    "Token",
+    "Credencial",
+    "Secret"
+  ],
+  "checks": [
+    "approved project mapping before membership writes",
+    "source row hash + batch id + idempotent unique key",
+    "no PostgreSQL production import",
+    "no writes without QA RLS",
+    "no fake calendar meetings",
+    "review IDs 6/27, 56 orphans and row 525",
+    "no notifications or AI closures without human approval"
+  ],
+  "historical_counts_at_2026_10_28": {
+    "private_ingestion_rows": 755,
+    "projects": 44,
+    "meeting_activity_rows": 682,
+    "pqrs": 29,
+    "delegates_pending": 55,
+    "edit_history_pending": 367,
+    "unlinked_events": 56
+  }
+}

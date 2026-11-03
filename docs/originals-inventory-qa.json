@@ -1,0 +1,170 @@
+{
+  "files": [
+    {
+      "path": "reuniones/appsscript.json",
+      "bytes": 879,
+      "sha256": "d2bc8c3b473a43c20571a23ab461a3bc964bba8a2855f3cfc30c699f76571a43"
+    },
+    {
+      "path": "reuniones/Calendario.js",
+      "bytes": 12972,
+      "sha256": "476f6018b744f3d5ed0f79b7f239accfe366562c2a58a468da4dcb922ea2b516"
+    },
+    {
+      "path": "reuniones/C\u00f3digo.js",
+      "bytes": 37180,
+      "sha256": "018b7bb3a4865ea5bedff917766359e8c26d1d331c0c79aeafb0c7e180735a90"
+    },
+    {
+      "path": "reuniones/Correo.js",
+      "bytes": 4831,
+      "sha256": "2404004246e9fd1a630e6963000d323b7d378cc7e09e68cf0072345d2be8fd5a"
+    },
+    {
+      "path": "reuniones/Index.html",
+      "bytes": 135740,
+      "sha256": "0db6f4e7c589f193561ab2a85549cb052c72446928841984f17b05ec7d3e8476"
+    },
+    {
+      "path": "reuniones/Utilidades.js",
+      "bytes": 18285,
+      "sha256": "0300ef5d434196986ab1dd9899f47595c2dc8d2fee8925f5bd679db634d4182d"
+    },
+    {
+      "path": "reuniones/MFA.js",
+      "bytes": 16255,
+      "sha256": "3bfed84e45d8ff24de58f7a0e7eec0719988a7bad57cf35b341485753fdb2b5f"
+    },
+    {
+      "path": "portal/appsscript.json",
+      "bytes": 345,
+      "sha256": "8a55186c713768b822b655c65d3a71e16676d6d1d87a00a16bace2dd53d2d3ca"
+    },
+    {
+      "path": "portal/Calendario.js",
+      "bytes": 7793,
+      "sha256": "c680f1540b79c2a21ad054d7d87bcd5039f77d86fd976d17a1a033dfb1964c0f"
+    },
+    {
+      "path": "portal/Copropiedades.js",
+      "bytes": 1552,
+      "sha256": "7a8a0627e250f2619c7d1ba8acfbd1467455882e1eea538fa3e432483e9803c7"
+    },
+    {
+      "path": "portal/Correo.js",
+      "bytes": 2262,
+      "sha256": "96eca487a1dc8531d1bf868ab3a2e2b8b51292decb7abbf8b890d91052ce17f8"
+    },
+    {
+      "path": "portal/C\u00f3digo.js",
+      "bytes": 46314,
+      "sha256": "f4708a15fb5e8fa5ef717dd33ee39f3b400b8a15dd16dd828f76e438bfc90a49"
+    },
+    {
+      "path": "portal/Comunidad.html",
+      "bytes": 118181,
+      "sha256": "64ef23ea3eb7f62821cb38c98c6489c176c842dca51e058fdf9de5ac0038e003"
+    },
+    {
+      "path": "portal/GestionCorreos.html",
+      "bytes": 22297,
+      "sha256": "c9a431ca65d8650b46573215c907bfdcfa267394ad222f9ef4e6b9090ff05a3b"
+    },
+    {
+      "path": "portal/GestionCorreosRegistro.html",
+      "bytes": 148968,
+      "sha256": "992f1b7df48fba49468753055ef744eb91335922365505a63cc69d03e7150ce5"
+    },
+    {
+      "path": "portal/Index.html",
+      "bytes": 410194,
+      "sha256": "ea989c25765bcc8bce10c4cfdeda32361609e95d735693dde1c2fb18b10e4b47"
+    },
+    {
+      "path": "portal/JavaScript.html",
+      "bytes": 268879,
+      "sha256": "f123f59286bc7dadd14f54d7484b01d2a983fc4d85a5c8c11bfaa418acf383c9"
+    },
+    {
+      "path": "portal/PortalHome.html",
+      "bytes": 9427,
+      "sha256": "1da1fbe64124647926b18450759e2454b70bc90b1e48573342d7861531b52051"
+    },
+    {
+      "path": "portal/PQRS_Notificaciones.js",
+      "bytes": 27880,
+      "sha256": "0487b7dfdfaac976ed5b14558056747e9dd49b74b401fc37ee01d47d068a71ad"
+    },
+    {
+      "path": "portal/PQRS.js",
+      "bytes": 123441,
+      "sha256": "f38c8ffcb1b7d07d3d127fba62e27485dc33ba335a793a22f2c8f7436d09a8c1"
+    },
+    {
+      "path": "portal/PQRSForm.html",
+      "bytes": 136997,
+      "sha256": "d57feb7fe1b8a35311afb0f4566eb1b4d51c4bab6319fb513b28a8e03aa47368"
+    },
+    {
+      "path": "portal/PQRSStatus.html",
+      "bytes": 89152,
+      "sha256": "599d9754e0aca9dc469f7d2d526e4c286d03fceefa10578158e6337bfebc3dc7"
+    },
+    {
+      "path": "portal/QuizCartagenaData.html",
+      "bytes": 141415,
+      "sha256": "5984ce1ff3f3c66a0dade0b6c25ec184ebdf91faabc8a3e4f1f7d361e11ed7d0"
+    },
+    {
+      "path": "portal/Registro.html",
+      "bytes": 6535,
+      "sha256": "bb868c5358c3ee93182e696f1672afc886f6bbfc9caef59640f7d70cd66023ec"
+    },
+    {
+      "path": "portal/RegistroCorreo.html",
+      "bytes": 46138,
+      "sha256": "e59f852e0a6979984cd3e002fb8e61c65151e6c5e1e2c8b12f837f52a3c101fe"
+    },
+    {
+      "path": "portal/ProcesadorPQRS.js",
+      "bytes": 5724,
+      "sha256": "b6db1380cf574fbc0c2db3557c4e85d720e68b71d9482fc4b074621803fac115"
+    },
+    {
+      "path": "portal/Reuniones.js",
+      "bytes": 8997,
+      "sha256": "37c825191ea3b949050ee2e46ae439823ca84c3d02ed5194f504288b784b167b"
+    },
+    {
+      "path": "portal/RevocacionCorreo.html",
+      "bytes": 5998,
+      "sha256": "4019a09b02eb115959f9737bb5bb1389c18b7cd0194c7eb87ba841448bc73621"
+    },
+    {
+      "path": "portal/StyleSheet.html",
+      "bytes": 94371,
+      "sha256": "f3b1ab06771bb1def991182716ca37e142568d1fda6576c51c7346900fb83f27"
+    },
+    {
+      "path": "portal/Utilidades.js",
+      "bytes": 3334,
+      "sha256": "2178fe9c2733cec529c0acdefd5b88229bffbda79feface406fd6e4816adeaa1"
+    },
+    {
+      "path": "portal/VerificacionCorreo.html",
+      "bytes": 6002,
+      "sha256": "f9d25f2be0a2230dcde2743ad9cd15c2e8c658716c796918cba3e34bdaaf6726"
+    },
+    {
+      "path": "portal/Visitas.js",
+      "bytes": 14902,
+      "sha256": "79dfddb3ed330b756944c5f55132169b4b648017dda5d21b0767a7d2a05380aa"
+    }
+  ],
+  "scan_summary": {
+    "public_sharing": 10,
+    "pin_dialog": 2,
+    "client_role": 30,
+    "unsafe_html": 157
+  }
+}

@@ -1,0 +1,41 @@
+name: PostgreSQL QA contract (isolated)
+on:
+  pull_request:
+    paths:
+      - 'qa/database/**'
+      - '.github/workflows/postgres-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: qa_ephemeral_only
+          POSTGRES_DB: adphor_qa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d adphor_qa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: qa_ephemeral_only
+      PGDATABASE: adphor_qa
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create disposable prerequisite schema
+        run: psql -v ON_ERROR_STOP=1 -f qa/database/ci/qa-postgres-bootstrap.sql
+      - name: Apply recovered pilot candidate to temporary PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f qa/porto/recovered/sql/01_porto_pilot_schema_QA_ONLY.sql
+      - name: Apply meeting guard migration in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f qa/database/supabase/migrations/20261029134821_porto_meeting_guards.sql
+      - name: Verify RLS, reminder outbox, collisions and 24-hour rule
+        run: psql -v ON_ERROR_STOP=1 -f qa/database/ci/qa-postgres-assertions.sql

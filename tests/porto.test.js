@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {portoEnabled,createPortoRepository} from '../src/js/services/porto.js';
+const ref='abcdefghijklmnopqrst';
+test('production is blocked even with enabled flag',()=>assert.equal(portoEnabled('https://oqizvirqjwbbhyyjpthq.supabase.co','true','oqizvirqjwbbhyyjpthq'),false));
+test('unconfigured QA remains disabled',()=>assert.equal(portoEnabled(`https://${ref}.supabase.co`,undefined,ref),false));
+test('different reference is rejected',()=>assert.equal(portoEnabled('https://different.supabase.co','true',ref),false));
+test('exact staging gate',()=>assert.equal(portoEnabled(`https://${ref}.supabase.co`,'true',ref),true));
+test('gate rejects before touching client',async()=>{const repo=createPortoRepository({},{});await assert.rejects(repo.list('qa-a'),/staging/);});
+test('no session cannot query data',async()=>{const repo=createPortoRepository({auth:{getUser:async()=>({data:{user:null}})}},{url:`https://${ref}.supabase.co`,enabled:'true',stagingRef:ref});await assert.rejects(repo.list('qa-a'),/Sesión/);});

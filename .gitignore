@@ -7,3 +7,6 @@ dist
 playwright-report/
 test-results/
 venv/
+.venv/
+__pycache__/
+*.pyc
