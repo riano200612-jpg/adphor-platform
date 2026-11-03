@@ -1,3 +1,4 @@
+import {mountSourceSnapshot} from './ui-source-snapshot.js';
 // ADPHOR P1: entry point shared by existing modules. No synthetic records or bypasses.
 // Operational meetings/visits require a verified staging API before being enabled.
 export const UNIFIED_MODULES = Object.freeze([
@@ -35,6 +36,7 @@ export function mountUnifiedHub(target,{project,tickets,members,mode,portoEnable
   title.append(el('p','eyebrow','CENTRO UNIFICADO · ADPHOR'),el('h1','', 'Operación integrada'),el('p','muted','Copropiedad seleccionada: '+(project?.name||'Sin asignación')));
   title.append(el('p','notice',mode==='demo'?'Vista de prueba. No muestra registros operativos reales.':'Los indicadores siguientes corresponden exclusivamente a la bitácora autorizada. No son reservas ni reuniones confirmadas.'));
   target.append(title);
+  if(mode!=='demo') mountSourceSnapshot(target);
   const modules=el('section','panel');modules.append(el('h2','','Módulos y acceso'));
   const grid=el('div','module-grid');
   for(const m of unifiedModuleStatus({mode,portoEnabled})){
