@@ -30,7 +30,7 @@ export function upcomingDueItems(tickets,projectId,limit=8) {
     .slice(0,Math.max(0,Math.min(20,limit)));
 }
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=String(text);return e;};
-export function mountUnifiedHub(target,{project,tickets,members,mode,portoEnabled}) {
+export function mountUnifiedHub(target,{project,tickets,members,mode,portoEnabled,role='viewer'}) {
   target.replaceChildren();
   const title=el('section','panel');
   title.append(el('p','eyebrow','CENTRO UNIFICADO · ADPHOR'),el('h1','', 'Operación integrada'),el('p','muted','Copropiedad seleccionada: '+(project?.name||'Sin asignación')));
@@ -77,6 +77,12 @@ export function mountUnifiedHub(target,{project,tickets,members,mode,portoEnable
   }
   if(!eligible.length)people.append(el('p','notice','No hay personal autorizado asignado a esta copropiedad en la base de datos conectada. No se muestran empleados ficticios.'));
   people.append(roster);
+  if(mode==='cloud'&&role==='admin'){
+    const openRoster=el('button','btn secondary','Ver carrusel real: fotos, cargos, sectores y responsabilidades documentadas');
+    openRoster.type='button';openRoster.dataset.page='qa-source';
+    people.append(openRoster);
+    people.append(el('p','muted','El carrusel real requiere cargar el paquete privado de datos y el ZIP multimedia. No se publican fotografías en internet.'));
+  }
   const openMeeting=el('button','btn secondary','Abrir formulario de reuniones y acompañamientos');
   openMeeting.type='button';openMeeting.dataset.page='meetings';people.append(openMeeting);
   target.append(people);
