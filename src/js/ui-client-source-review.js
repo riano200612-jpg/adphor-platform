@@ -80,7 +80,7 @@ export function staffForProject(project,delegates){
 export function photoForStaff(person,entries){
  const expected=staffNameKey(person?.Delegado);if(!expected)return null;
  return (Array.isArray(entries)?entries:[]).find(x=>{
-   if(!/^media\/fotosColaboradores\//i.test(x.name)||!\/\.(jpg|jpeg|png|webp)$/i.test(x.name))return false;
+   if(!/^media\/fotosColaboradores\//i.test(x.name)||!/\.(jpg|jpeg|png|webp)$/i.test(x.name))return false;
    const base=x.name.split('/').pop().replace(/\.[^.]+$/,'').replace(/^\d+\.\s*/,'');
    return staffNameKey(base)===expected;
  })||null;
