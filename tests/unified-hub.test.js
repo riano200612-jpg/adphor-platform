@@ -5,7 +5,8 @@ import {UNIFIED_MODULES,unifiedModuleStatus,upcomingDueItems} from '../src/js/ui
 test('centro incluye los siete accesos y no inventa permisos operativos',()=>{
   assert.equal(UNIFIED_MODULES.length,7);
   const gated=unifiedModuleStatus({mode:'cloud',portoEnabled:false});
-  assert.equal(gated.find(x=>x.id==='meetings').available,false);
+  assert.equal(gated.find(x=>x.id==='meetings').available,true);
+  assert.match(gated.find(x=>x.id==='meetings').note,/sin calendario real/i);
   assert.equal(gated.find(x=>x.id==='pqrs').available,false);
   assert.equal(gated.find(x=>x.id==='reports').available,true);
   assert.equal(unifiedModuleStatus({portoEnabled:true}).find(x=>x.id==='pqrs').available,true);
