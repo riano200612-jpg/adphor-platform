@@ -17,10 +17,21 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La tabla operativa de reuniones aún no existe en esta base de datos.';}}
  if(demo){const load=document.createElement('button');load.type='button';load.className='btn secondary';load.textContent='Cargar 3 reuniones de simulación';load.setAttribute('data-demo-scenarios','');notice.after(load);load.onclick=()=>{try{const n=seedDemoMeetingScenarios(projectId);status.textContent=n?n+' reuniones FICTICIAS añadidas únicamente a este navegador.':'Los escenarios de simulación ya estaban cargados.';render();}catch(error){status.textContent=error.message;}};}
  let editing=null, experience;
+ let verifiedCloudRows=[];
  function render(){
   experience?.draw();
   list.replaceChildren();
-  if(!demo){list.textContent='La agenda real estará disponible cuando se configure PostgreSQL QA.';return;}
+  if(!demo){
+    if(!verifiedCloudRows.length){list.textContent='No hay reuniones verificadas disponibles en la base QA para esta copropiedad. El Excel histórico no se considera una reserva activa.';return;}
+    for(const m of verifiedCloudRows){
+      const item=document.createElement('article');item.className='panel';
+      const title=document.createElement('h4');title.textContent=m.title;
+      const description=document.createElement('p');
+      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · Confirmación verificada, lectura QA';
+      item.append(title,description);list.append(item);
+    }
+    return;
+  }
   const rows=listDemoMeetings(projectId);
   if(!rows.length){list.textContent='Todavía no hay reuniones registradas para esta copropiedad.';return;}
   for(const m of rows){
@@ -78,6 +89,18 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    editing=null;form.reset();render();experience.reset();
   }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
  };
- experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>demo?listDemoMeetings(projectId):[]});
+ experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
  render();
+ if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
+   repo.listVerifiedQaMeetings(projectId).then(rows=>{
+     if(!root.isConnected)return;
+     verifiedCloudRows=(Array.isArray(rows)?rows:[]).map(r=>({
+       id:r.id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
+     }));
+     render();
+   }).catch(error=>{
+     if(!root.isConnected)return;
+     status.textContent='No se pudo consultar la agenda QA autorizada: '+error.message;
+   });
+ }
 }
