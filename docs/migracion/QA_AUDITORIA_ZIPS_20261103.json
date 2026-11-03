@@ -1,0 +1,94 @@
+{
+  "version": "2026-11-03-source-snapshot-v2",
+  "sources": [
+    {
+      "label": "01_BASE_DE_DATOS zip",
+      "sha256": "79e2613ffe82bd2b94e2cd9db102a8313c1e711b6f04688cbc25a8cf0bf2809b",
+      "files": 117,
+      "total_uncompressed_bytes": 140620651
+    },
+    {
+      "label": "media zip",
+      "sha256": "1bb4d282c7d2ac157451893dfce58b56f08357051ea24df287e74df571483371",
+      "files": 103,
+      "total_uncompressed_bytes": 133538877
+    },
+    {
+      "label": "Master_ADPHOR.xlsx",
+      "sha256": "a40b2e418497ca687a4ddaff8bcdf42a5bd8e9a8fd65875d4250591f312d46a5"
+    }
+  ],
+  "raw_sheets": {
+    "Registros": {
+      "rows": 684,
+      "unique_source_ids": 653,
+      "extra_duplicates": 31,
+      "project_name_mapped_rows": 628,
+      "project_unmapped_rows": 56,
+      "statuses": {
+        "Confirmada": 386,
+        "Eliminada": 204,
+        "Por Confirmar": 63,
+        "Rechazada": 31
+      },
+      "future_confirmed_candidates_2026_11_03": 40
+    },
+    "PQRS": {
+      "rows": 29,
+      "unique_ids": 29,
+      "statuses": {
+        "Abierto": 29
+      }
+    },
+    "Copropiedades": {
+      "rows": 44,
+      "unique_ids": 44
+    },
+    "Delegados": {
+      "rows": 55,
+      "unique_ids": 55
+    },
+    "Info Copropiedades": {
+      "rows": 39
+    },
+    "Historial Ediciones": {
+      "rows": 368,
+      "unique_original_ids": 309
+    },
+    "Visitas": {
+      "rows": 0
+    },
+    "Métricas Reuniones Meet": {
+      "rows": 0
+    }
+  },
+  "media": {
+    "collaborator_photos": 45,
+    "property_photos_media_zip": 42,
+    "corporate_images": 16,
+    "delegate_photos_database_zip": 55,
+    "property_photos_database_zip": 44
+  },
+  "security": {
+    "exclude": [
+      "PIN",
+      "passwords",
+      "OTP",
+      "secret API keys",
+      "personal photos",
+      "source rows",
+      "calendar event IDs",
+      "email addresses"
+    ],
+    "never_publish_raw_data": true,
+    "never_auto_create_calendar": true,
+    "never_auto_create_users": true
+  },
+  "notes": [
+    "ZIP snapshot only; current Google Drive spreadsheet may differ",
+    "No visits in uploaded Master sheet; original portal source has visit operations not backed by sheet rows",
+    "Existing private adphor_ingest.source_rows has 755 historical immutable rows and import_batches has 3; not yet functional meeting or PQRS operational table",
+    "One QA source package generated locally for protected staging only; NOT in this public repo",
+    "Do not treat 40 future Confirmada rows as verified live Google Calendar events until reconciled"
+  ]
+}
