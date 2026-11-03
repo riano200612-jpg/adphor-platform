@@ -15,6 +15,7 @@ import { mountAgentHistory } from './ui-agent-history.js';
 import { mountTenantConsultation } from './ui-tenant-consultation.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
+import '../css/client-source-review.css';
 import '../css/premium.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
