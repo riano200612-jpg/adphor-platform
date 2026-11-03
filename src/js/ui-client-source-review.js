@@ -97,6 +97,7 @@ function simpleCard(root,title,details){
  const card=text('article','','panel');card.append(text('h4',title),text('p',details,'muted'));root.append(card);return card;
 }
 export function mountClientSourceReview(root){
+ root.classList.add('source-review');
  root.replaceChildren();
  const host=text('section','','panel');
  host.append(text('p','REVISIÓN PRIVADA · ADMINISTRADOR','eyebrow'),
