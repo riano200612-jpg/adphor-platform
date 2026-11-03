@@ -12,10 +12,10 @@ export const UNIFIED_MODULES = Object.freeze([
 export function unifiedModuleStatus({mode='demo',portoEnabled=false}={}) {
   return UNIFIED_MODULES.map(m=>({
     ...m,
-    available: m.id==='meetings' || m.id!=='pqrs' || portoEnabled,
+    available: true,
     note: m.id==='meetings'&&!portoEnabled ?
       'Formulario y carrusel disponibles; sin calendario real ni reservas persistentes' :
-      m.id==='pqrs'&&!portoEnabled ? 'Sin conexión transaccional certificada: módulo restringido' :
+      m.id==='pqrs'&&!portoEnabled ? 'Resumen histórico del origen; radicación y consulta operativa bloqueadas' :
       m.id==='recorridos' ? 'Seguimiento de novedades; formulario de visitas independiente pendiente' :
       m.id==='tickets' ? 'Fotografías de mantenimiento; biblioteca multimedia pendiente' :
       m.id==='dashboard' ? 'Panel de datos autorizados' :
