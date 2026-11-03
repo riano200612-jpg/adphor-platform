@@ -9,7 +9,7 @@ on:
       - 'tests/readonly-rpc-gauntlet.test.js'
       - 'tests/agent-effect-contract.test.js'
       - 'tests/qa-jose-identity.test.js'
-      - 'tests/meeting-slots.test.js tests/qa-companion-carousel.test.js'
+      - 'tests/meeting-slots.test.js'
       - 'qa/meeting-slots.mjs'
       - 'tests/qa-companion-carousel.test.js'
       - 'qa/security/agent-effect-contract.js'
