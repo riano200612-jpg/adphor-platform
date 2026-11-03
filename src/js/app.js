@@ -7,6 +7,7 @@ import { mountProjectSelector, chooseProject, projectPreference } from './ui-pro
 import { mountMeetingAssessment } from './ui-meeting-assessment.js';
 import { mountPqrs } from './ui-pqrs.js';
 import { mountPqrsSourceStatus } from './ui-pqrs-source-status.js';
+import { mountUnifiedPqrs } from './ui-pqrs-unified.js';
 import { mountClientSourceReview } from './ui-client-source-review.js';
 import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
@@ -146,7 +147,7 @@ function renderPage() {
   }
   if (state.page === 'pqrs') {
     if(portoVisible()) mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});
-    else mountPqrsSourceStatus($('page-content'),{repo,projectId:state.projectId});
+    else mountUnifiedPqrs($('page-content'),{repo,projectId:state.projectId,role:role(),environment:import.meta.env.VITE_ADPHOR_PORTAL_EXEC_URL||''});
     return;
   }
   if (state.page === 'consultation' && import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') {
