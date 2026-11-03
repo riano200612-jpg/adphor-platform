@@ -9,7 +9,7 @@ const protectedStaging = process.env.CF_PAGES === '1'
   && ['qa/premium-ux-20261030','qa/cliente-integracion-verificada-20261102','qa/cliente-preview-real-readonly-20261103','qa/p1-integracion-modulos-gate-20261103'].includes(process.env.CF_PAGES_BRANCH)
   && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true';
 if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !protectedStaging) {
-  throw new Error('DEPLOY_BLOCKED: expected production branch or explicitly protected QA staging');
+  throw new Error('QA_DEPLOY_BLOCKED: expected production branch or explicitly protected QA staging');
 }
 
 export default defineConfig({
