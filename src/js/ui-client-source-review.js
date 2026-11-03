@@ -140,7 +140,7 @@ export function mountClientSourceReview(root){
   const select=text('select');for(const p of records.projects){const op=text('option',p.Copropiedad);op.value=String(p.ID_Copropiedad);select.append(op);}
   label.append(select);content.append(label);
   const calendarHost=text('section','','panel'),listHost=text('section','','panel'),pqrsHost=text('section','','panel'),peopleHost=text('section','','panel');
-  content.append(calendarHost,listHost,pqrsHost,peopleHost);
+  content.append(peopleHost,calendarHost,pqrsHost,listHost);
   const makeView=()=>{
    clearUrls();const p=records.projects.find(x=>String(x.ID_Copropiedad)===select.value);if(!p)return;
    const rows=selectProjectMeetings(records.meetings,p.ID_Copropiedad);
