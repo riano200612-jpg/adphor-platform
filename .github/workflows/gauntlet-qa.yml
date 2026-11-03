@@ -12,6 +12,8 @@ on:
       - 'tests/meeting-slots.test.js'
       - 'qa/meeting-slots.mjs'
       - 'tests/qa-companion-carousel.test.js'
+      - 'tests/qa-real-readonly.test.js'
+      - 'qa/datos-reales.html'
       - 'qa/security/agent-effect-contract.js'
       - 'qa/security/readonly-rpc-gauntlet.sql'
       - 'vite.config.js'
@@ -34,7 +36,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Gauntlet regression checks
-        run: node --test tests/gauntlet-gates.test.js tests/qa-build-config.test.js tests/readonly-rpc-gauntlet.test.js tests/agent-effect-contract.test.js tests/qa-jose-identity.test.js tests/meeting-slots.test.js tests/qa-companion-carousel.test.js
+        run: node --test tests/gauntlet-gates.test.js tests/qa-build-config.test.js tests/readonly-rpc-gauntlet.test.js tests/agent-effect-contract.test.js tests/qa-jose-identity.test.js tests/meeting-slots.test.js tests/qa-companion-carousel.test.js tests/qa-real-readonly.test.js
       - name: Normal build (simulation excluded)
         run: npm run build
       - name: Opt-in synthetic demo build
@@ -43,6 +45,7 @@ jobs:
         run: |
           npm run build
           test -f dist/qa/simulacion-operativa.html
+          test -f dist/qa/datos-reales.html
           test -f dist/qa/cliente.html
       - name: Guard cloud deployment still blocks without Access
         env:
