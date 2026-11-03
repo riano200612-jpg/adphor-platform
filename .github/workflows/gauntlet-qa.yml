@@ -9,8 +9,9 @@ on:
       - 'tests/readonly-rpc-gauntlet.test.js'
       - 'tests/agent-effect-contract.test.js'
       - 'tests/qa-jose-identity.test.js'
-      - 'tests/meeting-slots.test.js'
+      - 'tests/meeting-slots.test.js tests/qa-companion-carousel.test.js'
       - 'qa/meeting-slots.mjs'
+      - 'tests/qa-companion-carousel.test.js'
       - 'qa/security/agent-effect-contract.js'
       - 'qa/security/readonly-rpc-gauntlet.sql'
       - 'vite.config.js'
@@ -33,7 +34,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Gauntlet regression checks
-        run: node --test tests/gauntlet-gates.test.js tests/qa-build-config.test.js tests/readonly-rpc-gauntlet.test.js tests/agent-effect-contract.test.js tests/qa-jose-identity.test.js tests/meeting-slots.test.js
+        run: node --test tests/gauntlet-gates.test.js tests/qa-build-config.test.js tests/readonly-rpc-gauntlet.test.js tests/agent-effect-contract.test.js tests/qa-jose-identity.test.js tests/meeting-slots.test.js tests/qa-companion-carousel.test.js
       - name: Normal build (simulation excluded)
         run: npm run build
       - name: Opt-in synthetic demo build
