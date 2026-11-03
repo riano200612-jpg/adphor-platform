@@ -12,9 +12,10 @@ export const UNIFIED_MODULES = Object.freeze([
 export function unifiedModuleStatus({mode='demo',portoEnabled=false}={}) {
   return UNIFIED_MODULES.map(m=>({
     ...m,
-    available: !['meetings','pqrs'].includes(m.id) || portoEnabled,
-    note: (m.id==='meetings'||m.id==='pqrs')&&!portoEnabled ?
-      'Sin conexión transaccional certificada: módulo restringido' :
+    available: m.id==='meetings' || m.id!=='pqrs' || portoEnabled,
+    note: m.id==='meetings'&&!portoEnabled ?
+      'Formulario y carrusel disponibles; sin calendario real ni reservas persistentes' :
+      m.id==='pqrs'&&!portoEnabled ? 'Sin conexión transaccional certificada: módulo restringido' :
       m.id==='recorridos' ? 'Seguimiento de novedades; formulario de visitas independiente pendiente' :
       m.id==='tickets' ? 'Fotografías de mantenimiento; biblioteca multimedia pendiente' :
       m.id==='dashboard' ? 'Panel de datos autorizados' :
@@ -58,6 +59,23 @@ export function mountUnifiedHub(target,{project,tickets,members,mode,portoEnable
   target.append(agenda);
   const people=el('section','panel');people.append(el('h2','','Equipo autorizado'));
   people.append(el('p','muted','Perfiles visibles mediante membresías de la copropiedad. No implica disponibilidad para acompañamientos.'));
-  people.append(el('p','',String((members||[]).length)+' integrantes en la vista autorizada.'));
+  const eligible=(Array.isArray(members)?members:[]).filter(m=>m?.project_id===project?.id && m?.name && ['admin','coordinator','technician'].includes(m.role));
+  people.append(el('p','',String(eligible.length)+' responsables elegibles entre las membresías autorizadas. Su presencia aquí no implica que estén disponibles.'));
+  const roster=el('div','meeting-escort-carousel');
+  roster.setAttribute('role','list');
+  const noEscort=el('article','meeting-escort-card');
+  noEscort.append(el('strong','','Sin acompañamiento requerido'),el('small','','Opción disponible en el formulario de reuniones'));
+  noEscort.setAttribute('role','listitem');
+  roster.append(noEscort);
+  for(const person of eligible){
+    const card=el('article','meeting-escort-card');
+    card.setAttribute('role','listitem');
+    card.append(el('strong','',person.name),el('small','',person.role));
+    roster.append(card);
+  }
+  if(!eligible.length)people.append(el('p','notice','No hay personal autorizado asignado a esta copropiedad en la base de datos conectada. No se muestran empleados ficticios.'));
+  people.append(roster);
+  const openMeeting=el('button','btn secondary','Abrir formulario de reuniones y acompañamientos');
+  openMeeting.type='button';openMeeting.dataset.page='meetings';people.append(openMeeting);
   target.append(people);
 }
