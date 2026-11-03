@@ -51,7 +51,7 @@ export function enhanceMeetings(root,{form,list,projectName,demo,getRows}){
     const button=document.createElement('button');button.type='button';button.className='calendar-slot'+(occupied.length?' occupied':'');
     button.textContent=time+(occupied.length?' · '+occupied.map(e=>e.title).join(', '):demo?' · Solicitar reunión':' · Sin agenda sincronizada');
     button.setAttribute('aria-label',time+(occupied.length?' ocupado; seleccionar otro horario':' disponible para propuesta de reunión'));
-    button.disabled=!demo||Boolean(occupied.length);
+    button.disabled=Boolean(occupied.length);if(!demo)button.disabled=true;
     button.onclick=()=>{if(!demo)return;clear.click();open();form.elements.start.value=day+'T'+time;};
     slots.append(button);
   }
