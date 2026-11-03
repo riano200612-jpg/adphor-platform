@@ -14,5 +14,5 @@ test('QA modules can be navigated without unverified operational permissions',()
   assert.equal(modules.find(m=>m.id==='meetings').available,true);
   assert.equal(modules.find(m=>m.id==='pqrs').available,true);
   assert.match(modules.find(m=>m.id==='meetings').note,/sin calendario real/i);
-  assert.match(modules.find(m=>m.id==='pqrs').note,/radicación.*bloqueadas/i);
+  assert.match(modules.find(m=>m.id==='pqrs').note,/sin enlace no hay radicación/i);
 });
