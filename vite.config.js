@@ -8,7 +8,13 @@ const productionPages = process.env.CF_PAGES === '1'
 const protectedStaging = process.env.CF_PAGES === '1'
   && ['qa/premium-ux-20261030','qa/cliente-integracion-verificada-20261102','qa/cliente-preview-real-readonly-20261103','qa/p1-integracion-modulos-gate-20261103'].includes(process.env.CF_PAGES_BRANCH)
   && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true';
-if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !protectedStaging) {
+// Consolidated QA branch is a separate, explicitly gated preview. Never enable
+// ADPHOR_QA_ACCESS_VERIFIED before verifying Access on the exact preview hostname.
+const consolidatedQa = process.env.CF_PAGES === '1'
+  && process.env.CF_PAGES_BRANCH === 'qa/pqrs-carrusel-integracion-20261104'
+  && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true'
+  && process.env.ADPHOR_QA_ACCESS_VERIFIED === 'true';
+if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !protectedStaging && !consolidatedQa) {
   throw new Error('QA_DEPLOY_BLOCKED: expected production branch or explicitly protected QA staging');
 }
 
