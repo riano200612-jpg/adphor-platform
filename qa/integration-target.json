@@ -1,0 +1,10 @@
+{
+  "repository": "riano200612-jpg/adphor-platform",
+  "branch": "qa/pqrs-carrusel-integracion-20261104",
+  "pagesProject": "adphor-platform",
+  "cloudflareAccountId": "d7c467dca048f6f09a93d78bb59e616d",
+  "qaUrl": "https://qa-pqrs-carrusel-integracion-20261104.adphor-platform.pages.dev",
+  "qaUrlStatus": "proposed-not-certified",
+  "supabaseRef": "qfctnnnnltghepwujpdm",
+  "releaseEnvironment": "adphor-qa"
+}

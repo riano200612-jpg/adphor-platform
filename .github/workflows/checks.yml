@@ -2,7 +2,7 @@ name: Validate ADPHOR
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, qa/pqrs-carrusel-integracion-20261104]
 permissions:
   contents: read
 jobs:
@@ -45,3 +45,61 @@ jobs:
         run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
       - name: Compile Python modules
         run: python -m compileall -q backend/src
+
+  deploy-approved-qa:
+    name: Deploy approved QA preview
+    needs: [test, python-tests]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/qa/pqrs-carrusel-integracion-20261104' &&
+      vars.ADPHOR_QA_DEPLOY_ENABLED == 'true' &&
+      vars.ADPHOR_QA_ACCESS_VERIFIED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: adphor-qa
+    concurrency:
+      group: adphor-platform-approved-qa
+      cancel-in-progress: true
+    env:
+      ADPHOR_QA_DEPLOY_ENABLED: ${{ vars.ADPHOR_QA_DEPLOY_ENABLED }}
+      ADPHOR_QA_ACCESS_VERIFIED: ${{ vars.ADPHOR_QA_ACCESS_VERIFIED }}
+      ADPHOR_QA_URL: ${{ vars.ADPHOR_QA_URL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      VITE_SUPABASE_URL: https://qfctnnnnltghepwujpdm.supabase.co
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_QA_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_PORTO_QA_ENABLED: 'true'
+      VITE_PORTO_STAGING_REF: qfctnnnnltghepwujpdm
+      VITE_REQUIRE_MFA: 'true'
+      VITE_PRIVATE_MEDIA_QA_ENABLED: ${{ vars.VITE_PRIVATE_MEDIA_QA_ENABLED }}
+      VITE_QA_EVIDENCE_UPLOAD_ENABLED: ${{ vars.VITE_QA_EVIDENCE_UPLOAD_ENABLED }}
+      VITE_AGENTS_API_URL: ${{ vars.ADPHOR_QA_AGENTS_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify target configuration and anonymous Access redirect
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_QA_API_TOKEN }}
+        run: node qa/deploy-preflight.mjs
+      - run: npm ci
+      - name: Build the approved preview SHA
+        env:
+          CF_PAGES: '1'
+          CF_PAGES_BRANCH: qa/pqrs-carrusel-integracion-20261104
+          CF_PAGES_COMMIT_SHA: ${{ github.sha }}
+          ADPHOR_PROTECTED_STAGING_QA: 'true'
+        run: npm run build
+      - name: Publish only the configured QA branch
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_QA_API_TOKEN }}
+        run: >-
+          npm exec --yes --package=wrangler@4.157.0 -- wrangler pages deploy dist
+          --project-name=adphor-platform
+          --branch=qa/pqrs-carrusel-integracion-20261104
+          --commit-hash="$GITHUB_SHA"
+          --commit-dirty=false
