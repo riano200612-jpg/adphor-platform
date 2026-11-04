@@ -93,6 +93,7 @@ jobs:
           CF_PAGES_BRANCH: qa/pqrs-carrusel-integracion-20261104
           CF_PAGES_COMMIT_SHA: ${{ github.sha }}
           ADPHOR_PROTECTED_STAGING_QA: 'true'
+          ADPHOR_QA_ACCESS_VERIFIED: ${{ vars.ADPHOR_QA_ACCESS_VERIFIED }}
         run: npm run build
       - name: Publish only the configured QA branch
         env:
