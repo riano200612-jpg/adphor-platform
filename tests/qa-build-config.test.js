@@ -26,8 +26,8 @@ test('approved QA workflow forwards Access verification to the Vite build', () =
   const workflow = readFileSync(new URL('../.github/workflows/checks.yml', import.meta.url), 'utf8');
   const buildStep = workflow.split('      - name: Build the approved preview SHA')[1]?.split('      - name: Publish only the configured QA branch')[0];
   assert.ok(buildStep, 'approved QA build step must exist');
-  assert.match(buildStep, /ADPHOR_PROTECTED_STAGING_QA: 'true'/);
-  assert.match(buildStep, /ADPHOR_QA_ACCESS_VERIFIED: \\$\\{\\{ vars\\.ADPHOR_QA_ACCESS_VERIFIED \\}\\}/);
-  assert.match(workflow, /--project-name=adphor-platform/);
-  assert.match(workflow, /--branch=qa\\/pqrs-carrusel-integracion-20261104/);
+  assert.ok(buildStep.includes("ADPHOR_PROTECTED_STAGING_QA: 'true'"));
+  assert.ok(buildStep.includes('ADPHOR_QA_ACCESS_VERIFIED: ' + '$' + '{{ vars.ADPHOR_QA_ACCESS_VERIFIED }}'));
+  assert.ok(workflow.includes('--project-name=adphor-platform'));
+  assert.ok(workflow.includes('--branch=qa/pqrs-carrusel-integracion-20261104'));
 });
