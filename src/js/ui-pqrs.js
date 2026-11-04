@@ -58,7 +58,26 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
     if(!rows.length)list.append(el('p','Aún no hay solicitudes visibles. Radica una nueva PQRS o cambia el filtro.'));
     return `${rows.length} solicitudes consultadas · ${repository.localDemo?'Demostración local, no PostgreSQL':'Lectura del servicio PostgreSQL'}`;
   }
-  root.querySelector('form').onsubmit=e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button');button.disabled=true;run(async()=>{const files=selectedEvidence();if(files.length)throw Error('No se puede radicar con adjuntos: el almacenamiento privado de evidencias PQRS no está habilitado todavía. Retira los archivos para continuar sin evidencia.');const payload=Object.fromEntries(new FormData(form));delete payload.evidence;const saved=await repository.create(projectId,payload,requestId);if(!saved?.id)throw Error('El servicio no confirmó el radicado. Conserva los datos y vuelve a intentar.');requestId=crypto.randomUUID();form.reset();await load();return `Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;}).finally(()=>button.disabled=false);};
+  let submitting=false;
+  form.onsubmit=e=>{
+    e.preventDefault();
+    if(submitting)return;
+    submitting=true;
+    const button=form.querySelector('[type="submit"]');
+    button.disabled=true;
+    run(async()=>{
+      const files=selectedEvidence();
+      if(files.length)throw Error('No se puede radicar con adjuntos: el almacenamiento privado de evidencias PQRS no está habilitado todavía. Retira los archivos para continuar sin evidencia.');
+      const payload=Object.fromEntries(new FormData(form));delete payload.evidence;
+      const saved=await repository.create(projectId,payload,requestId);
+      if(!saved?.id)throw Error('El servicio no confirmó el radicado. Conserva los datos y vuelve a intentar.');
+      requestId=crypto.randomUUID();
+      form.reset();clearPreviews();evidenceList.replaceChildren();clearEvidence.hidden=true;
+      const confirmation=`Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;
+      try{await load();}catch{return confirmation+' No se pudo actualizar la lista. Pulsa Actualizar lista para consultar el radicado.';}
+      return confirmation;
+    }).finally(()=>{submitting=false;button.disabled=false;});
+  };
   root.querySelector('[data-new]').onclick=()=>{root.querySelector('form').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});root.querySelector('form [name=kind]').focus();};
   root.querySelector('[data-refresh]').onclick=()=>run(load);filter.onchange=()=>run(load);run(load);
 }
