@@ -145,7 +145,7 @@ function renderPage() {
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   if (state.page === 'meetings') {
-    mountMeetingAssessment($('page-content'),{projectName:project().name,role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
+    mountMeetingAssessment($('page-content'),{projectName:project().name,sector:project().sector||project().location||'',role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
   }
   if (state.page === 'pqrs') {
     if(portoVisible()) mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});

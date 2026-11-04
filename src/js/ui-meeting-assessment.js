@@ -1,10 +1,11 @@
+import { drawCompanionOptions } from './ui-companion-options.js';
 import {enhanceMeetings,bogotaInput,bogotaInstant} from './ui-meeting-experience.js';
 import {buildClientMeetingTitle,meetingDurationHours} from './services/client-meeting-mapping.js';
 import {listDemoMeetings,scheduleDemoMeeting,cancelDemoMeeting,historyDemoMeeting,decideDemoMeeting,seedDemoMeetingScenarios} from './services/demo-calendar.js';
 
 // This is an interactive local calendar in DEMO mode. Cloud mode remains assessment-only
 // until authenticated transactional booking is verified on isolated QA PostgreSQL.
-export function mountMeetingAssessment(root,{repo,projectId,projectName=projectId,role='viewer',members=[]}) {
+export function mountMeetingAssessment(root,{repo,projectId,projectName=projectId,role='viewer',members=[],sector=''}) {
  const demo=repo.mode==='demo-calendar';
  root.innerHTML='<section class="panel"><h2>Reuniones y agenda gerencial</h2><p data-notice></p><form><label>Tipo de reunión<select name="meetingType"><option>Consejo</option><option>Asamblea</option><option>Comité</option><option>Gerencia</option><option>Otra</option></select></label><label>Subtipo<select name="subType"><option value="">Ninguno</option><option>Pre-Asamblea</option><option>Ordinaria</option><option>Extraordinaria</option></select></label><label>Modalidad<select name="modality"><option>Presencial</option><option>Virtual</option><option>Mixta</option></select></label><label>Especificación<input name="specification" maxlength="100"></label><label>Delegado asignado<input name="delegate" maxlength="120"></label><label>Asunto<input name="subject" required minlength="3" maxlength="200"></label><label>Notas<textarea name="notes" maxlength="5000"></textarea></label><label>Inicio<input name="start" type="datetime-local" required></label><label>Fin<input name="end" type="datetime-local"></label><label>Duración sugerida (horas)<input name="duration" type="number" min="0.25" max="12" step="0.25" placeholder="Automática según tipo"></label><label>Prioridad<select name="priority"><option value="bajo">Baja</option><option value="medio" selected>Media</option><option value="alto">Alta</option></select></label><label><input name="management" type="checkbox"> Solicitar asistencia de Gerencia</label><button>Evaluar y agendar</button><button type="button" data-clear>Nuevo horario</button></form><p role="status"></p><h3>Calendario de la copropiedad</h3><div data-list></div></section>';
  const escort=document.createElement('fieldset');escort.className='meeting-escorts';escort.innerHTML='<legend>Acompañamiento</legend><p>Selecciona a un responsable de tu copropiedad o indica que no se requiere acompañamiento.</p><div class="meeting-escort-carousel" role="radiogroup" aria-label="Responsable de acompañamiento"></div>';
@@ -12,6 +13,12 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  const options=[{id:'',name:'Sin acompañamiento requerido',role:''},...members.filter(m=>m.project_id===projectId&&m.name&&['admin','coordinator','technician'].includes(m.role)).map(m=>({id:m.user_id,name:m.name,role:m.role}))];
  options.forEach((person,i)=>{const label=document.createElement('label');label.className='meeting-escort-card';const radio=document.createElement('input');radio.type='radio';radio.name='escort_id';radio.value=person.id;radio.checked=i===0;label.append(radio);const name=document.createElement('strong');name.textContent=person.name;label.append(name);if(person.role){const roleLabel=document.createElement('small');roleLabel.textContent=person.role;label.append(roleLabel);}escortChoices.append(label);});
  root.querySelector('form').append(escort);
+ if(!demo&&repo.privateMediaEnabled){
+  escortChoices.replaceChildren();
+  repo.authorizedCompanions(projectId,sector).then(people=>{
+    if(escortChoices.isConnected)drawCompanionOptions(escortChoices,people,{photoUrl:id=>repo.companionPhotoUrl(projectId,id)});
+  }).catch(()=>{if(escortChoices.isConnected){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
+ }
  if(role==='admin' && !demo){
    const help=document.createElement('div');help.className='panel';
    const title=document.createElement('h3');title.textContent='Fotografías, dependencias y funciones del equipo';
