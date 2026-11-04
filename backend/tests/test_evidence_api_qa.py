@@ -10,9 +10,19 @@ PNG_QA = bytes.fromhex("89504e470d0a1a0a") + b"synthetic"
 class FakeStorage:
     def __init__(self):
         self.calls=[]
+        self.metadata=None
+        self.metadata_ok=True
+        self.storage_status=200
+        self.payload=b""
     async def post(self,url,**kwargs):
         self.calls.append((url,kwargs))
-        return type("Response",(),{"status_code":200,"is_success":True})()
+        if "/rest/v1/" in url:
+            if self.metadata_ok: self.metadata=kwargs["json"]
+            return type("Response",(),{"status_code":201 if self.metadata_ok else 500,"is_success":self.metadata_ok})()
+        self.payload=kwargs.get("content",b"")
+        return type("Response",(),{"status_code":self.storage_status,"is_success":self.storage_status==200,"json":lambda _: {"error":"Duplicate"}})()
+    async def get(self,url,**kwargs):
+        return type("Response",(),{"is_success":True,"content":self.payload})()
 
 class EvidenceQaTests(unittest.TestCase):
     def setUp(self):
@@ -27,6 +37,8 @@ class EvidenceQaTests(unittest.TestCase):
             self.allowed_roles.append(tuple(allowed))
             if project!="qa-prop": raise RuntimeError("unexpected scope")
         async def read(request,token,path,params=None):
+            if "qa_case_evidence" in path:
+                return [self.storage.metadata] if self.storage.metadata else []
             return [{"id":"case-1"}] if self.case_exists else []
         app=FastAPI()
         app.include_router(build_evidence_router(
@@ -48,9 +60,9 @@ class EvidenceQaTests(unittest.TestCase):
                           headers={"content-type":"image/png"})
         self.assertEqual(r.status_code,200,r.text)
         self.assertTrue(r.json()["storage_written"])
-        self.assertFalse(r.json()["metadata_linked"])
+        self.assertTrue(r.json()["metadata_linked"])
         self.assertFalse(r.json()["notifications_sent"])
-        self.assertEqual(len(self.storage.calls),1)
+        self.assertEqual(len(self.storage.calls),2)
         self.assertIn("/qa-prop/pqrs/case-1/",self.storage.calls[0][0])
     def test_viewer_role_is_not_permitted_to_upload(self):
         r=self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"})
@@ -101,10 +113,34 @@ class EvidenceQaTests(unittest.TestCase):
                              headers={"content-type": "image/png"})
         self.assertEqual(r.status_code, 413)
         self.assertEqual(self.storage.calls, [])
-    def test_storage_response_does_not_pretend_metadata_persisted(self):
+    def test_metadata_failure_is_not_reported_as_saved(self):
+        self.storage.metadata_ok=False
+        r=self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"})
+        self.assertEqual(r.status_code,502)
+        self.assertIn("asociación no confirmada",r.json()["detail"])
+        self.assertIsNone(self.storage.metadata)
+    def test_retry_reuses_persisted_attachment_without_new_storage_write(self):
+        first=self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"})
+        second=self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"})
+        self.assertEqual(first.json()["id"],second.json()["id"])
+        self.assertEqual(len(self.storage.calls),2)
+    def test_interrupted_upload_can_link_verified_existing_bytes(self):
+        self.storage.metadata_ok=False
+        self.assertEqual(self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"}).status_code,502)
+        self.storage.metadata_ok=True
+        self.storage.storage_status=409
+        r=self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"})
+        self.assertEqual(r.status_code,200,r.text)
+        self.assertTrue(r.json()["metadata_linked"])
+    def test_legacy_duplicate_response_is_verified_before_linking(self):
+        self.storage.storage_status=400
+        r=self.client.post(self.path,data=PNG_QA,headers={"content-type":"image/png"})
+        self.assertEqual(r.status_code,200,r.text)
+        self.assertTrue(r.json()["metadata_linked"])
+    def test_success_requires_metadata_persisted(self):
         r=self.client.post(self.path,data=PNG_QA,
                            headers={"content-type":"image/png"})
         self.assertEqual(r.status_code,200)
-        self.assertIs(r.json()["metadata_linked"],False)
+        self.assertIs(r.json()["metadata_linked"],True)
         self.assertIs(r.json()["notifications_sent"],False)
 if __name__=="__main__": unittest.main()

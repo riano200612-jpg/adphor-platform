@@ -8,7 +8,7 @@ test('PQRS attachment picker accepts specified media and documents',()=>{
  assert.match(ui,/selectedEvidence\(\)/);
 });
 test('PQRS must never silently submit selected files without private storage',()=>{
- assert.match(ui,/if\(files.length\)throw Error\('No se puede radicar con adjuntos/);
+ assert.match(ui,/if\(files.length&&typeof repository.uploadEvidence!=='function'\)throw Error\('No se puede radicar con adjuntos/);
  assert.match(ui,/delete payload.evidence/);
  assert.match(policy,/20\*1024\*1024/);
  assert.match(ui,/validateQaEvidence/);

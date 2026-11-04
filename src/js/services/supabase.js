@@ -1,3 +1,5 @@
+import { createEvidenceApiRepository } from './evidence-api.js';
+import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
 import { createManagedMfa } from './managed-mfa.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
@@ -9,6 +11,11 @@ import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
+  const privateMediaEnabled=import.meta.env.VITE_PRIVATE_MEDIA_QA_ENABLED==='true' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
+  const media=privateMediaEnabled?createPrivateMediaRepository(client):null;
+  const evidence=createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
+  const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
+  if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
   const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true'});
   async function finishLogin(id) {
     const profile=check(await client.from('profiles').select('name').eq('id',id).single());
@@ -24,7 +31,7 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
-    porto: createPortoRepository(client, {url, enabled:import.meta.env.VITE_PORTO_QA_ENABLED, stagingRef:import.meta.env.VITE_PORTO_STAGING_REF}),
+    porto,
     // Historical data is readable only when an isolated QA project is explicitly enabled.
     // Source status alone never proves a Google Calendar reservation.
     async listVerifiedQaMeetings(projectId) {
@@ -108,9 +115,23 @@ export function createCloudRepository(url, key) {
         allPages(() => client.from('tickets').select('*').order('created_at', { ascending: false }).order('id')),
       ]);
       const [projects, members, tickets] = results;
+      if(media){
+        const photos=await media.projectPhotos(assignedProjects(projects,members,user.id));
+        for(const project of projects)project.photo_filename=photos.find(p=>p.project_id===project.id)?.filename;
+      }
       return { projects:assignedProjects(projects,members,user.id), members:assignedMembers(members,user.id,projects).map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets:assignedTickets(tickets,user.id,members,projects) };
     },
+    privateMediaEnabled,
+    async authorizedCompanions(projectId,sector){
+      if(!media||!user)throw Error('Catálogo privado disponible solo en QA aislado.');
+      return media.companions(projectId,sector);
+    },
+    async companionPhotoUrl(projectId,personId){
+      if(!media||!user)throw Error('Fotografías privadas disponibles solo en QA aislado.');
+      return media.companionPhoto(projectId,personId);
+    },
     async propertyPhotoUrl(projectId,filename){
+      if(media)return media.propertyPhoto(projectId,filename);
       if(!user)throw Error('Sesión necesaria.');
       const [projects,members]=await Promise.all([
         allPages(()=>client.from('projects').select('id').order('id')),
