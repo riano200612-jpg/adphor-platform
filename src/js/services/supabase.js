@@ -1,3 +1,4 @@
+import { signedPropertyPhoto } from './property-photos.js';
 import { createManagedMfa } from './managed-mfa.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
@@ -108,6 +109,15 @@ export function createCloudRepository(url, key) {
       ]);
       const [projects, members, tickets] = results;
       return { projects:assignedProjects(projects,members,user.id), members:assignedMembers(members,user.id,projects).map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets:assignedTickets(tickets,user.id,members,projects) };
+    },
+    async propertyPhotoUrl(projectId,filename){
+      if(!user)throw Error('Sesión necesaria.');
+      const [projects,members]=await Promise.all([
+        allPages(()=>client.from('projects').select('id').order('id')),
+        allPages(()=>client.from('memberships').select('project_id,user_id').eq('user_id',user.id).order('project_id'))
+      ]);
+      const allowed=new Set(members.map(m=>m.project_id));
+      return signedPropertyPhoto(client.storage,projects.filter(p=>allowed.has(p.id)),projectId,filename);
     },
     async save(action, payload) { return check(await client.rpc('ticket_command', { command: action, payload })); },
     async upload(files, projectId, ticketId) {
