@@ -14,3 +14,10 @@ test('remote QA deployment still requires protected staging opt-in', () => {
   assert.match(config, /ADPHOR_PROTECTED_STAGING_QA === 'true'/);
   assert.match(config, /QA_DEPLOY_BLOCKED/);
 });
+
+
+test('consolidated QA branch requires both staging and Access verification flags', () => {
+  assert.match(config, /CF_PAGES_BRANCH === 'qa\\/pqrs-carrusel-integracion-20261104'/);
+  assert.match(config, /ADPHOR_QA_ACCESS_VERIFIED === 'true'/);
+  assert.match(config, /!productionPages && !protectedStaging && !consolidatedQa/);
+});
