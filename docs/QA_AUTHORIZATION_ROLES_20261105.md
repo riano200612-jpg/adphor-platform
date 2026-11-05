@@ -1,5 +1,11 @@
 # QA: identidades autorizadas y separación de funciones
 
+**Prioridad vigente:** auditoría interna del propietario. La cuenta del cliente
+está inactiva en el padrón y su permiso Access se retira; no debe recibir
+invitaciones ni acceso antes de autorización expresa. Ver
+`QA_OWNER_AUDIT_FIRST_20261105.md`. Las dos identidades siguientes describen
+los roles de ambas fases, no dos cuentas habilitadas simultáneamente.
+
 Aplicable únicamente a Supabase `qfctnnnnltghepwujpdm` y las vistas previas de
 Cloudflare Pages `adphor-platform`. No se modificó producción.
 
