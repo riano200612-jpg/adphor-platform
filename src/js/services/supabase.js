@@ -16,7 +16,7 @@ export function createCloudRepository(url, key) {
   const evidence=createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
   const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
   if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
-  const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true'});
+  const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true',allowEnrollment:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
   async function finishLogin(id) {
     const profile=check(await client.from('profiles').select('name').eq('id',id).single());
     user={id,name:profile.name};return user;
@@ -101,10 +101,11 @@ export function createCloudRepository(url, key) {
       const data = check(await client.auth.signInWithPassword({ email: loginEmail, password }));
       user=null;
       try {
-        if(await mfa.begin(data.user.id))return {mfaRequired:true};
+        if(await mfa.begin(data.user.id))return {mfaRequired:true,enrollmentRequired:mfa.needsEnrollment()};
         return await finishLogin(data.user.id);
       } catch(error) {await client.auth.signOut();throw error;}
     },
+    async enrollMfa() {return mfa.enroll();},
     async completeMfa(code) {return finishLogin(await mfa.complete(code));},
     async logout() { mfa.clear();check(await client.auth.signOut()); user = null; },
     async load() {

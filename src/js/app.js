@@ -1,3 +1,4 @@
+import {renderMfaScreen} from './ui-mfa.js';
 import {loginAvatarMarkup} from './services/branding.js';
 import {ADPHOR_DEPLOY_LABEL} from './services/deployment-version.js';
 import {mountMissAdphorChat} from './ui-miss-adphor-chat.js';
@@ -66,9 +67,7 @@ function loginScreen() {
     $('miss-adphor-bubble').textContent=MISS_ADPHOR_GUIDANCE.wave;
   });
 }
-function mfaScreen() {
-  root.innerHTML='<main id="main" class="login-shell mfa-shell"><section class="login-form-wrap"><form id="mfa-form"><h2>Verificación adicional</h2><p>Ingresa el código de tu aplicación autenticadora.</p><label>Código<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label><p class="error" role="alert"></p><button type="submit" class="btn primary">Verificar</button><button type="button" class="btn secondary" data-action="cancel-mfa">Volver al acceso</button></form></section></main>';
-}
+function mfaScreen(enrollmentRequired=false,enrollment=null){renderMfaScreen(root,enrollmentRequired,enrollment);}
 async function refresh() {
   const data = await repo.load();
   Object.assign(state, data);
@@ -227,7 +226,7 @@ async function submit(event) {
     const input = Object.fromEntries(new FormData(form));
     if (form.id === 'login-form') {
       const result = await repo.login(input);
-      if(result.mfaRequired) {mfaScreen();return;}
+      if(result.mfaRequired) {mfaScreen(result.enrollmentRequired);return;}
       state.user = result;
       await refresh(); state.page = 'dashboard'; state.filters = {}; shell();
     } else if(form.id === 'mfa-form') {
@@ -253,6 +252,7 @@ document.addEventListener('submit', submit);
 document.addEventListener('click', async event => {
   const el = event.target.closest('button,a[data-page]'); if (!el || busy) return;
   try {
+    if(el.dataset.action==='enroll-mfa'){el.disabled=true;try{mfaScreen(true,await repo.enrollMfa());}catch(error){el.disabled=false;reportError(error);}return;}
     if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;loginScreen();return;}
     if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
