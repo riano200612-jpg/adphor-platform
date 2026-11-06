@@ -1,4 +1,5 @@
 import {renderMfaScreen} from './ui-mfa.js';
+import {mountQaPasswordRecovery} from './ui-password-recovery.js';
 import {loginAvatarMarkup} from './services/branding.js';
 import {ADPHOR_DEPLOY_LABEL} from './services/deployment-version.js';
 import {mountMissAdphorChat} from './ui-miss-adphor-chat.js';
@@ -333,4 +334,6 @@ dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); }
 dialog.addEventListener('close', () => { modalReturnFocus?.focus(); });
 window.addEventListener('offline', () => toast('Sin conexión. Conserva el formulario; podrás volver a intentar el guardado.'));
 window.addEventListener('storage', event => { if(event.key === 'adphor.workflow.demo.v3' && state.user) toast('La bitácora cambió en otra pestaña. Pulsa Actualizar para consultar los cambios.'); });
-loginScreen();
+mountQaPasswordRecovery(root, {url, key, onLogin: loginScreen})
+  .then(handled => { if (!handled) loginScreen(); })
+  .catch(() => { loginScreen(); $('login-error').textContent = 'No se pudo abrir la recuperación. Solicita un enlace nuevo.'; });
