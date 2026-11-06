@@ -112,6 +112,7 @@ for (const existing of [false,true]) test(`QA login ${existing?'challenges exist
   expect(protectedRequests).toEqual([]);
   await page.getByLabel('Código',{exact:true}).fill('123456');await page.getByRole('button',{name:'Verificar',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Configura tu autenticador'})).toHaveCount(0);
-  await expect(page.getByText('Synthetic Property',{exact:true}).first()).toBeVisible();
+  await expect(page.locator('#project-select')).toBeVisible();
+  await expect(page.locator('#project-select')).toHaveValue('qa-a');
   expect(protectedRequests[0]).toBe('/rest/v1/profiles');
 });
