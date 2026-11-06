@@ -62,3 +62,18 @@ test('verified link updates only Auth password and then requires normal login an
   await expect(page.locator('#login-form')).toBeVisible();
   expect(updates).toBe(1); expect(unexpected).toEqual([]);
 });
+
+test('login password visibility toggles without submitting or changing its value', async ({page}) => {
+  let authRequests = 0;
+  await page.route('https://qfctnnnnltghepwujpdm.supabase.co/**', async route => {authRequests++;await route.abort();});
+  await page.goto(origin);
+  const password = page.getByLabel('Contraseña', {exact:true});
+  await password.fill('synthetic-visibility-only');
+  await expect(password).toHaveAttribute('type', 'password');
+  await page.getByRole('button', {name:'Mostrar contraseña',exact:true}).click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(password).toHaveValue('synthetic-visibility-only');
+  await page.getByRole('button', {name:'Ocultar contraseña',exact:true}).click();
+  await expect(password).toHaveAttribute('type', 'password');
+  expect(authRequests).toBe(0);
+});
