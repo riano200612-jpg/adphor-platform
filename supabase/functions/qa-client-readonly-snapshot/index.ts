@@ -12,7 +12,7 @@ function response(status,body,origin){
     'Access-Control-Allow-Origin':QA_ORIGIN,
     'Access-Control-Allow-Headers':'authorization, apikey, content-type',
     'Access-Control-Allow-Methods':'GET, OPTIONS'}:{})};
-  return new Response(JSON.stringify(body),{status,headers});
+  return new Response(status===204?null:JSON.stringify(body),{status,headers});
 }
 function payloadFromVerifiedJwt(token){
   try{const part=token.split('.')[1];if(!part)return null;
