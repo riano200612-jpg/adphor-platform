@@ -3,6 +3,7 @@ import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
 import { createCloudAuthentication } from './cloud-authentication.js';
 import { qaAuthPolicy } from './qa-auth-policy.js';
+import { createStaffDirectory } from './staff-directory.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
@@ -20,6 +21,7 @@ export function createCloudRepository(url, key) {
   const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
   const authentication=createCloudAuthentication(client,{required:authPolicy.required,
     allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
+  const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -31,6 +33,9 @@ export function createCloudRepository(url, key) {
   }
   return {
     porto,
+    staffDirectoryEnabled:Boolean(staff),
+    async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
+    async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},
     // Historical data is readable only when an isolated QA project is explicitly enabled.
     // Source status alone never proves a Google Calendar reservation.
     async listVerifiedQaMeetings(projectId) {

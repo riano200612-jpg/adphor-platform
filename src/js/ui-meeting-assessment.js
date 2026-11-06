@@ -13,7 +13,14 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  const options=[{id:'',name:'Sin acompañamiento requerido',role:''},...members.filter(m=>m.project_id===projectId&&m.name&&['admin','coordinator','technician'].includes(m.role)).map(m=>({id:m.user_id,name:m.name,role:m.role}))];
  options.forEach((person,i)=>{const label=document.createElement('label');label.className='meeting-escort-card';const radio=document.createElement('input');radio.type='radio';radio.name='escort_id';radio.value=person.id;radio.checked=i===0;label.append(radio);const name=document.createElement('strong');name.textContent=person.name;label.append(name);if(person.role){const roleLabel=document.createElement('small');roleLabel.textContent=person.role;label.append(roleLabel);}escortChoices.append(label);});
  root.querySelector('form').append(escort);
- if(!demo&&repo.privateMediaEnabled){
+ if(!demo&&repo.staffDirectoryEnabled){
+  escortChoices.replaceChildren();
+  repo.staffDirectory(projectId).then(people=>{
+   if(!escortChoices.isConnected)return;
+   const eligible=people.filter(p=>p.relationship==='coordinator'||['GG','GF','GT','CG','CO','A'].includes(p.role_code));
+   drawCompanionOptions(escortChoices,eligible.map(p=>({id:p.id,nombre:p.name,leyendaRol:p.role_label,photoStoragePath:p.photo_path})),{photoUrl:id=>repo.staffPhotoUrl(projectId,id)});
+  }).catch(()=>{if(escortChoices.isConnected){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
+ }else if(!demo&&repo.privateMediaEnabled){
   escortChoices.replaceChildren();
   repo.authorizedCompanions(projectId,sector).then(people=>{
     if(escortChoices.isConnected)drawCompanionOptions(escortChoices,people,{photoUrl:id=>repo.companionPhotoUrl(projectId,id)});

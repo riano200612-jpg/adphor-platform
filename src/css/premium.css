@@ -200,3 +200,10 @@
 .property-art .property-photo{display:block;width:100%;height:100%;min-height:170px;max-height:240px;object-fit:cover}
 .property-art.has-property-photo>i{display:none}
 .property-art.has-property-photo>small{position:absolute;left:12px;bottom:12px;background:#16344edb;color:#fff;padding:6px 9px;border-radius:7px}
+
+/* Authorized staff directory: horizontal cards remain reachable on mobile. */
+.staff-directory-carousel{display:flex;gap:1rem;overflow-x:auto;scroll-snap-type:x proximity;padding:0 0 1rem;align-items:stretch}
+.staff-directory-card{flex:0 0 min(300px,85vw);scroll-snap-align:start;display:flex;flex-direction:column;gap:.65rem;align-items:flex-start}
+.staff-directory-card h2{font-size:1.2rem;margin:0}.staff-directory-card p{margin:0}
+.staff-directory-portrait{width:144px;height:144px;border-radius:1rem;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:2.5rem}
+.staff-directory-role{font-weight:700;color:var(--navy,#234661)}
