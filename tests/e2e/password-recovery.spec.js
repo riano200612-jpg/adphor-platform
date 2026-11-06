@@ -50,7 +50,7 @@ test('verified link updates only Auth password and then requires normal login an
     unexpected.push(path); await route.abort();
   });
   const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
-  const token = `${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:user.id,exp:Math.floor(Date.now()/1000)+3600,aal:'aal1'})}.synthetic`;
+  const token = `${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:user.id,exp:Math.floor(Date.now()/1000)+3600,aal:'aal1'})}.${Buffer.from('synthetic-signature').toString('base64url')}`;
   await page.goto(`${origin}/#type=recovery&access_token=${token}&refresh_token=synthetic-refresh`);
   await expect(page.getByText('Enlace verificado.',{exact:false})).toBeVisible();
   expect(new URL(page.url()).hash).toBe('');
