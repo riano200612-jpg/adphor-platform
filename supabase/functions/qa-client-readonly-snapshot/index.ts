@@ -36,6 +36,8 @@ Deno.serve(async req=>{
   });
   const {data:auth,error:authError}=await client.auth.getUser(match[1]);
   if(authError||!auth?.user)return response(401,{error:'INVALID_SESSION'},origin);
+  if(auth.user.email?.toLowerCase()!=='riano200612@gmail.com')
+    return response(403,{error:'OWNER_ONLY_QA'},origin);
   // Claims are inspected ONLY after getUser has verified the exact token.
   const claims=payloadFromVerifiedJwt(match[1]);
   if(claims?.sub!==auth.user.id || claims?.aal!=='aal2' || claims?.is_anonymous===true)
