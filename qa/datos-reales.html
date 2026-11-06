@@ -13,7 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 const url=import.meta.env.VITE_SUPABASE_URL;
 const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
 const $=id=>document.getElementById(id);
-const allowed=Boolean(url&&key&&/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url));
+const allowed=url==='https://qfctnnnnltghepwujpdm.supabase.co' && Boolean(key);
 const client=allowed?createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}):null;
 let mfaFactor=null,properties=[];
 const status=(v,err=false)=>{$('status').textContent=v;$('status').className=err?'error':'';};
