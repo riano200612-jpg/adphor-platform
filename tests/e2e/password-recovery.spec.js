@@ -43,7 +43,7 @@ test('verified link updates only Auth password and then requires normal login an
     const req = route.request(); const path = new URL(req.url()).pathname;
     if(path === '/auth/v1/user' && req.method() === 'GET') return route.fulfill({json:user});
     if(path === '/auth/v1/user' && req.method() === 'PUT') {
-      expect(req.postDataJSON()).toEqual({password:'synthetic-new-password-123'}); updates++;
+      expect(req.postDataJSON()).toEqual({password:'synthetic-new-password-123',code_challenge:null,code_challenge_method:null}); updates++;
       return route.fulfill({json:user});
     }
     if(path === '/auth/v1/logout') return route.fulfill({status:204});
