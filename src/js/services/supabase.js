@@ -1,7 +1,8 @@
 import { createEvidenceApiRepository } from './evidence-api.js';
 import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
-import { createManagedMfa } from './managed-mfa.js';
+import { createCloudAuthentication } from './cloud-authentication.js';
+import { qaAuthPolicy } from './qa-auth-policy.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
@@ -16,11 +17,9 @@ export function createCloudRepository(url, key) {
   const evidence=createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
   const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
   if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
-  const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true',allowEnrollment:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
-  async function finishLogin(id) {
-    const profile=check(await client.from('profiles').select('name').eq('id',id).single());
-    user={id,name:profile.name};return user;
-  }
+  const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
+  const authentication=createCloudAuthentication(client,{required:authPolicy.required,
+    allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -97,17 +96,14 @@ export function createCloudRepository(url, key) {
     },
     mode: 'cloud',
     async login({ email, password }) {
-      const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
-      const data = check(await client.auth.signInWithPassword({ email: loginEmail, password }));
       user=null;
-      try {
-        if(await mfa.begin(data.user.id))return {mfaRequired:true,enrollmentRequired:mfa.needsEnrollment()};
-        return await finishLogin(data.user.id);
-      } catch(error) {await client.auth.signOut();throw error;}
+      const result=await authentication.login({email,password});
+      if(!result.mfaRequired)user=result;
+      return result;
     },
-    async enrollMfa() {return mfa.enroll();},
-    async completeMfa(code) {return finishLogin(await mfa.complete(code));},
-    async logout() { mfa.clear();check(await client.auth.signOut()); user = null; },
+    async enrollMfa() {return authentication.enrollMfa();},
+    async completeMfa(code) {user=await authentication.completeMfa(code);return user;},
+    async logout() {user=null;await authentication.logout();},
     async load() {
       if(!user)throw Error('Completa la autenticación.');
       const results = await Promise.all([

@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
+import { assertQaBuildAuth } from './src/js/services/qa-auth-policy.js';
 import { fileURLToPath, URL } from 'node:url';
 
 // Public production branch may build the same vetted modern UI as protected QA.
@@ -27,7 +28,18 @@ if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !pro
 // Only expose an actual hexadecimal commit identifier. Never expose build secrets.
 const buildSha = /^[a-f0-9]{40}$/i.test(process.env.CF_PAGES_COMMIT_SHA || '')
   ? process.env.CF_PAGES_COMMIT_SHA.toLowerCase() : '';
-export default defineConfig({
+export default defineConfig(({mode}) => {
+  const effectiveEnv={...loadEnv(mode,process.cwd(),''),...process.env};
+  if(consolidatedQa && !accessBootstrap)assertQaBuildAuth(effectiveEnv);
+  return {
+  ...((consolidatedQa && !accessBootstrap) ? {plugins:[{
+    name:'qa-auth-artifact-config',
+    generateBundle(){this.emitFile({type:'asset',fileName:'qa-auth-config.json',source:JSON.stringify({
+      sha:buildSha,backendUrl:effectiveEnv.VITE_SUPABASE_URL,
+      requireMfa:effectiveEnv.VITE_REQUIRE_MFA,portoQaEnabled:effectiveEnv.VITE_PORTO_QA_ENABLED,
+      portoStagingRef:effectiveEnv.VITE_PORTO_STAGING_REF,runtimeMfaRequired:true,
+    })});},
+  }]} : {}),
   ...(accessBootstrap ? {
     root: fileURLToPath(new URL('./qa/access-bootstrap/', import.meta.url)),
     publicDir: false, envPrefix: [],
@@ -54,4 +66,5 @@ export default defineConfig({
       } : {}),
     } },
   },
+};
 });
