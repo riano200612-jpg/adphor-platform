@@ -21,10 +21,14 @@ export function createPortoRepository(client, config) {
     },
     async create(project,fields,requestId) {
       const actor=await assertProject(project);const payload={project_id:project,created_by:actor,request_id:requestId,kind:fields.kind,subject:fields.subject,description:fields.description};
+      const locationFields = ['tower', 'apartment', 'owner'];
+      for (const key of locationFields) {
+        if (fields[key] !== undefined) payload[key] = fields[key].trim();
+      }
       const result=await client.from('pilot_pqrs').insert(payload).select().single();
       if(result.error?.code==='23505'){
         const existing=checked(await client.from('pilot_pqrs').select('*').eq('project_id',project).eq('created_by',actor).eq('request_id',requestId).single());
-        if(['kind','subject','description'].some(k=>existing[k]!==payload[k]))throw Error('Clave de reintento ya utilizada con otro contenido.');
+        if(['kind','subject','description',...locationFields].some(k=>(existing[k]??'')!==(payload[k]??'')))throw Error('Clave de reintento ya utilizada con otro contenido.');
         return existing;
       }return checked(result);
     },
