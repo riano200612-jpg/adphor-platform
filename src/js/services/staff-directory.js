@@ -9,6 +9,16 @@ export function createStaffDirectory(client){
   if(memberships?.length!==1)throw Error('Copropiedad no autorizada.');
  }
  return {
+  async institutional(){
+   const level=checked(await client.auth.mfa.getAuthenticatorAssuranceLevel());
+   if(level?.currentLevel!=='aal2')throw Error('Completa MFA antes de consultar el equipo.');
+   return checked(await client.rpc('qa_institutional_directory'));
+  },
+  async institutionalPhoto(path){
+   const data=checked(await client.storage.from('qa-staff-photos').createSignedUrl(path,300));
+   if(!data?.signedUrl)throw Error('Fotografía no disponible.');
+   return data.signedUrl;
+  },
   async list(projectId){
    await authorize(projectId);
    return checked(await client.from('qa_staff_directory').select('project_id,id,name,role_code,role_label,functions,relationship,photo_path').eq('project_id',projectId).order('name'));

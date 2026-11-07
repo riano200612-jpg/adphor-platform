@@ -44,3 +44,24 @@ test('staff carousel decodes a photo and keeps initials when the image fails', a
   await expect(page.getByRole('listitem').filter({hasText:'Foto vencida'}).locator('.avatar')).toHaveText('Fv');
  }
 });
+
+test('institutional directory includes Technology independently of property assignments', async ({page}) => {
+ await page.goto('./');
+ await page.evaluate(async () => {
+  const {mountStaffDirectory}=await import('/adphor-platform/src/js/ui-staff-directory.js');
+  const root=document.createElement('main');
+  document.body.replaceChildren(root);
+  const people=[
+   {id:'1',name:'Persona QA uno',role_label:'Gerente de Tecnología',department:'Tecnología'},
+   {id:'2',name:'Persona QA dos',role_label:'Auxiliar de Tecnología',department:'Tecnología'},
+   {id:'3',name:'Persona QA tres',role_label:'Delegado',department:'Administración'},
+  ];
+  await mountStaffDirectory(root,{institutional:true,repo:{institutionalStaff:async()=>people}});
+ });
+ await expect(page.getByRole('listitem')).toHaveCount(3);
+ await page.getByLabel('Departamento',{exact:true}).selectOption('Tecnología');
+ await expect(page.getByRole('listitem')).toHaveCount(2);
+ await page.getByRole('searchbox').fill('auxiliar de tecnologia');
+ await expect(page.getByRole('listitem')).toHaveCount(1);
+ await expect(page.getByText('Persona QA dos')).toBeVisible();
+});
