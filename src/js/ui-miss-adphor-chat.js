@@ -50,6 +50,11 @@ export function answerMissAdphor(question, context={}) {
  if(/permiso|rol|puedo hacer/.test(q))return {text:`Tu rol actual es ${role}. Los permisos de escritura se verifican en el backend; yo solo puedo orientarte.`,page:null};
  return {text:'Puedo ayudarte con Bitácora, PQRS, Recorridos, Reuniones, Informes y el enjambre. No tengo una respuesta verificada para esa consulta; reformúlala o abre el módulo correspondiente.',page:null};
 }
+export function isPqrsAttentionQuestion(question) {
+ return /^(?:miss adphor,? *)?que asuntos(?: importantes)? requieren mi atencion hoy$/.test(
+  normalized(question).replace(/[¿?]/g,'').trim()
+ );
+}
 export function summarizePqrsAttention(rows,projectId,now=Date.now()){
  const open=rows.filter(row=>row.project_id===projectId && ['open','assigned','in_progress'].includes(row.status));
  const overdue=open.filter(row=>Number.isFinite(Date.parse(row.due_at)) && Date.parse(row.due_at)<now);
@@ -67,7 +72,7 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs}){
   append(question,'user');input.value='';
   const current=context();
   let result=answerMissAdphor(question,current);
-  if(/^que asuntos importantes requieren mi atencion hoy\??$/.test(normalized(question).replace(/^¿/,'')) && current.project?.id===current.projectId && current.projectId){
+  if(isPqrsAttentionQuestion(question) && current.project?.id===current.projectId && current.projectId){
    result={text:'La consulta de atención requiere PQRS habilitado en QA.',page:null};
    if(loadPqrs){
     try{
