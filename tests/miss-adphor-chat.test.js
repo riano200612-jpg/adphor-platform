@@ -53,10 +53,10 @@ test('Atención hoy accepts the direct question and quick action',()=>{
 test('Atención hoy excludes closed cases, invalid deadlines and other properties',()=>{
  const past='2026-11-08T00:00:00Z';
  const rows=[
-  {project_id:'p1',status:'open',due_at:past},
+  {id:'case-1',project_id:'p1',status:'open',due_at:past},
   {project_id:'p1',status:'assigned',due_at:'invalid'},
   {project_id:'p1',status:'closed',due_at:past},
   {project_id:'p2',status:'in_progress',due_at:past}
  ];
- assert.deepEqual(summarizePqrsAttention(rows,'p1',Date.parse('2026-11-09T00:00:00Z')),{open:2,overdue:1});
+ assert.deepEqual(summarizePqrsAttention(rows,'p1',Date.parse('2026-11-09T00:00:00Z')),{open:1,inProgress:1,overdue:1,overdueIds:['case-1']});
 });
