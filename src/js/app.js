@@ -123,6 +123,8 @@ function shell() {
       role:role(),mode:repo.mode,
       availablePages:['tickets','pqrs','meetings','recorridos','agent-history','reports']
     }),
+    loadMeetings:repo.mode==='cloud' && typeof repo.listVerifiedQaMeetings==='function'
+      ? id=>repo.listVerifiedQaMeetings(id) : undefined,
     loadPqrs:repo.mode==='cloud' && repo.porto ? id=>repo.porto.listAttention(id) : undefined,
     onNavigate(page){state.page=page;state.filters={};shell();}
   });
