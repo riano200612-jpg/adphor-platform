@@ -15,6 +15,8 @@ export function createCloudRepository(url, key) {
   let user = null;
   const privateMediaEnabled=import.meta.env.VITE_PRIVATE_MEDIA_QA_ENABLED==='true' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
   const media=privateMediaEnabled?createPrivateMediaRepository(client):null;
+  const propertyMedia=media ?? (url==='https://qfctnnnnltghepwujpdm.supabase.co'
+    ? createPrivateMediaRepository(client) : null);
   const evidence=createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
   const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
   if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
@@ -117,9 +119,14 @@ export function createCloudRepository(url, key) {
         allPages(() => client.from('tickets').select('*').order('created_at', { ascending: false }).order('id')),
       ]);
       const [projects, members, tickets] = results;
-      if(media){
-        const photos=await media.projectPhotos(assignedProjects(projects,members,user.id));
-        for(const project of projects)project.photo_filename=photos.find(p=>p.project_id===project.id)?.filename;
+      if(propertyMedia){
+        try {
+          const photos=await propertyMedia.projectPhotos(assignedProjects(projects,members,user.id));
+          const filenames=new Map(photos.map(photo=>[photo.project_id,photo.filename]));
+          for(const project of projects)project.photo_filename=filenames.get(project.id);
+        } catch {
+          // Keep the catalog usable when optional private photos cannot be loaded.
+        }
       }
       return { projects:assignedProjects(projects,members,user.id), members:assignedMembers(members,user.id,projects).map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets:assignedTickets(tickets,user.id,members,projects) };
     },
@@ -133,7 +140,7 @@ export function createCloudRepository(url, key) {
       return media.companionPhoto(projectId,personId);
     },
     async propertyPhotoUrl(projectId,filename){
-      if(media)return media.propertyPhoto(projectId,filename);
+      if(propertyMedia)return propertyMedia.propertyPhoto(projectId,filename);
       if(!user)throw Error('Sesión necesaria.');
       const [projects,members]=await Promise.all([
         allPages(()=>client.from('projects').select('id').order('id')),
