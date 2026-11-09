@@ -11,6 +11,9 @@ export function answerMissAdphor(question, context={}) {
  const go=(page,text)=>({text,page:availablePages.includes(page)?page:null});
  if(!q)return {text:'Pregúntame por pendientes, prioridades, bitácora, PQRS, reuniones o el enjambre.',page:null};
  if(/cerrar|aprobar|enviar|borrar|eliminar|asignar (un |una )?caso/.test(q))return {text:'Puedo orientarte y abrir el módulo correspondiente, pero no ejecuto cierres, aprobaciones, asignaciones ni notificaciones. Esas operaciones requieren permisos y revisión humana.',page:null};
+ if(/\b(?:agendar|programar|crear|preparar)\b.*\breunion(?:es)?\b/.test(q)){
+  return go('meetings',`Para preparar una reunión en ${name}, abre Reuniones y selecciona tipo, duración y acompañamiento. Allí puedes evaluar la solicitud. La disponibilidad en vivo y la creación en Google Calendar aún no están habilitadas desde el asistente.`);
+ }
  if(/pendient|vencid|atrasad|casos|novedad|mantenimiento|estado/.test(q)) {
   const active=scoped.filter(t=>!['cerrada','cerrado','closed'].includes(normalized(t.status)));
   const late=active.filter(t=>t.due_date && /^\d{4}-\d{2}-\d{2}$/.test(t.due_date) && t.due_date < new Date().toISOString().slice(0,10));
