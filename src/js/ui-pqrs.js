@@ -35,7 +35,6 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   };
 
   const context=document.createElement('p');context.className='pqrs-context';context.textContent='Copropiedad: '+projectName;form.querySelector('.pqrs-form-title').after(context);
-  if(!repository.localDemo){for(const name of ['tower','apartment','owner']){form.elements[name].disabled=true;form.elements[name].placeholder='Pendiente de migración QA';}const note=document.createElement('p');note.className='notice';note.textContent='Torre, unidad y solicitante requieren una migración QA adicional. Estos campos no se enviarán ni se presentarán como guardados.';context.after(note);}
   const layout=document.createElement('div');layout.className='pqrs-layout';form.before(layout);layout.append(form);const feed=document.createElement('section');feed.append(root.querySelector('.pqrs-list-head'),list);layout.append(feed);
   let requestId=crypto.randomUUID();
   const run=async f=>{try{message.textContent='Procesando…';const result=await f();if(!root.isConnected)return;message.textContent=typeof result==='string'?result:(repository.localDemo?'Cambio guardado en este navegador (demo). No se modificó PostgreSQL.':'Operación confirmada por PostgreSQL.');}catch(e){message.textContent=e.message;}};
