@@ -61,7 +61,7 @@ export function summarizePqrsAttention(rows,projectId,now=Date.now()){
  const opened=open.filter(row=>row.status==='open').length;
  return {open:opened,inProgress:open.length-opened,overdue:overdue.length,overdueIds:overdue.map(row=>row.id)};
 }
-export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs}){
+export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings}){
  const img='/assets/branding/miss-adphor.webp';
  host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
@@ -82,6 +82,22 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs}){
      const references=summary.overdueIds.slice(0,5).join(', ');
      result={text:`PQRS de esta copropiedad · ${summary.open} abiertas · ${summary.inProgress} en gestión · ${summary.overdue} vencidas.`+(references ? ' Radicados vencidos (hasta 5): '+references+'.' : ''),page:'pqrs'};
     }catch{result={text:'No pude verificar las PQRS de esta copropiedad. Revisa tu sesión o abre el módulo.',page:null};}
+   }
+  }
+  if (/^que reuniones verificadas tiene esta copropiedad$/.test(normalized(question).replace(/[¿?]/g,'').trim()) &&
+      current.project?.id===current.projectId && current.projectId) {
+   result={text:'No dispongo de una fuente de reuniones verificadas para esta consulta.',page:null};
+   if (loadMeetings) {
+    try {
+     const rows=(await loadMeetings(current.projectId)).filter(row=>row.project_id===current.projectId &&
+       row.is_calendar_verified===true && row.source_status==='Confirmada');
+     const date=new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'});
+     const details=rows.slice(0,5).map(row=>row.title+' · '+date.format(new Date(row.start_at))).join(' / ');
+     result={text:(rows.length ? `${rows.length} reuniones verificadas. ${details}.` : 'No hay reuniones verificadas para esta copropiedad en la carga disponible.')+
+       ' Fuente: calendario corporativo de ADPHOR, importación puntual. Consulta Reuniones para ver el detalle.',page:'meetings'};
+    } catch {
+     result={text:'No pude verificar las reuniones de esta copropiedad.',page:null};
+    }
    }
   }
   if(!host.isConnected||context().projectId!==current.projectId)return;
