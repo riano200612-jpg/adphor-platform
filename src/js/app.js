@@ -123,6 +123,7 @@ function shell() {
       role:role(),mode:repo.mode,
       availablePages:['tickets','pqrs','meetings','recorridos','agent-history','reports']
     }),
+    loadPqrs:repo.mode==='cloud' && repo.porto ? id=>repo.porto.list(id) : undefined,
     onNavigate(page){state.page=page;state.filters={};shell();}
   });
 }
