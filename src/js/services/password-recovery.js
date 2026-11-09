@@ -5,7 +5,9 @@ const QA_ALIAS = 'qa-pqrs-carrusel-integracion.adphor-platform.pages.dev';
 export function readQaRecovery(location, history, supabaseUrl) {
   const hash = new URLSearchParams(location.hash.slice(1));
   const query = new URLSearchParams(location.search);
-  const present = hash.has('access_token') || hash.has('refresh_token') || hash.has('error') || hash.get('type') === 'recovery' || query.has('code');
+  const type = hash.get('type');
+  const passwordSetup = type === 'recovery' || type === 'invite';
+  const present = hash.has('access_token') || hash.has('refresh_token') || hash.has('error') || passwordSetup || query.has('code');
   if (!present) return null;
   // Remove credentials before any asynchronous work or UI interaction.
   history.replaceState(null, '', location.pathname);
@@ -14,8 +16,8 @@ export function readQaRecovery(location, history, supabaseUrl) {
     return {error: 'La recuperación solo está disponible en ADPHOR QA autorizado.'};
   }
   if (hash.has('error')) return {error: 'El enlace es inválido o ha expirado. Solicita un nuevo correo de recuperación.'};
-  if (hash.get('type') !== 'recovery' || !hash.get('access_token') || !hash.get('refresh_token')) {
-    return {error: 'El enlace no contiene una recuperación válida. Solicita un nuevo correo desde Supabase QA.'};
+  if (!passwordSetup || !hash.get('access_token') || !hash.get('refresh_token')) {
+    return {error: 'El enlace no contiene una invitación o recuperación válida. Contacta al administrador de ADPHOR QA.'};
   }
   return {access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token')};
 }

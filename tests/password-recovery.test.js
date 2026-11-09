@@ -18,7 +18,13 @@ test('recovery removes URL credentials and only accepts isolated QA targets', ()
   assert.ok(read(origin + fragment, 'https://oqizvirqjwbbhyyjpthq.supabase.co').result.error);
   assert.equal(read(origin).result, null);
 });
-test('expired, partial and non-recovery links never create a session', () => {
+test('official invitation fragments use the isolated password setup flow', () => {
+  const invite = fragment.replace('recovery', 'invite');
+  assert.deepEqual(read(origin + invite), read(origin + fragment));
+  assert.ok(read('https://adphor-platform.pages.dev' + invite).result.error);
+  assert.ok(read(origin + '#type=invite&access_token=x').result.error);
+});
+test('expired, partial and unrelated links never create a session', () => {
   for (const hash of ['#error=access_denied&error_code=otp_expired', '#type=recovery&access_token=x', '#access_token=x&refresh_token=y&type=signup']) {
     const checked = read(origin + hash);
     assert.ok(checked.result.error); assert.equal(checked.cleaned, '/');
