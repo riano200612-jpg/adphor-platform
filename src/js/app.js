@@ -211,6 +211,41 @@ function renderPage() {
     const pqrsCard=$('page-content').querySelector('.module-card[data-page=pqrs] small');
     const meetingCard=$('page-content').querySelector('.module-card[data-page=meetings] small');
     if(meetingCard)meetingCard.textContent=repo.mode==='demo'?`${listDemoMeetings(state.projectId).filter(m=>m.status==='scheduled'&&new Date(m.start)>new Date()).length} próximas · calendario local de prueba`:'Agenda pendiente de conexión QA';
+    if (meetingCard && repo.mode === 'cloud' && typeof repo.listVerifiedQaMeetings === 'function') {
+      const projectId = state.projectId;
+      const section = document.createElement('section');
+      section.className = 'panel';
+      const heading = document.createElement('h2');
+      heading.textContent = 'Reuniones verificadas';
+      const status = document.createElement('p');
+      status.setAttribute('role', 'status');
+      status.textContent = 'Consultando reuniones…';
+      meetingCard.textContent = status.textContent;
+      section.append(heading, status);
+      meetingCard.closest('.module-grid').after(section);
+      repo.listVerifiedQaMeetings(projectId).then(rows => {
+        if (!section.isConnected || state.projectId !== projectId) return;
+        const meetings = rows.filter(row => row.project_id === projectId);
+        status.textContent = meetings.length ? 'Horarios de Colombia' : 'Sin reuniones verificadas para esta copropiedad.';
+        meetingCard.textContent = meetings.length ? `${meetings.length} reuniones verificadas` : status.textContent;
+        if (!meetings.length) return;
+        const formatter = new Intl.DateTimeFormat('es-CO', {
+          dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota'
+        });
+        const list = document.createElement('ul');
+        for (const meeting of meetings) {
+          const item = document.createElement('li');
+          item.textContent = [meeting.title, meeting.kind, meeting.source_status,
+            formatter.formatRange(new Date(meeting.start_at), new Date(meeting.end_at))].join(' · ');
+          list.append(item);
+        }
+        section.append(list);
+      }).catch(() => {
+        if (!section.isConnected || state.projectId !== projectId) return;
+        status.textContent = 'No se pudieron consultar las reuniones verificadas.';
+        meetingCard.textContent = status.textContent;
+      });
+    }
     if(pqrsCard){pqrsCard.textContent='Consultando solicitudes…';const id=state.projectId;(repo.mode==='demo'?demoPorto:repo.porto).list(id).then(items=>{if(!pqrsCard.isConnected||state.projectId!==id)return;pqrsCard.textContent=`${items.length===200?'Al menos ':''}${items.filter(i=>i.status!=='closed').length} sin cerrar · ${repo.mode==='demo'?'datos locales de prueba':'consulta autorizada'}`;}).catch(()=>{if(pqrsCard.isConnected)pqrsCard.textContent='Consulta no disponible. Abre PQRS para revisar.';});}
   }
 
