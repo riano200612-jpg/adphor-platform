@@ -13,8 +13,12 @@ export async function mountStaffDirectory(root,{repo,projectId,projectName}){
    const initials=String(person.name).trim().split(/\s+/).slice(0,2).map(s=>s[0]).join('');
    const fallback=text('span',initials,'avatar staff-directory-portrait');fallback.setAttribute('aria-hidden','true');card.append(fallback);
    if(person.photo_path){
-    const image=document.createElement('img');image.alt=`Fotografía de ${person.name}`;image.width=144;image.height=144;image.loading='lazy';image.className='staff-directory-portrait';
-    repo.staffPhotoUrl(projectId,person.id).then(url=>{if(!card.isConnected)return;image.src=url;image.onload=()=>fallback.replaceWith(image);}).catch(()=>{});
+    const image=document.createElement('img');image.alt=`Fotografía de ${person.name}`;image.width=144;image.height=144;image.className='staff-directory-portrait';
+    repo.staffPhotoUrl(projectId,person.id).then(url=>{
+     if(!card.isConnected)return;
+     image.onload=()=>fallback.replaceWith(image);
+     image.src=url;
+    }).catch(()=>{});
    }
    card.append(text('h2',person.name),text('p',person.role_label,'staff-directory-role'));
    card.append(text('p',({delegate:'Administración de esta copropiedad',coordinator:'Coordinación asignada',support:'Apoyo administrativo'})[person.relationship]||'Equipo asignado','muted'));
