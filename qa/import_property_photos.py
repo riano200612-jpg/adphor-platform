@@ -24,6 +24,8 @@ OPENER = build_opener(RejectRedirects())
 
 def request(path, token, payload=None, mime=None):
     headers = {"Authorization": f"Bearer {token}"}
+    if api_key := os.environ.get("ADPHOR_QA_SUPABASE_API_KEY"):
+        headers["apikey"] = api_key
     if payload is not None:
         headers.update({"Content-Type": mime, "x-upsert": "false"})
     for attempt in range(3):
@@ -73,16 +75,11 @@ def main():
         path = f"/object/{BUCKET}/{project}/{filename}"
         read_path = f"/object/authenticated/{BUCKET}/{project}/{filename}"
         try:
-            remote = request(read_path, token)
-        except HTTPError as error:
-            if error.code != 404:
+            request(path, token, blob, mime)
+        except HTTPError as conflict:
+            if conflict.code != 409:
                 raise
-            try:
-                request(path, token, blob, mime)
-            except HTTPError as conflict:
-                if conflict.code != 409:
-                    raise
-            remote = request(read_path, token)
+        remote = request(read_path, token)
         if hashlib.sha256(remote).hexdigest() != digest:
             raise ValueError(f"Remote integrity check failed for {project}")
         print(f"Verified {project}/{filename}")
