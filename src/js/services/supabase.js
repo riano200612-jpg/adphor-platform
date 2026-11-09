@@ -42,7 +42,7 @@ export function createCloudRepository(url, key) {
       if(!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) return [];
       if(!user) throw Error('Sesión necesaria.');
       const result=await client.from('qa_meeting_events')
-        .select('id,project_id,title,source_status,start_at,end_at,is_calendar_verified')
+        .select('id,project_id,title,kind,source_status,start_at,end_at,is_calendar_verified')
         .eq('project_id',projectId).eq('is_calendar_verified',true)
         .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(500);
       return check(result);
