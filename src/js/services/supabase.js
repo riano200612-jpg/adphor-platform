@@ -1,4 +1,9 @@
-import { createManagedMfa } from './managed-mfa.js';
+import { createEvidenceApiRepository } from './evidence-api.js';
+import { createPrivateMediaRepository } from './private-media.js';
+import { signedPropertyPhoto } from './property-photos.js';
+import { createCloudAuthentication } from './cloud-authentication.js';
+import { qaAuthPolicy } from './qa-auth-policy.js';
+import { createStaffDirectory } from './staff-directory.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
@@ -8,11 +13,17 @@ import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
-  const mfa = createManagedMfa(client.auth, {required:import.meta.env.VITE_REQUIRE_MFA === 'true'});
-  async function finishLogin(id) {
-    const profile=check(await client.from('profiles').select('name').eq('id',id).single());
-    user={id,name:profile.name};return user;
-  }
+  const privateMediaEnabled=import.meta.env.VITE_PRIVATE_MEDIA_QA_ENABLED==='true' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
+  const media=privateMediaEnabled?createPrivateMediaRepository(client):null;
+  const propertyMedia=media ?? (url==='https://qfctnnnnltghepwujpdm.supabase.co'
+    ? createPrivateMediaRepository(client) : null);
+  const evidence=createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
+  const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
+  if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
+  const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
+  const authentication=createCloudAuthentication(client,{required:authPolicy.required,
+    allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
+  const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -23,14 +34,17 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
-    porto: createPortoRepository(client, {url, enabled:import.meta.env.VITE_PORTO_QA_ENABLED, stagingRef:import.meta.env.VITE_PORTO_STAGING_REF}),
+    porto,
+    staffDirectoryEnabled:Boolean(staff),
+    async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
+    async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},
     // Historical data is readable only when an isolated QA project is explicitly enabled.
     // Source status alone never proves a Google Calendar reservation.
     async listVerifiedQaMeetings(projectId) {
       if(!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) return [];
       if(!user) throw Error('Sesión necesaria.');
       const result=await client.from('qa_meeting_events')
-        .select('id,project_id,title,source_status,start_at,end_at,is_calendar_verified')
+        .select('id,project_id,title,kind,source_status,start_at,end_at,is_calendar_verified')
         .eq('project_id',projectId).eq('is_calendar_verified',true)
         .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(500);
       return check(result);
@@ -89,16 +103,14 @@ export function createCloudRepository(url, key) {
     },
     mode: 'cloud',
     async login({ email, password }) {
-      const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
-      const data = check(await client.auth.signInWithPassword({ email: loginEmail, password }));
       user=null;
-      try {
-        if(await mfa.begin(data.user.id))return {mfaRequired:true};
-        return await finishLogin(data.user.id);
-      } catch(error) {await client.auth.signOut();throw error;}
+      const result=await authentication.login({email,password});
+      if(!result.mfaRequired)user=result;
+      return result;
     },
-    async completeMfa(code) {return finishLogin(await mfa.complete(code));},
-    async logout() { mfa.clear();check(await client.auth.signOut()); user = null; },
+    async enrollMfa() {return authentication.enrollMfa();},
+    async completeMfa(code) {user=await authentication.completeMfa(code);return user;},
+    async logout() {user=null;await authentication.logout();},
     async load() {
       if(!user)throw Error('Completa la autenticación.');
       const results = await Promise.all([
@@ -107,7 +119,35 @@ export function createCloudRepository(url, key) {
         allPages(() => client.from('tickets').select('*').order('created_at', { ascending: false }).order('id')),
       ]);
       const [projects, members, tickets] = results;
+      if(propertyMedia){
+        try {
+          const photos=await propertyMedia.projectPhotos(assignedProjects(projects,members,user.id));
+          const filenames=new Map(photos.map(photo=>[photo.project_id,photo.filename]));
+          for(const project of projects)project.photo_filename=filenames.get(project.id);
+        } catch {
+          // Keep the catalog usable when optional private photos cannot be loaded.
+        }
+      }
       return { projects:assignedProjects(projects,members,user.id), members:assignedMembers(members,user.id,projects).map(m => ({ ...m, name: m.profiles?.name || 'Colaborador' })), tickets:assignedTickets(tickets,user.id,members,projects) };
+    },
+    privateMediaEnabled,
+    async authorizedCompanions(projectId,sector){
+      if(!media||!user)throw Error('Catálogo privado disponible solo en QA aislado.');
+      return media.companions(projectId,sector);
+    },
+    async companionPhotoUrl(projectId,personId){
+      if(!media||!user)throw Error('Fotografías privadas disponibles solo en QA aislado.');
+      return media.companionPhoto(projectId,personId);
+    },
+    async propertyPhotoUrl(projectId,filename){
+      if(propertyMedia)return propertyMedia.propertyPhoto(projectId,filename);
+      if(!user)throw Error('Sesión necesaria.');
+      const [projects,members]=await Promise.all([
+        allPages(()=>client.from('projects').select('id').order('id')),
+        allPages(()=>client.from('memberships').select('project_id,user_id').eq('user_id',user.id).order('project_id'))
+      ]);
+      const allowed=new Set(members.map(m=>m.project_id));
+      return signedPropertyPhoto(client.storage,projects.filter(p=>allowed.has(p.id)),projectId,filename);
     },
     async save(action, payload) { return check(await client.rpc('ticket_command', { command: action, payload })); },
     async upload(files, projectId, ticketId) {

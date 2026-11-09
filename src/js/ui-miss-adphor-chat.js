@@ -21,6 +21,19 @@ export function answerMissAdphor(question, context={}) {
   return go('tickets',prefix+`En ${name} veo ${high.length} casos de prioridad alta o urgente entre ${scoped.length} registros visibles. Las prioridades deben verificarse antes de actuar.`);
  }
  if(/copropiedad|propiedad|donde estoy|mi comunidad/.test(q))return {text:prefix+`Estás consultando ${name}. Solo puedo utilizar datos que tu sesión ya tiene autorizados.`,page:null};
+
+  // ADPHOR_NAV_GUIDE_V1
+  if(/^(inicio|home|dashboard|ir al inicio|volver al inicio|llevame al inicio)$/.test(q))
+    return go('dashboard','Te acompaño al inicio de ADPHOR.');
+
+  if(/copropiedades|ver propiedades|catalogo/.test(q))
+    return go('properties','Te acompaño al catálogo de copropiedades.');
+
+  if(/mis tareas|mis actividades|trabajo asignado/.test(q))
+    return go('tickets','Te acompaño a la Bitácora.');
+
+  if(/centro integrado|centro de operaciones/.test(q))
+    return go('unified','Te acompaño al Centro integrado de ADPHOR.');
  if(/pqrs|peticion|reclamo|queja|sugerencia/.test(q))return go('pqrs','Abre PQRS para registrar o consultar solicitudes. La carga real de archivos sigue pendiente de habilitar Storage privado; no confirmaré adjuntos que no se hayan guardado.');
  if(/reunion|calendario|agenda|meet/.test(q))return go('meetings','Abre Reuniones para ver la agenda disponible. La sincronización con el calendario original de José todavía no está certificada.');
  if(/recorrido|inspeccion|visita/.test(q))return go('recorridos','En Recorridos puedes registrar una novedad, asignar seguimiento según tu rol y verificar avances. Las evidencias multimedia requieren almacenamiento privado.');

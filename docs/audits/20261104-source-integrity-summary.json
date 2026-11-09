@@ -1,0 +1,50 @@
+{
+  "archives": [
+    {
+      "file": "media-20261103T134407Z-1-001(1).zip",
+      "bytes": 133591282,
+      "sha256": "1bb4d282c7d2ac157451893dfce58b56f08357051ea24df287e74df571483371",
+      "entries": 103,
+      "crc": "passed"
+    },
+    {
+      "file": "01_BASE_DE_DATOS-20261103T134139Z-1-001(1).zip",
+      "bytes": 139731044,
+      "sha256": "79e2613ffe82bd2b94e2cd9db102a8313c1e711b6f04688cbc25a8cf0bf2809b",
+      "entries": 117,
+      "crc": "passed"
+    },
+    {
+      "file": "ADPHOR_QA_PAQUETE_PRIVADO_CONCILIADO_20261103.zip",
+      "bytes": 68889,
+      "sha256": "7c37841c9cc6fa659bba7c1b9998c855b2c6a5c53c32b63cbeef93f38bc3f5c2",
+      "entries": 8,
+      "crc": "passed"
+    }
+  ],
+  "master_hash_verified": true,
+  "source_identities_verified": {
+    "properties": 44,
+    "staff": 55
+  },
+  "row_counts_verified": {
+    "projects.jsonl": 44,
+    "project_info.jsonl": 39,
+    "meeting_history_mapped.jsonl": 628,
+    "meeting_history_quarantine.jsonl": 56,
+    "pqrs_history.jsonl": 29,
+    "delegates_directory_no_credentials.jsonl": 55,
+    "edits_history.jsonl": 368
+  },
+  "images_verified": 213,
+  "unique_image_hashes": 122,
+  "properties": {
+    "matched": 41,
+    "missing": 3
+  },
+  "staff": {
+    "matched": 46,
+    "missing": 9
+  },
+  "authorization": "No target mappings or access grants inferred. No database or storage writes."
+}

@@ -1,3 +1,6 @@
+import {renderMfaScreen} from './ui-mfa.js';
+import {mountStaffDirectory} from './ui-staff-directory.js';
+import {mountQaPasswordRecovery} from './ui-password-recovery.js';
 import {loginAvatarMarkup} from './services/branding.js';
 import {ADPHOR_DEPLOY_LABEL} from './services/deployment-version.js';
 import {mountMissAdphorChat} from './ui-miss-adphor-chat.js';
@@ -61,14 +64,39 @@ function reportError(error) { toast(error.message || 'No se pudo completar la op
 function loginScreen() {
   const corporateAvatar=import.meta.env.VITE_ADPHOR_AVATAR_PATH || '/assets/branding/miss-adphor.webp';
 
-  root.innerHTML = `<main id="main" class="login-shell"><section class="login-story"><div class="brand">${icon('building')} ADPHOR<span>S.A.S.</span></div><div><p class="eyebrow">LÍDERES EN GESTIÓN DE PROPIEDAD HORIZONTAL</p><div class="client-avatar-frame" role="group" aria-label="Asistente visual Miss ADPHOR">${loginAvatarMarkup(corporateAvatar)}<strong>Miss ADPHOR</strong><p class="miss-adphor-bubble" id="miss-adphor-bubble" role="status" aria-live="polite">${MISS_ADPHOR_GUIDANCE.idle}</p><button type="button" class="miss-adphor-hello" id="miss-adphor-hello">Salúdame ${icon("hand")}</button></div><h1>Portal Team<br>ADPHOR</h1><p>La operación, las decisiones y tu equipo.<br>Conectados en un solo lugar.</p><div class="login-steps"><span>01 · Conectar</span><span>02 · Gestionar</span><span>03 · Mejorar</span></div></div><small>Gestión operativa · Copropiedades y áreas de trabajo</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></section><section class="login-form-wrap"><form id="login-form"><span class="app-mark">${icon('building-shield')}</span><p class="eyebrow">BIENVENIDO A ADPHOR</p><h2>Bienvenido al Portal Team ADPHOR</h2><p class="muted">${repo.mode === 'demo' ? 'Explora el flujo completo con un perfil de prueba.' : 'Ingresa con la cuenta asignada por tu administrador.'}</p>${invalidConfig ? '<p class="notice danger">La configuración del servicio está incompleta. Completa ambas variables de Supabase antes de ingresar.</p>' : repo.mode === 'demo' ? `<div class="notice"><strong>Demostración local</strong><br>Los datos se guardan solo en este navegador. Usa información y fotografías de prueba.</div><label>Perfil de demostración<select name="profile">${DEMO_USERS.map(u => option(u.id, `${u.name} · ${ROLES[u.role]}`, '')).join('')}</select></label>` : '<label>Correo o usuario<input name="email" type="text" autocomplete="username" required></label><label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>'}<p id="login-error" role="alert" class="error"></p><button class="btn primary full" ${invalidConfig ? 'disabled' : ''}>${repo.mode === 'demo' ? 'Explorar demostración' : 'Ingresar'} ${icon('arrow-right')}</button><p class="login-foot">${repo.mode === 'demo' ? 'Puedes cambiar de perfil cerrando la sesión.' : '¿Necesitas una cuenta? Contacta al administrador de tu copropiedad.'}</p></form></section></main>`;
-  $('miss-adphor-hello')?.addEventListener('click',()=>{
-    $('miss-adphor-bubble').textContent=MISS_ADPHOR_GUIDANCE.wave;
+  root.innerHTML = `<main id="main" class="login-shell"><section class="login-story"><div class="brand">${icon('building')} ADPHOR<span>S.A.S.</span></div><div><p class="eyebrow">LÍDERES EN GESTIÓN DE PROPIEDAD HORIZONTAL</p><div class="client-avatar-frame" role="group" aria-label="Asistente visual Miss ADPHOR">${loginAvatarMarkup(corporateAvatar)}<strong>Miss ADPHOR</strong><p class="miss-adphor-bubble" id="miss-adphor-bubble" role="status" aria-live="polite">${MISS_ADPHOR_GUIDANCE.idle}</p><button type="button" class="miss-adphor-hello" id="miss-adphor-hello" aria-expanded="false" aria-controls="miss-login-assistant">Conversar con Miss ADPHOR ${icon("comments")}</button><section id="miss-login-assistant" hidden aria-label="Orientación de acceso"><p class="muted">Orientación local de acceso. Para consultar casos o el enjambre debes iniciar sesión y verificar tu identidad.</p><form id="miss-login-form"><label for="miss-login-question">Tu pregunta</label><input id="miss-login-question" maxlength="200" placeholder="Ej. ¿Cómo consulto una PQRS?" required><button type="submit" class="btn secondary">Preguntar</button></form><p id="miss-login-answer" role="status" aria-live="polite"></p><div class="miss-chat-quick"><button type="button" data-login-help="pqrs">PQRS</button><button type="button" data-login-help="reuniones">Reuniones</button><button type="button" data-login-help="enjambre">Enjambre IA</button></div></section></div><h1>Portal Team<br>ADPHOR</h1><p>La operación, las decisiones y tu equipo.<br>Conectados en un solo lugar.</p><div class="login-steps"><span>01 · Conectar</span><span>02 · Gestionar</span><span>03 · Mejorar</span></div></div><small>Gestión operativa · Copropiedades y áreas de trabajo</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></section><section class="login-form-wrap"><form id="login-form"><span class="app-mark">${icon('building-shield')}</span><p class="eyebrow">BIENVENIDO A ADPHOR</p><h2>Bienvenido al Portal Team ADPHOR</h2><p class="muted">${repo.mode === 'demo' ? 'Explora el flujo completo con un perfil de prueba.' : 'Ingresa con la cuenta asignada por tu administrador.'}</p>${invalidConfig ? '<p class="notice danger">La configuración del servicio está incompleta. Completa ambas variables de Supabase antes de ingresar.</p>' : repo.mode === 'demo' ? `<div class="notice"><strong>Demostración local</strong><br>Los datos se guardan solo en este navegador. Usa información y fotografías de prueba.</div><label>Perfil de demostración<select name="profile">${DEMO_USERS.map(u => option(u.id, `${u.name} · ${ROLES[u.role]}`, '')).join('')}</select></label>` : '<label>Correo o usuario<input name="email" type="text" autocomplete="username" required></label><label>Contraseña<input id="login-password" name="password" type="password" autocomplete="current-password" required></label><button id="toggle-login-password" class="text-btn" type="button" aria-controls="login-password" aria-pressed="false">Mostrar contraseña</button>'}<p id="login-error" role="alert" class="error"></p><button class="btn primary full" ${invalidConfig ? 'disabled' : ''}>${repo.mode === 'demo' ? 'Explorar demostración' : 'Ingresar'} ${icon('arrow-right')}</button><p class="login-foot">${repo.mode === 'demo' ? 'Puedes cambiar de perfil cerrando la sesión.' : '¿Necesitas una cuenta? Contacta al administrador de tu copropiedad.'}</p></form></section></main>`;
+  $('toggle-login-password')?.addEventListener('click', () => {
+    const input = $('login-password');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    $('toggle-login-password').textContent = show ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    $('toggle-login-password').setAttribute('aria-pressed', String(show));
   });
+  const helpPanel=$('miss-login-assistant');
+  $('miss-adphor-hello')?.addEventListener('click',()=>{
+    helpPanel.hidden=!helpPanel.hidden;
+    $('miss-adphor-hello').setAttribute('aria-expanded',String(!helpPanel.hidden));
+    $('miss-adphor-bubble').textContent=MISS_ADPHOR_GUIDANCE.wave;
+    if(!helpPanel.hidden)$('miss-login-question')?.focus();
+  });
+  const explainLogin=(question)=>{
+    const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const answer=/pqrs|peticion|queja|reclamo/.test(q)
+      ? 'Después de ingresar, abre PQRS para consultar las opciones autorizadas. El envío y los adjuntos dependen de los servicios habilitados; no confirmo radicaciones desde este chat.'
+      : /reunion|agenda|calendario/.test(q)
+      ? 'Después de iniciar sesión, abre Reuniones. La confirmación en Google Calendar debe verificarse en el servicio autorizado.'
+      : /enjambre|agente|inteligencia|ia|modelo/.test(q)
+      ? 'El enjambre ML, DL y PLN ayuda a analizar casos y preparar borradores. Solo personal autorizado puede revisar sus ejecuciones; ninguna decisión se aprueba ni se envía automáticamente.'
+      : /clave|contrasena|acceso|login|mfa|codigo/.test(q)
+      ? 'Ingresa con tu cuenta asignada y completa la verificación MFA cuando se solicite. No compartas contraseñas ni códigos en el asistente.'
+      : 'Puedo orientarte sobre PQRS, Reuniones, el enjambre IA y el acceso. Para datos de tu copropiedad, inicia sesión con tu cuenta autorizada.';
+    $('miss-login-answer').textContent=answer;
+  };
+  $('miss-login-form')?.addEventListener('submit',event=>{event.preventDefault();explainLogin($('miss-login-question').value);});
+  root.querySelectorAll('[data-login-help]').forEach(button=>button.addEventListener('click',()=>explainLogin(button.dataset.loginHelp)));
+
 }
-function mfaScreen() {
-  root.innerHTML='<main id="main" class="login-shell mfa-shell"><section class="login-form-wrap"><form id="mfa-form"><h2>Verificación adicional</h2><p>Ingresa el código de tu aplicación autenticadora.</p><label>Código<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label><p class="error" role="alert"></p><button type="submit" class="btn primary">Verificar</button><button type="button" class="btn secondary" data-action="cancel-mfa">Volver al acceso</button></form></section></main>';
-}
+function mfaScreen(enrollmentRequired=false,enrollment=null){renderMfaScreen(root,enrollmentRequired,enrollment);}
 async function refresh() {
   const data = await repo.load();
   Object.assign(state, data);
@@ -80,6 +108,7 @@ function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['unified','grip','Centro integrado'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
   nav.splice(1,0,['meetings','calendar','Reuniones'],['pqrs','inbox','PQRS']);
+  if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo']);
   if (repo.mode === 'cloud' && role()==='admin') nav.push(['qa-source','users','Equipo, fotos y datos reales']);
   if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' || project()?.id === 'demo-01' ? 'Entorno de prueba · origen histórico disponible' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : (project()?.is_demo || project()?.id === 'demo-01') ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div><div id="miss-adphor-chat-root"></div>`;
@@ -140,12 +169,13 @@ function reportPage() {
   return heading('Informe de seguimiento', 'Estado actual de los casos registrados en el período elegido.', `<button class="btn secondary" data-action="csv">${icon('download')} Descargar CSV</button><button class="btn primary" data-action="print">${icon('print')} Imprimir / PDF</button>`) + `<label class="report-period no-print">Mes de registro <input id="report-month" type="month" value="${esc(state.reportMonth)}"><span class="muted">Déjalo vacío para incluir todo el historial.</span></label><article class="panel printable"><div class="report-title"><div><p class="eyebrow">ADPHOR · INFORME OPERATIVO</p><h2>${esc(project().name)}</h2><p>${state.reportMonth ? `Casos registrados en ${esc(state.reportMonth)}` : 'Todos los registros'} · Generado: ${stamp(new Date())}</p></div><span class="badge">${repo.mode === 'demo' ? 'Datos de demostración' : 'Resumen de bitácora'}</span></div><div class="report-numbers"><span><strong>${m.total}</strong>Total</span><span><strong>${m.pending}</strong>Pendientes</span><span><strong>${m.closed}</strong>Cerrados</span><span><strong>${m.overdue}</strong>Fuera de plazo</span></div><div tabindex="0" role="region" aria-label="Tabla de registros" class="table-wrap"><table><thead><tr><th>Área de trabajo</th><th>Pendientes</th><th>Por verificar</th><th>Cerradas</th></tr></thead><tbody>${project().areas.map(a => { const k = metrics(list.filter(t => t.area === a)); return `<tr><td>${esc(a)}</td><td>${k.pending}</td><td>${k.review}</td><td>${k.closed}</td></tr>`; }).join('')}</tbody></table></div><p class="muted report-note">Los valores corresponden al estado actual de la bitácora. Este informe no certifica auditorías legales, financieras ni condiciones técnicas de las instalaciones.</p></article>`;
 }
 function renderPage() {
+  if(state.page==='staff' && repo.staffDirectoryEnabled){mountStaffDirectory($('page-content'),{repo,projectId:state.projectId,projectName:project()?.name});return;}
   if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin') { mountClientSourceReview($('page-content'));return; }
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
-  if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
+  if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   if (state.page === 'meetings') {
-    mountMeetingAssessment($('page-content'),{projectName:project().name,role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
+    mountMeetingAssessment($('page-content'),{projectName:project().name,sector:project().sector||project().location||'',role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
   }
   if (state.page === 'pqrs') {
     if(portoVisible()) mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});
@@ -181,6 +211,41 @@ function renderPage() {
     const pqrsCard=$('page-content').querySelector('.module-card[data-page=pqrs] small');
     const meetingCard=$('page-content').querySelector('.module-card[data-page=meetings] small');
     if(meetingCard)meetingCard.textContent=repo.mode==='demo'?`${listDemoMeetings(state.projectId).filter(m=>m.status==='scheduled'&&new Date(m.start)>new Date()).length} próximas · calendario local de prueba`:'Agenda pendiente de conexión QA';
+    if (meetingCard && repo.mode === 'cloud' && typeof repo.listVerifiedQaMeetings === 'function') {
+      const projectId = state.projectId;
+      const section = document.createElement('section');
+      section.className = 'panel';
+      const heading = document.createElement('h2');
+      heading.textContent = 'Reuniones verificadas';
+      const status = document.createElement('p');
+      status.setAttribute('role', 'status');
+      status.textContent = 'Consultando reuniones…';
+      meetingCard.textContent = status.textContent;
+      section.append(heading, status);
+      meetingCard.closest('.module-grid').after(section);
+      repo.listVerifiedQaMeetings(projectId).then(rows => {
+        if (!section.isConnected || state.projectId !== projectId) return;
+        const meetings = rows.filter(row => row.project_id === projectId);
+        status.textContent = meetings.length ? 'Horarios de Colombia' : 'Sin reuniones verificadas para esta copropiedad.';
+        meetingCard.textContent = meetings.length ? `${meetings.length} reuniones verificadas` : status.textContent;
+        if (!meetings.length) return;
+        const formatter = new Intl.DateTimeFormat('es-CO', {
+          dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota'
+        });
+        const list = document.createElement('ul');
+        for (const meeting of meetings) {
+          const item = document.createElement('li');
+          item.textContent = [meeting.title, meeting.kind, meeting.source_status,
+            formatter.formatRange(new Date(meeting.start_at), new Date(meeting.end_at))].join(' · ');
+          list.append(item);
+        }
+        section.append(list);
+      }).catch(() => {
+        if (!section.isConnected || state.projectId !== projectId) return;
+        status.textContent = 'No se pudieron consultar las reuniones verificadas.';
+        meetingCard.textContent = status.textContent;
+      });
+    }
     if(pqrsCard){pqrsCard.textContent='Consultando solicitudes…';const id=state.projectId;(repo.mode==='demo'?demoPorto:repo.porto).list(id).then(items=>{if(!pqrsCard.isConnected||state.projectId!==id)return;pqrsCard.textContent=`${items.length===200?'Al menos ':''}${items.filter(i=>i.status!=='closed').length} sin cerrar · ${repo.mode==='demo'?'datos locales de prueba':'consulta autorizada'}`;}).catch(()=>{if(pqrsCard.isConnected)pqrsCard.textContent='Consulta no disponible. Abre PQRS para revisar.';});}
   }
 
@@ -226,8 +291,10 @@ async function submit(event) {
   try {
     const input = Object.fromEntries(new FormData(form));
     if (form.id === 'login-form') {
+      if ($('login-password')) $('login-password').type = 'password';
+      if ($('toggle-login-password')) { $('toggle-login-password').textContent = 'Mostrar contraseña'; $('toggle-login-password').setAttribute('aria-pressed', 'false'); }
       const result = await repo.login(input);
-      if(result.mfaRequired) {mfaScreen();return;}
+      if(result.mfaRequired) {mfaScreen(result.enrollmentRequired);return;}
       state.user = result;
       await refresh(); state.page = 'dashboard'; state.filters = {}; shell();
     } else if(form.id === 'mfa-form') {
@@ -253,6 +320,7 @@ document.addEventListener('submit', submit);
 document.addEventListener('click', async event => {
   const el = event.target.closest('button,a[data-page]'); if (!el || busy) return;
   try {
+    if(el.dataset.action==='enroll-mfa'){el.disabled=true;try{mfaScreen(true,await repo.enrollMfa());}catch(error){el.disabled=false;reportError(error);}return;}
     if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;loginScreen();return;}
     if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
@@ -313,4 +381,6 @@ dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); }
 dialog.addEventListener('close', () => { modalReturnFocus?.focus(); });
 window.addEventListener('offline', () => toast('Sin conexión. Conserva el formulario; podrás volver a intentar el guardado.'));
 window.addEventListener('storage', event => { if(event.key === 'adphor.workflow.demo.v3' && state.user) toast('La bitácora cambió en otra pestaña. Pulsa Actualizar para consultar los cambios.'); });
-loginScreen();
+mountQaPasswordRecovery(root, {url, key, onLogin: loginScreen})
+  .then(handled => { if (!handled) loginScreen(); })
+  .catch(() => { loginScreen(); $('login-error').textContent = 'No se pudo abrir la recuperación. Solicita un enlace nuevo.'; });

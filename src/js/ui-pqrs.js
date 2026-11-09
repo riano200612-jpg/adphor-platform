@@ -1,3 +1,4 @@
+import {uploadPrivateEvidence} from './services/private-evidence.js';
 import { validateQaEvidence } from './services/qa-evidence-policy.js';
 // Uses the current ADPHOR shell/styles; all untrusted strings rendered as text.
 export function mountPqrs(root,{repository,projectId,members=[],role,projectName=projectId}) {
@@ -9,6 +10,7 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   const clearEvidence=root.querySelector('[data-clear-evidence]');
   const evidencePreview=root.querySelector('.pqrs-evidence-preview');
   let previewUrls=[];
+  if(typeof repository.uploadEvidence==='function')root.querySelector('.pqrs-upload-note').textContent='Hasta 5 archivos de máximo 20 MB cada uno. Se requiere confirmación del almacenamiento y de la asociación al radicado.';
   function clearPreviews(){for(const url of previewUrls)URL.revokeObjectURL(url);previewUrls=[];evidencePreview.replaceChildren();}
   function addPreview(file){
     if(!file.type.startsWith('image/')&&!file.type.startsWith('video/'))return;
@@ -28,12 +30,11 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
       const files=selectedEvidence();
       for(const file of files){const li=document.createElement('li');li.textContent=file.name+' · '+(file.size/1048576).toFixed(1)+' MB';evidenceList.append(li);addPreview(file);}
       clearEvidence.hidden=!files.length;
-      message.textContent=files.length?'Evidencias seleccionadas. La subida privada todavía no está habilitada en este entorno.':'';
+      message.textContent=files.length?(typeof repository.uploadEvidence==='function'?'Evidencias seleccionadas. Se confirmará su asociación antes de finalizar el envío.':'Evidencias seleccionadas. La subida privada todavía no está habilitada en este entorno.'):'';
     }catch(error){clearPreviews();message.textContent=error.message;evidenceInput.value='';clearEvidence.hidden=true;}
   };
 
   const context=document.createElement('p');context.className='pqrs-context';context.textContent='Copropiedad: '+projectName;form.querySelector('.pqrs-form-title').after(context);
-  if(!repository.localDemo){for(const name of ['tower','apartment','owner']){form.elements[name].disabled=true;form.elements[name].placeholder='Pendiente de migración QA';}const note=document.createElement('p');note.className='notice';note.textContent='Torre, unidad y solicitante requieren una migración QA adicional. Estos campos no se enviarán ni se presentarán como guardados.';context.after(note);}
   const layout=document.createElement('div');layout.className='pqrs-layout';form.before(layout);layout.append(form);const feed=document.createElement('section');feed.append(root.querySelector('.pqrs-list-head'),list);layout.append(feed);
   let requestId=crypto.randomUUID();
   const run=async f=>{try{message.textContent='Procesando…';const result=await f();if(!root.isConnected)return;message.textContent=typeof result==='string'?result:(repository.localDemo?'Cambio guardado en este navegador (demo). No se modificó PostgreSQL.':'Operación confirmada por PostgreSQL.');}catch(e){message.textContent=e.message;}};
@@ -58,7 +59,34 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
     if(!rows.length)list.append(el('p','Aún no hay solicitudes visibles. Radica una nueva PQRS o cambia el filtro.'));
     return `${rows.length} solicitudes consultadas · ${repository.localDemo?'Demostración local, no PostgreSQL':'Lectura del servicio PostgreSQL'}`;
   }
-  root.querySelector('form').onsubmit=e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button');button.disabled=true;run(async()=>{const files=selectedEvidence();if(files.length)throw Error('No se puede radicar con adjuntos: el almacenamiento privado de evidencias PQRS no está habilitado todavía. Retira los archivos para continuar sin evidencia.');const payload=Object.fromEntries(new FormData(form));delete payload.evidence;const saved=await repository.create(projectId,payload,requestId);if(!saved?.id)throw Error('El servicio no confirmó el radicado. Conserva los datos y vuelve a intentar.');requestId=crypto.randomUUID();form.reset();await load();return `Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;}).finally(()=>button.disabled=false);};
+  let submitting=false, pendingCase=null, lockedControls=[];
+  form.onsubmit=e=>{
+    e.preventDefault();
+    if(submitting)return;
+    submitting=true;
+    const button=form.querySelector('[type="submit"]');
+    button.disabled=true;
+    run(async()=>{
+      const files=selectedEvidence();
+      if(files.length&&typeof repository.uploadEvidence!=='function')throw Error('No se puede radicar con adjuntos: el almacenamiento privado de evidencias PQRS no está habilitado todavía. Retira los archivos para continuar sin evidencia.');
+      const payload=Object.fromEntries(new FormData(form));delete payload.evidence;
+      if(!lockedControls.length){lockedControls=[...form.querySelectorAll('input:not([type=file]),select,textarea')].filter(control=>!control.disabled);for(const control of lockedControls)control.disabled=true;}
+      const saved=pendingCase||await repository.create(projectId,payload,requestId);
+      if(!saved?.id)throw Error('El servicio no confirmó el radicado. Conserva los datos y vuelve a intentar.');
+      pendingCase=saved;
+      if(files.length){
+        // A failed upload keeps the confirmed case and files for a safe retry.
+        try{await uploadPrivateEvidence({repository,projectId,caseId:saved.id,files});}
+        catch(error){throw Error(`Radicado: ${saved.id}. Evidencias incompletas. ${error.message}`);}
+      }
+      pendingCase=null;
+      requestId=crypto.randomUUID();
+      form.reset();clearPreviews();evidenceList.replaceChildren();clearEvidence.hidden=true;
+      const confirmation=`Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;
+      try{await load();}catch{return confirmation+' No se pudo actualizar la lista. Pulsa Actualizar lista para consultar el radicado.';}
+      return confirmation;
+    }).finally(()=>{if(!pendingCase){for(const control of lockedControls)control.disabled=false;lockedControls=[];}submitting=false;button.disabled=false;});
+  };
   root.querySelector('[data-new]').onclick=()=>{root.querySelector('form').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});root.querySelector('form [name=kind]').focus();};
   root.querySelector('[data-refresh]').onclick=()=>run(load);filter.onchange=()=>run(load);run(load);
 }

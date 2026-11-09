@@ -4,7 +4,8 @@ No service role or email/WhatsApp provider is used.
 """
 import os
 import re
-from uuid import uuid4
+from uuid import uuid5, NAMESPACE_URL
+from hashlib import sha256
 from fastapi import APIRouter, Depends, HTTPException, Request
 from .evidence_signatures import matches_evidence_signature
 
@@ -63,7 +64,31 @@ def build_evidence_router(*, identity_dependency, membership_checker, http_get, 
         payload = b"".join(chunks)
         if not matches_evidence_signature(mime, payload):
             raise HTTPException(415, "El contenido no corresponde al tipo de archivo declarado.")
-        key = f"{project_id}/{kind}/{case_id}/{uuid4().hex}.{CONTENT_TYPES[mime]}"
+        content_hash = sha256(payload).hexdigest()
+        evidence_id = str(uuid5(NAMESPACE_URL, f"adphor:{project_id}:{kind}:{case_id}:{actor['id']}:{mime}:{content_hash}"))
+        key = f"{project_id}/{kind}/{case_id}/{actor['id']}/{evidence_id}.{CONTENT_TYPES[mime]}"
+        metadata = {"id": evidence_id, "project_id": project_id, "case_id": case_id,
+                    "case_kind": kind, "storage_bucket": bucket, "storage_path": key,
+                    "media_type": mime, "file_bytes": size, "uploaded_by": actor["id"]}
+
+        async def persisted():
+            found = await http_get(request, actor["token"], "/rest/v1/qa_case_evidence",
+                params={"select": ",".join(metadata), "id": f"eq.{evidence_id}",
+                        "project_id": f"eq.{project_id}", "case_id": f"eq.{case_id}", "limit": "1"})
+            if not isinstance(found, list) or len(found) > 1:
+                raise HTTPException(502, "Respuesta de persistencia inválida.")
+            if found and any(found[0].get(k) != v for k, v in metadata.items()):
+                raise HTTPException(409, "La evidencia existente no coincide con el envío.")
+            return bool(found)
+
+        def confirmation():
+            return {"id": evidence_id, "project_id": project_id, "case_id": case_id,
+                    "kind": kind, "visibility": "private", "storage_key": key,
+                    "storage_written": True, "metadata_linked": True, "notifications_sent": False}
+
+        # Same actor, case and bytes reuse an identifier across network retries.
+        if await persisted():
+            return confirmation()
         headers = {"apikey": publishable_key, "Authorization": "Bearer " + actor["token"],
                    "Content-Type": mime, "x-upsert": "false"}
         try:
@@ -74,11 +99,39 @@ def build_evidence_router(*, identity_dependency, membership_checker, http_get, 
             raise HTTPException(503, "No se pudo contactar el almacenamiento privado.") from None
         if response.status_code in (401, 403):
             raise HTTPException(403, "Storage denegó la carga; revisa RLS y permisos.")
-        if not response.is_success:
+        duplicate = response.status_code == 409
+        if response.status_code == 400:
+            try:
+                error_body = response.json()
+                duplicate = isinstance(error_body, dict) and (
+                    error_body.get("code", error_body.get("error")) in
+                    ("Duplicate", "KeyAlreadyExists", "ResourceAlreadyExists", "already_exists")
+                    or error_body.get("message") in ("Asset Already Exists", "The resource already exists"))
+            except (ValueError, AttributeError):
+                duplicate = False
+        if duplicate:
+            # A prior interrupted request may have stored bytes without metadata.
+            # Never assume a path collision proves identical content.
+            try:
+                existing = await request.app.state.http.get(
+                    f"{base_url.rstrip('/')}/storage/v1/object/authenticated/{bucket}/{key}",
+                    headers={"apikey": publishable_key, "Authorization": "Bearer " + actor["token"]})
+            except Exception:
+                raise HTTPException(503, "No se pudo verificar la carga anterior.") from None
+            if not existing.is_success or len(existing.content) != size or sha256(existing.content).hexdigest() != content_hash:
+                raise HTTPException(409, "La carga anterior no coincide; no se vinculó la evidencia.")
+        elif not response.is_success:
             raise HTTPException(502, "Storage no confirmó la carga.")
-        # A successful Storage write is not yet a persisted case-attachment metadata row.
-        return {"id": key.rsplit("/", 1)[-1], "project_id": project_id,
-                "case_id": case_id, "kind": kind, "visibility": "private",
-                "storage_key": key, "storage_written": True,
-                "metadata_linked": False, "notifications_sent": False}
+        try:
+            linked = await request.app.state.http.post(
+                f"{base_url.rstrip('/')}/rest/v1/qa_case_evidence",
+                headers={"apikey": publishable_key, "Authorization": "Bearer " + actor["token"],
+                         "Content-Type": "application/json", "Prefer": "return=minimal"}, json=metadata)
+        except Exception:
+            raise HTTPException(503, "Archivo privado cargado, asociación no confirmada. Reintenta el mismo archivo.") from None
+        if not linked.is_success and linked.status_code != 409:
+            raise HTTPException(502, "Archivo privado cargado, asociación no confirmada. Reintenta el mismo archivo.")
+        if not await persisted():
+            raise HTTPException(502, "La base de datos no confirmó la asociación. Reintenta el mismo archivo.")
+        return confirmation()
     return router
