@@ -58,7 +58,8 @@ export function isPqrsAttentionQuestion(question) {
 export function summarizePqrsAttention(rows,projectId,now=Date.now()){
  const open=rows.filter(row=>row.project_id===projectId && ['open','assigned','in_progress'].includes(row.status));
  const overdue=open.filter(row=>Number.isFinite(Date.parse(row.due_at)) && Date.parse(row.due_at)<now);
- return {open:open.length,overdue:overdue.length};
+ const opened=open.filter(row=>row.status==='open').length;
+ return {open:opened,inProgress:open.length-opened,overdue:overdue.length,overdueIds:overdue.map(row=>row.id)};
 }
 export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs}){
  const img='/assets/branding/miss-adphor.webp';
@@ -78,7 +79,8 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs}){
     try{
      const rows=await loadPqrs(current.projectId);
      const summary=summarizePqrsAttention(rows,current.projectId);
-     result={text:`En PQRS de esta copropiedad, entre los registros consultados hay ${summary.open} solicitudes abiertas o en gestión y ${summary.overdue} con plazo vencido. Fuente: módulo PQRS.`,page:'pqrs'};
+     const references=summary.overdueIds.slice(0,5).join(', ');
+     result={text:`PQRS de esta copropiedad · ${summary.open} abiertas · ${summary.inProgress} en gestión · ${summary.overdue} vencidas.`+(references ? ' Radicados vencidos (hasta 5): '+references+'.' : ''),page:'pqrs'};
     }catch{result={text:'No pude verificar las PQRS de esta copropiedad. Revisa tu sesión o abre el módulo.',page:null};}
    }
   }
