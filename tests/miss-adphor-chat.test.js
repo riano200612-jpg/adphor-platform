@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
-import {answerMissAdphor} from '../src/js/ui-miss-adphor-chat.js';
+import {answerMissAdphor,isPqrsAttentionQuestion,summarizePqrsAttention} from '../src/js/ui-miss-adphor-chat.js';
 const context={project:{id:'p1',name:'QA Porto'},projectId:'p1',tickets:[{project_id:'p1',status:'Pendiente',priority:'Alta'},{project_id:'p2',status:'Pendiente',priority:'Urgente'}],role:'viewer',mode:'demo',availablePages:['tickets','pqrs','agent-history','recorridos','meetings','reports']};
 test('read-only assistant only counts current authorized property',()=>{
  const a=answerMissAdphor('casos pendientes',context);
@@ -42,4 +42,21 @@ test('role-specific guidance avoids unsupported resident records',()=>{
  const reply=answerMissAdphor('soy copropietario',{...context,role:'viewer'});
  assert.equal(reply.page,null);
  assert.match(reply.text,/sesión tenga autorizadas/);
+});
+
+test('Atención hoy accepts the direct question and quick action',()=>{
+ assert.equal(isPqrsAttentionQuestion('Miss ADPHOR, ¿qué asuntos requieren mi atención hoy?'),true);
+ assert.equal(isPqrsAttentionQuestion('¿Qué asuntos importantes requieren mi atención hoy?'),true);
+ assert.equal(isPqrsAttentionQuestion('¿Qué asuntos requieren atención en otra copropiedad?'),false);
+});
+
+test('Atención hoy excludes closed cases, invalid deadlines and other properties',()=>{
+ const past='2026-11-08T00:00:00Z';
+ const rows=[
+  {project_id:'p1',status:'open',due_at:past},
+  {project_id:'p1',status:'assigned',due_at:'invalid'},
+  {project_id:'p1',status:'closed',due_at:past},
+  {project_id:'p2',status:'in_progress',due_at:past}
+ ];
+ assert.deepEqual(summarizePqrsAttention(rows,'p1',Date.parse('2026-11-09T00:00:00Z')),{open:2,overdue:1});
 });
