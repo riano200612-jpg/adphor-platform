@@ -40,6 +40,9 @@ def build_meeting_router(*, identity_dependency, membership_checker, settings):
         await membership_checker(request, actor, body.project_id, ('admin', 'coordinator'))
         if not timedelta(0) < body.end - body.start <= timedelta(days=7):
             raise HTTPException(422, 'La consulta debe abarcar hasta siete días.')
+        if (settings.supabase_url.rstrip('/') != 'https://qfctnnnnltghepwujpdm.supabase.co'
+                or settings.frontend_origin != 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev'):
+            raise HTTPException(503, 'La disponibilidad corporativa solo está habilitada en ADPHOR QA.')
         calendar = os.getenv('ADPHOR_QA_CALENDAR_ID')
         oauth = {
             'client_id': os.getenv('ADPHOR_QA_CALENDAR_OAUTH_CLIENT_ID'),
