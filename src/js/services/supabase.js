@@ -54,6 +54,26 @@ export function createCloudRepository(url, key) {
         .select('id,project_id,source_id,subject,source_status,source_created_at')
         .eq('project_id',projectId).order('source_created_at',{ascending:false}).limit(200));
     },
+    async meetingAvailability(projectId, start, end) {
+      if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Disponibilidad solo habilitada en QA.');
+      const origin=agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL,import.meta.env.DEV);
+      if (!origin) throw Error('Servicio de disponibilidad sin conexión.');
+      const {session}=check(await client.auth.getSession());
+      if (!session?.access_token) throw Error('Sesión requerida.');
+      const response=await fetch(new URL('/meetings/availability',origin),{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},
+        body:JSON.stringify({project_id:projectId,start,end}),credentials:'omit',redirect:'error',
+        cache:'no-store',signal:AbortSignal.timeout(22000)
+      });
+      if (response.status===401 || response.status===403) throw Error('La consulta requiere autorización y MFA AAL2.');
+      if (response.status===503) throw Error('El calendario corporativo o el servicio QA no está habilitado.');
+      if (!response.ok) throw Error('No se pudo verificar el calendario corporativo.');
+      const data=await response.json();
+      if (data.project_id!==projectId || !Array.isArray(data.busy) || data.busy.some(slot=>
+        !Number.isFinite(Date.parse(slot?.start)) || !Number.isFinite(Date.parse(slot?.end)) ||
+        Date.parse(slot.end)<=Date.parse(slot.start))) throw Error('Respuesta de disponibilidad inválida.');
+      return data.busy;
+    },
     async assessMeeting(projectId, fields) {
       if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Evaluación solo disponible en QA aislado.');
       const origin=agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL,import.meta.env.DEV);
