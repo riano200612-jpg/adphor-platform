@@ -1,5 +1,8 @@
 """Synthetic HTTP contracts: mocked identity/membership, not JWT/RLS or E2E."""
+import base64
+import json
 import unittest
+from unittest.mock import patch
 from dataclasses import replace
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
@@ -14,10 +17,12 @@ QA = ConsultationSettings(deployment='staging', mode='synthetic',
 class AssessmentTests(unittest.TestCase):
     def setUp(self):
         self.role = 'admin'
+        self.aal = 'aal2'
         async def identity(request: Request):
             if request.headers.get('Authorization') != 'Bearer synthetic':
                 raise HTTPException(401)
-            return {'id': 'qa-user'}
+            claims = base64.urlsafe_b64encode(json.dumps({'sub':'qa-user','aal':self.aal}).encode()).decode()
+            return {'id': 'qa-user', 'token': f'header.{claims}.signature'}
         async def membership(request, actor, project, allowed):
             if project != 'qa-a' or self.role not in allowed:
                 raise HTTPException(403)
@@ -34,6 +39,22 @@ class AssessmentTests(unittest.TestCase):
         return (client or self.client).post('/meetings/assess',
             json={'project_id':'qa-a', 'subject':'Riesgo estructural', **overrides},
             headers={'Authorization':'Bearer synthetic'})
+
+    def availability(self, project='qa-a'):
+        return self.client.post('/meetings/availability', headers={'Authorization':'Bearer synthetic'},
+            json={'project_id':project,'start':'2026-11-10T08:00:00-05:00','end':'2026-11-10T18:00:00-05:00'})
+
+    def test_availability_requires_aal2_and_membership_before_oauth(self):
+        with patch('backend.src.adphor_ai.meeting_api.httpx.AsyncClient') as transport:
+            self.aal = 'aal1'
+            self.assertEqual(self.availability().status_code,403)
+            self.aal = 'aal2'
+            self.assertEqual(self.availability('qa-b').status_code,403)
+            transport.assert_not_called()
+
+    def test_availability_missing_configuration_fails_closed(self):
+        with patch.dict('os.environ', {'ADPHOR_QA_CALENDAR_ID':''}):
+            self.assertEqual(self.availability().status_code,503)
 
     def test_rules_and_no_side_effects(self):
         response = self.post()
