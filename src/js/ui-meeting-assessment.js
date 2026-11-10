@@ -42,8 +42,16 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   availability.type='button';
   availability.textContent='Verificar horario en Google Calendar';
   form.append(availability);
-  const snapshot=()=>['start','end','duration','meetingType'].map(key=>form.elements[key].value).join('|');
+  const snapshot=()=>JSON.stringify([...new FormData(form)]);
+  const review=document.createElement('button');
+  review.type='button';
+  review.hidden=true;
+  review.textContent='Revisar solicitud de reunión';
+  form.append(review);
+  form.addEventListener('input',()=>{review.hidden=true;});
+  form.addEventListener('reset',()=>{review.hidden=true;});
   availability.onclick=async()=>{
+   review.hidden=true;
    const selection=snapshot();
    let start, end;
    try {
@@ -71,6 +79,23 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
     const conflict=busy.some(slot=>Date.parse(slot.start)<+end+buffer && Date.parse(slot.end)>+start-buffer);
     status.textContent=conflict ? 'Horario ocupado o en conflicto con el margen de 30 minutos.'
      : 'Google Calendar no reporta conflictos para este horario. La comprobación es informativa y no reserva el evento.';
+    if (!conflict) {
+     review.hidden=false;
+     review.onclick=()=>{
+      if (!review.isConnected || selection!==snapshot() || !form.reportValidity()) return;
+      const formatter=new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'});
+      const escort=form.querySelector('[name=escort_id]:checked');
+      const summary=[
+       projectName,form.elements.meetingType.value,form.elements.subject.value,
+       formatter.formatRange(start,end),
+       escort?.closest('label')?.textContent?.trim() || 'Acompañamiento pendiente de revisar',
+       'La creación de eventos todavía no está habilitada en QA.'
+      ].join('\n');
+      if (!window.confirm(summary+'\n\n¿Confirmas que estos son los datos de la solicitud?')) return;
+      status.textContent='Datos confirmados para revisión. No se creó un evento.';
+      review.hidden=true;
+     };
+    }
    } catch (error) {
     if (availability.isConnected && selection===snapshot()) status.textContent=error.message;
    } finally {
