@@ -45,9 +45,15 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   const snapshot=()=>['start','end','duration','meetingType'].map(key=>form.elements[key].value).join('|');
   availability.onclick=async()=>{
    const selection=snapshot();
-   const start=bogotaInstant(form.elements.start.value);
-   const duration=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
-   const end=form.elements.end.value ? bogotaInstant(form.elements.end.value) : new Date(+start+duration*3600000);
+   let start, end;
+   try {
+    start=bogotaInstant(form.elements.start.value);
+    const duration=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
+    end=form.elements.end.value ? bogotaInstant(form.elements.end.value) : new Date(+start+duration*3600000);
+   } catch (error) {
+    status.textContent=error.message;
+    return;
+   }
    if (!Number.isFinite(+start) || !Number.isFinite(+end) || +end<=+start || +end-+start>43200000) {
     status.textContent='Indica un horario válido de hasta 12 horas.';
     return;
