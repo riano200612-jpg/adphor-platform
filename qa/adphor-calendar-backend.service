@@ -1,0 +1,23 @@
+[Unit]
+Description=ADPHOR QA private calendar backend
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=adphor-qa
+Group=adphor-qa
+WorkingDirectory=/opt/adphor-qa/current
+EnvironmentFile=/etc/adphor-qa/calendar-backend.env
+Environment=PATH=/opt/adphor-qa/current/.venv/bin:/usr/bin:/bin
+ExecStart=/bin/bash /opt/adphor-qa/current/qa/run-calendar-backend.sh
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target
