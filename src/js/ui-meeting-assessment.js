@@ -37,6 +37,41 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'VISTA DE REVISIÓN: formulario, calendario y carrusel habilitados visualmente; todavía NO hay reuniones reales importadas ni backend transaccional autorizado. No se enviarán invitaciones.';
  if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La tabla operativa de reuniones aún no existe en esta base de datos.';}}
  if(demo){const load=document.createElement('button');load.type='button';load.className='btn secondary';load.textContent='Cargar 3 reuniones de simulación';load.setAttribute('data-demo-scenarios','');notice.after(load);load.onclick=()=>{try{const n=seedDemoMeetingScenarios(projectId);status.textContent=n?n+' reuniones FICTICIAS añadidas únicamente a este navegador.':'Los escenarios de simulación ya estaban cargados.';render();}catch(error){status.textContent=error.message;}};}
+ if (!demo && typeof repo.meetingAvailability === 'function' && ['admin','coordinator'].includes(role)) {
+  const availability=document.createElement('button');
+  availability.type='button';
+  availability.textContent='Verificar horario en Google Calendar';
+  form.append(availability);
+  const snapshot=()=>['start','end','duration','meetingType'].map(key=>form.elements[key].value).join('|');
+  availability.onclick=async()=>{
+   const selection=snapshot();
+   const start=bogotaInstant(form.elements.start.value);
+   const duration=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
+   const end=form.elements.end.value ? bogotaInstant(form.elements.end.value) : new Date(+start+duration*3600000);
+   if (!Number.isFinite(+start) || !Number.isFinite(+end) || +end<=+start || +end-+start>43200000) {
+    status.textContent='Indica un horario válido de hasta 12 horas.';
+    return;
+   }
+   if (+start-Date.now()<86400000) {
+    status.textContent='El horario requiere al menos 24 horas de anticipación para esta comprobación.';
+    return;
+   }
+   availability.disabled=true;
+   status.textContent='Consultando el calendario corporativo…';
+   try {
+    const buffer=1800000;
+    const busy=await repo.meetingAvailability(projectId,new Date(+start-buffer).toISOString(),new Date(+end+buffer).toISOString());
+    if (!availability.isConnected || selection!==snapshot()) return;
+    const conflict=busy.some(slot=>Date.parse(slot.start)<+end+buffer && Date.parse(slot.end)>+start-buffer);
+    status.textContent=conflict ? 'Horario ocupado o en conflicto con el margen de 30 minutos.'
+     : 'Google Calendar no reporta conflictos para este horario. La comprobación es informativa y no reserva el evento.';
+   } catch (error) {
+    if (availability.isConnected && selection===snapshot()) status.textContent=error.message;
+   } finally {
+    availability.disabled=false;
+   }
+  };
+ }
  let editing=null, experience;
  let verifiedCloudRows=[];
  function render(){
