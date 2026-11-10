@@ -18,7 +18,12 @@ class Assessment(BaseModel):
 
 class Availability(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    project_id: str = Field(min_length=1, max_length=100, pattern=r'^[a-z0-9][a-z0-9-]*(*, identity_dependency, membership_checker, settings):
+    project_id: str = Field(min_length=1, max_length=100, pattern=r'^[a-z0-9][a-z0-9-]*$')
+    start: AwareDatetime
+    end: AwareDatetime
+
+
+def build_meeting_router(*, identity_dependency, membership_checker, settings):
     router=APIRouter(prefix='/meetings',tags=['meetings-qa'])
     @router.post('/assess')
     async def assess(body: Assessment, request: Request, actor=Depends(identity_dependency)):
@@ -55,20 +60,4 @@ class Availability(BaseModel):
             raise HTTPException(502, 'No se pudo verificar la disponibilidad corporativa.') from None
         return {'project_id': body.project_id, 'busy': busy, 'timezone': 'America/Bogota'}
 
-    return router
-)
-    start: AwareDatetime
-    end: AwareDatetime
-
-
-def build_meeting_router(*, identity_dependency, membership_checker, settings):
-    router=APIRouter(prefix='/meetings',tags=['meetings-qa'])
-    @router.post('/assess')
-    async def assess(body: Assessment, request: Request, actor=Depends(identity_dependency)):
-        settings.assert_sandbox()
-        await membership_checker(request,actor,body.project_id,('admin','coordinator'))
-        decision=assess_meeting(body.subject,body.notes,management_requested=body.management_requested)
-        return {'project_id':body.project_id,'engine_kind':'rules',
-                'status':'pending_administrator_review','persisted':False,
-                'booking_authorized':False,'notifications_sent':False,**asdict(decision)}
     return router
