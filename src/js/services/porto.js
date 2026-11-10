@@ -19,6 +19,21 @@ export function createPortoRepository(client, config) {
       await assertProject(project);let q=client.from('pilot_pqrs').select('*').eq('project_id',project).order('created_at',{ascending:false}).limit(200);
       if(status)q=q.eq('status',status);return checked(await q);
     },
+    async listAttention(project) {
+      await assertProject(project);
+      const rows = [];
+      let cursor;
+      while (true) {
+        let query = client.from('pilot_pqrs').select('id,project_id,status,due_at')
+          .eq('project_id',project).in('status',['open','assigned','in_progress'])
+          .order('id',{ascending:true}).limit(200);
+        if (cursor) query = query.gt('id',cursor);
+        const page = checked(await query);
+        if (!page.length) return rows;
+        rows.push(...page);
+        cursor = page.at(-1).id;
+      }
+    },
     async create(project,fields,requestId) {
       const actor=await assertProject(project);const payload={project_id:project,created_by:actor,request_id:requestId,kind:fields.kind,subject:fields.subject,description:fields.description};
       const locationFields = ['tower', 'apartment', 'owner'];
