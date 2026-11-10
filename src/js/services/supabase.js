@@ -36,6 +36,8 @@ export function createCloudRepository(url, key) {
   return {
     porto,
     staffDirectoryEnabled:Boolean(staff),
+    async institutionalStaff(){if(!staff||!user)throw Error('Sesión QA requerida.');return staff.institutional();},
+    async institutionalStaffPhoto(path){if(!staff||!user)throw Error('Sesión QA requerida.');return staff.institutionalPhoto(path);},
     async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
     async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},
     // Historical data is readable only when an isolated QA project is explicitly enabled.
