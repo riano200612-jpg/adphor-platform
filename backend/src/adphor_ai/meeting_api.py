@@ -40,12 +40,22 @@ def build_meeting_router(*, identity_dependency, membership_checker, settings):
         await membership_checker(request, actor, body.project_id, ('admin', 'coordinator'))
         if not timedelta(0) < body.end - body.start <= timedelta(days=7):
             raise HTTPException(422, 'La consulta debe abarcar hasta siete días.')
-        token = os.getenv('ADPHOR_QA_CALENDAR_ACCESS_TOKEN')
         calendar = os.getenv('ADPHOR_QA_CALENDAR_ID')
-        if not token or not calendar:
+        oauth = {
+            'client_id': os.getenv('ADPHOR_QA_CALENDAR_OAUTH_CLIENT_ID'),
+            'client_secret': os.getenv('ADPHOR_QA_CALENDAR_OAUTH_CLIENT_SECRET'),
+            'refresh_token': os.getenv('ADPHOR_QA_CALENDAR_OAUTH_REFRESH_TOKEN'),
+        }
+        if not calendar or not all(oauth.values()):
             raise HTTPException(503, 'La disponibilidad corporativa no está configurada en QA.')
         try:
             async with httpx.AsyncClient(timeout=8, follow_redirects=False) as client:
+                grant = await client.post('https://oauth2.googleapis.com/token',
+                    data={**oauth, 'grant_type': 'refresh_token'})
+                grant.raise_for_status()
+                token = grant.json()['access_token']
+                if not isinstance(token, str) or not token:
+                    raise ValueError('Invalid OAuth response')
                 response = await client.post('https://www.googleapis.com/calendar/v3/freeBusy',
                     headers={'Authorization': f'Bearer {token}'}, json={
                         'timeMin': body.start.isoformat(), 'timeMax': body.end.isoformat(),
@@ -56,7 +66,7 @@ def build_meeting_router(*, identity_dependency, membership_checker, settings):
                 if data.get('errors') or not isinstance(data['busy'], list):
                     raise ValueError('Invalid calendar response')
                 busy = [{'start': item['start'], 'end': item['end']} for item in data['busy']]
-        except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError):
             raise HTTPException(502, 'No se pudo verificar la disponibilidad corporativa.') from None
         return {'project_id': body.project_id, 'busy': busy, 'timezone': 'America/Bogota'}
 
