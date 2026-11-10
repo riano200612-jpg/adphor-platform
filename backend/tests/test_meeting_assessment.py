@@ -2,7 +2,7 @@
 import base64
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 from dataclasses import replace
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
@@ -55,6 +55,31 @@ class AssessmentTests(unittest.TestCase):
     def test_availability_missing_configuration_fails_closed(self):
         with patch.dict('os.environ', {'ADPHOR_QA_CALENDAR_ID':''}):
             self.assertEqual(self.availability().status_code,503)
+
+    def test_corporate_availability_refresh_and_google_error(self):
+        self.client = self.make_client(replace(QA,
+            supabase_url='https://qfctnnnnltghepwujpdm.supabase.co',
+            staging_project_ref='qfctnnnnltghepwujpdm',
+            frontend_origin='https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev'))
+        variables = {
+            'ADPHOR_QA_CALENDAR_ID':'synthetic-calendar',
+            'ADPHOR_QA_CALENDAR_OAUTH_CLIENT_ID':'synthetic-client',
+            'ADPHOR_QA_CALENDAR_OAUTH_CLIENT_SECRET':'synthetic-secret',
+            'ADPHOR_QA_CALENDAR_OAUTH_REFRESH_TOKEN':'synthetic-refresh',
+        }
+        grant = Mock()
+        grant.json.return_value = {'access_token':'synthetic-access'}
+        calendar = Mock()
+        calendar.json.return_value = {'calendars':{'synthetic-calendar':{'busy':[]}}}
+        with patch.dict('os.environ', variables), patch('backend.src.adphor_ai.meeting_api.httpx.AsyncClient') as factory:
+            client = factory.return_value.__aenter__.return_value
+            client.post = AsyncMock(side_effect=[grant, calendar, grant, calendar])
+            self.assertEqual(self.availability().json(), {
+                'project_id':'qa-a', 'busy':[], 'timezone':'America/Bogota'})
+            self.assertEqual(client.post.await_args_list[0].kwargs['data']['grant_type'], 'refresh_token')
+            self.assertEqual(client.post.await_args_list[1].kwargs['headers']['Authorization'], 'Bearer synthetic-access')
+            calendar.json.return_value = {'calendars':{'synthetic-calendar':{'errors':[{'reason':'internalError'}]}}}
+            self.assertEqual(self.availability().status_code,502)
 
     def test_rules_and_no_side_effects(self):
         response = self.post()
