@@ -48,11 +48,20 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   review.hidden=true;
   review.textContent='Revisar solicitud de reunión';
   form.append(review);
-  form.addEventListener('input',()=>{review.hidden=true;});
-  form.addEventListener('reset',()=>{review.hidden=true;});
-  availability.onclick=async()=>{
+  let revision=0;
+  const invalidateAvailability=()=>{
+   revision++;
    review.hidden=true;
+   if (status.dataset.availability) status.textContent='';
+   delete status.dataset.availability;
+  };
+  form.addEventListener('input',invalidateAvailability);
+  form.addEventListener('reset',invalidateAvailability);
+  availability.onclick=async()=>{
+   invalidateAvailability();
+   const requestRevision=revision;
    const selection=snapshot();
+   const isCurrent=()=>availability.isConnected && revision===requestRevision && selection===snapshot();
    let start, end;
    try {
     start=bogotaInstant(form.elements.start.value);
@@ -71,18 +80,20 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
     return;
    }
    availability.disabled=true;
+   status.dataset.availability='consultando';
    status.textContent='Consultando el calendario corporativo…';
    try {
     const buffer=1800000;
     const busy=await repo.meetingAvailability(projectId,new Date(+start-buffer).toISOString(),new Date(+end+buffer).toISOString());
-    if (!availability.isConnected || selection!==snapshot()) return;
+    if (!isCurrent()) return;
     const conflict=busy.some(slot=>Date.parse(slot.start)<+end+buffer && Date.parse(slot.end)>+start-buffer);
+    status.dataset.availability=conflict ? 'OCUPADO' : 'DISPONIBLE';
     status.textContent=conflict ? 'Horario ocupado o en conflicto con el margen de 30 minutos.'
      : 'Google Calendar no reporta conflictos para este horario. La comprobación es informativa y no reserva el evento.';
     if (!conflict) {
      review.hidden=false;
      review.onclick=()=>{
-      if (!review.isConnected || selection!==snapshot() || !form.reportValidity()) return;
+      if (!review.isConnected || !isCurrent() || !form.reportValidity()) return;
       const formatter=new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'});
       const escort=form.querySelector('[name=escort_id]:checked');
       const summary=[
@@ -96,8 +107,11 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
       review.hidden=true;
      };
     }
-   } catch (error) {
-    if (availability.isConnected && selection===snapshot()) status.textContent=error.message;
+   } catch {
+    if (isCurrent()) {
+     status.dataset.availability='CONSULTA_FALLIDA';
+     status.textContent='No se pudo verificar el calendario corporativo. Vuelve a intentar la consulta.';
+    }
    } finally {
     availability.disabled=false;
    }
