@@ -7,9 +7,9 @@ import json
 from fastapi import HTTPException
 
 
-def require_enrolled_mfa(validated_user: dict, validated_token: str) -> None:
+def require_enrolled_mfa(validated_user: dict, validated_token: str, *, mandatory: bool = False) -> None:
     factors = validated_user.get('factors', [])
-    if not any(f.get('status') == 'verified' for f in factors):
+    if not mandatory and not any(f.get('status') == 'verified' for f in factors):
         return
     try:
         parts = validated_token.split('.')

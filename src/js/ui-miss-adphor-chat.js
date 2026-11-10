@@ -11,6 +11,9 @@ export function answerMissAdphor(question, context={}) {
  const go=(page,text)=>({text,page:availablePages.includes(page)?page:null});
  if(!q)return {text:'Pregúntame por pendientes, prioridades, bitácora, PQRS, reuniones o el enjambre.',page:null};
  if(/cerrar|aprobar|enviar|borrar|eliminar|asignar (un |una )?caso/.test(q))return {text:'Puedo orientarte y abrir el módulo correspondiente, pero no ejecuto cierres, aprobaciones, asignaciones ni notificaciones. Esas operaciones requieren permisos y revisión humana.',page:null};
+ if(/\b(?:agendar|programar|crear|preparar)\b.*\breunion(?:es)?\b/.test(q)){
+  return go('meetings',`Para preparar una reunión en ${name}, abre Reuniones y selecciona tipo, duración y acompañamiento. Allí puedes evaluar la solicitud. La disponibilidad en vivo y la creación en Google Calendar aún no están habilitadas desde el asistente.`);
+ }
  if(/pendient|vencid|atrasad|casos|novedad|mantenimiento|estado/.test(q)) {
   const active=scoped.filter(t=>!['cerrada','cerrado','closed'].includes(normalized(t.status)));
   const late=active.filter(t=>t.due_date && /^\d{4}-\d{2}-\d{2}$/.test(t.due_date) && t.due_date < new Date().toISOString().slice(0,10));
@@ -50,13 +53,62 @@ export function answerMissAdphor(question, context={}) {
  if(/permiso|rol|puedo hacer/.test(q))return {text:`Tu rol actual es ${role}. Los permisos de escritura se verifican en el backend; yo solo puedo orientarte.`,page:null};
  return {text:'Puedo ayudarte con Bitácora, PQRS, Recorridos, Reuniones, Informes y el enjambre. No tengo una respuesta verificada para esa consulta; reformúlala o abre el módulo correspondiente.',page:null};
 }
-export function mountMissAdphorChat(host,{context,onNavigate}){
+export function isPqrsAttentionQuestion(question) {
+ return /^(?:miss adphor,? *)?que asuntos(?: importantes)? requieren mi atencion hoy$/.test(
+  normalized(question).replace(/[¿?]/g,'').trim()
+ );
+}
+export function summarizePqrsAttention(rows,projectId,now=Date.now()){
+ const open=rows.filter(row=>row.project_id===projectId && ['open','assigned','in_progress'].includes(row.status));
+ const overdue=open.filter(row=>Number.isFinite(Date.parse(row.due_at)) && Date.parse(row.due_at)<now);
+ const opened=open.filter(row=>row.status==='open').length;
+ return {open:opened,inProgress:open.length-opened,overdue:overdue.length,overdueIds:overdue.map(row=>row.id)};
+}
+export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings}){
  const img='/assets/branding/miss-adphor.webp';
- host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
+ host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)input.focus();});
  function append(text,who){const p=document.createElement('p');p.className='miss-chat-msg '+who;p.textContent=text;log.append(p);log.scrollTop=log.scrollHeight;}
- function ask(value){const question=String(value||'').trim();if(!question)return;append(question,'user');const result=answerMissAdphor(question,context());append(result.text,'assistant');if(result.page){const button=document.createElement('button');button.type='button';button.textContent='Abrir '+result.page;button.className='miss-chat-jump';button.onclick=()=>onNavigate(result.page);log.append(button);}input.value='';}
+ async function ask(value){
+  const question=String(value||'').trim();
+  if(!question)return;
+  append(question,'user');input.value='';
+  const current=context();
+  let result=answerMissAdphor(question,current);
+  if(isPqrsAttentionQuestion(question) && current.project?.id===current.projectId && current.projectId){
+   result={text:'La consulta de atención requiere PQRS habilitado en QA.',page:null};
+   if(loadPqrs){
+    try{
+     const rows=await loadPqrs(current.projectId);
+     const summary=summarizePqrsAttention(rows,current.projectId);
+     const references=summary.overdueIds.slice(0,5).join(', ');
+     result={text:`PQRS de esta copropiedad · ${summary.open} abiertas · ${summary.inProgress} en gestión · ${summary.overdue} vencidas.`+(references ? ' Radicados vencidos (hasta 5): '+references+'.' : ''),page:'pqrs'};
+    }catch{result={text:'No pude verificar las PQRS de esta copropiedad. Revisa tu sesión o abre el módulo.',page:null};}
+   }
+  }
+  if (/^que reuniones verificadas tiene esta copropiedad$/.test(normalized(question).replace(/[¿?]/g,'').trim()) &&
+      current.project?.id===current.projectId && current.projectId) {
+   result={text:'No dispongo de una fuente de reuniones verificadas para esta consulta.',page:null};
+   if (loadMeetings) {
+    try {
+     const rows=(await loadMeetings(current.projectId)).filter(row=>row.project_id===current.projectId &&
+       row.is_calendar_verified===true && row.source_status==='Confirmada');
+     const date=new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'});
+     const details=rows.slice(0,5).map(row=>row.title+' · '+date.format(new Date(row.start_at))).join(' / ');
+     result={text:(rows.length ? `${rows.length} reuniones verificadas. ${details}.` : 'No hay reuniones verificadas para esta copropiedad en la carga disponible.')+
+       ' Fuente: calendario corporativo de ADPHOR, importación puntual. Consulta Reuniones para ver el detalle.',page:'meetings'};
+    } catch {
+     result={text:'No pude verificar las reuniones de esta copropiedad.',page:null};
+    }
+   }
+  }
+  if(!host.isConnected||context().projectId!==current.projectId)return;
+  append(result.text,'assistant');
+  if(result.page && current.availablePages.includes(result.page)){
+   const button=document.createElement('button');button.type='button';button.textContent='Abrir '+result.page;button.className='miss-chat-jump';button.onclick=()=>onNavigate(result.page);log.append(button);
+  }
+ }
  form.addEventListener('submit',event=>{event.preventDefault();ask(input.value);});
  host.querySelectorAll('[data-miss-question]').forEach(b=>b.onclick=()=>ask(b.dataset.missQuestion));
  append('¡Hola! Soy Miss ADPHOR. Puedo orientarte usando los registros visibles de tu copropiedad.', 'assistant');
