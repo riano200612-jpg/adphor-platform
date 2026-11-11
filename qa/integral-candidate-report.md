@@ -25,7 +25,7 @@ Visitas no certifica todavía ejecución de visitas, ingreso/salida, resultados,
 
 ## Pruebas
 
-325/325 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
+327/327 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
 
 ## Publicación y reversión
 
@@ -50,3 +50,7 @@ La revisión posterior a `96e106d` introduce propiedad compartida de las consult
 ## Certificación de infraestructura posterior
 
 Se intentó autenticación oficial Google con participación del propietario. Cloudflare devolvió Unable to sign in, sin sesión administrativa. El HEAD anónimo al alias QA devolvió 403 sin redirección; no se atribuye a una política Access sin configuración y prueba autenticada. Se ampliaron los metadatos públicos del artefacto (sin clave) y la compilación rechaza clave ausente o modo readonly incompatible. Dos builds locales con configuración sintética fueron idénticos; no certifican variables del proveedor. Estado y plan: `qa/access-pages-certification-20261111.md`.
+
+## Reconciliación posterior de Pages y evidencia del propietario
+
+La actualización del informe maestro y captura posterior confirman que el propietario guardó ambas ramas en Preview personalizado. No se le debe pedir otra vez que las añada. Los skipped anteriores son históricos; falta leer los deployments posteriores al guardado. Se reprodujo otro bloqueo independiente: el código de c6286a3 no admitía la rama candidata en Vite ni en el manifiesto. La corrección admite exclusivamente las dos ramas QA con las mismas compuertas y bloquea bootstrap en la candidata. Respaldo con prefijo oficial CF-Pages-Skip, sin publicación. Detalle y recuperación segura de Preview: `qa/pages-skipped-reconciliation-20261111.md`.

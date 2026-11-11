@@ -28,7 +28,7 @@ export function applicationRepositoryMode({url,key,readonly=false,hostname=''}) 
 // Build configuration only: these flags are not proof of live Access or AAL2.
 export function publicQaBuildConfig(env,{sha='',branch}) {
  assertQaBuildAuth(env);
- if(branch!=='qa/pqrs-carrusel-integracion-20261104')throw Error('QA_AUTH_CONFIG_BLOCKED: unexpected preview branch.');
+ if(!['qa/pqrs-carrusel-integracion-20261104','qa/integral-claude-reviewed-20261111'].includes(branch))throw Error('QA_AUTH_CONFIG_BLOCKED: unexpected preview branch.');
  return {
   sha:/^[a-f0-9]{40}$/i.test(sha)?sha.toLowerCase():'',branch,
   backendUrl:QA_URL,requireMfa:env.VITE_REQUIRE_MFA,

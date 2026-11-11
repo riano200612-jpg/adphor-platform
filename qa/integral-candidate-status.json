@@ -5,7 +5,7 @@
   "basis": "Reviewed source and isolated tests only; administrative evidence retained privately. No authenticated acceptance or deployment certification.",
   "tests": {
     "javascript": {
-      "pass": 325,
+      "pass": 327,
       "fail": 0,
       "scope": "unit and isolated integration"
     },
@@ -240,8 +240,21 @@
       "redirect_followed": false,
       "attributed_to_access": false
     },
-    "live_variables": "BLOCKED",
+    "live_variables": "Owner Preview configuration documented; served effective configuration BLOCKED",
     "browser_runtime": "BLOCKED: official Chromium download failed; seven tests not executed",
-    "local_build_proof": "PASS: two controlled synthetic QA builds, 13 identical files; not live provider configuration"
+    "local_build_proof": "PASS: two controlled synthetic QA builds, 13 identical files; not live provider configuration",
+    "owner_policy_evidence": "Allow policy and positive evaluator documented; real URL/Auth/AAL2 not certified"
+  },
+  "pages_reconciliation": {
+    "owner_branch_control": "saved: both QA branches included per later owner evidence",
+    "independent_api_read": false,
+    "historical_skip_id": "91008b73-d10d-42f5-a7dc-ab90455898a5",
+    "historical_skip_reason": "branch exclusion strongly supported; exact provider skip_reason not retrieved",
+    "candidate_build_guard": "fixed locally: only two named QA branches allowed with existing security gates",
+    "candidate_bootstrap": "rejected; existing legacy bootstrap behavior preserved",
+    "backup_strategy": "CF-Pages-Skip commit prefix; no deployment authorized",
+    "last_successful_preview": "BLOCKED: latest list after owner save not available",
+    "served_sha": "BLOCKED",
+    "rollback": "Preview recovery only; native production rollback prohibited"
   }
 }

@@ -91,6 +91,7 @@ test('QA artifact reports only non-secret configuration and labels it as build-o
  assert.equal(manifest.sha,metadata.sha);assert.equal(manifest.publicKeyPresent,true);
  assert.equal(manifest.visitsSqlEnabled,false);assert.equal(manifest.readOnlyMode,false);
  assert.equal(manifest.agentsApiConfigured,false);assert.equal(manifest.accessVerifiedFlag,true);
+ assert.equal(publicQaBuildConfig(env,{...metadata,branch:'qa/integral-claude-reviewed-20261111'}).branch,'qa/integral-claude-reviewed-20261111');
  assert.equal(manifest.buildConfigurationOnly,true);assert.equal(JSON.stringify(manifest).includes(key),false);
  assert.equal(publicQaBuildConfig({...env,VITE_VISITS_SQL_ENABLED:'true',VITE_AGENTS_API_URL:'https://example.invalid'},metadata).visitsSqlEnabled,true);
  assert.throws(()=>publicQaBuildConfig(env,{...metadata,branch:'codex/flujo-mantenimiento'}),/QA_AUTH_CONFIG_BLOCKED/);

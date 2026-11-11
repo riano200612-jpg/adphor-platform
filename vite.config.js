@@ -12,7 +12,8 @@ const protectedStaging = process.env.CF_PAGES === '1'
 // Consolidated QA branch is a separate, explicitly gated preview. Never enable
 // ADPHOR_QA_ACCESS_VERIFIED before verifying Access on the exact preview hostname.
 const consolidatedQa = process.env.CF_PAGES === '1'
-  && process.env.CF_PAGES_BRANCH === 'qa/pqrs-carrusel-integracion-20261104'
+  && (process.env.CF_PAGES_BRANCH === 'qa/pqrs-carrusel-integracion-20261104'
+    || process.env.CF_PAGES_BRANCH === 'qa/integral-claude-reviewed-20261111')
   && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true'
   && process.env.ADPHOR_QA_ACCESS_VERIFIED === 'true';
 // Bootstrap publishes only an isolated static page; it never enables the app.
@@ -20,6 +21,12 @@ const accessBootstrap = process.env.CF_PAGES === '1'
   && process.env.CF_PAGES_BRANCH === 'qa/pqrs-carrusel-integracion-20261104'
   && process.env.ADPHOR_PROTECTED_STAGING_QA === 'true'
   && process.env.ADPHOR_QA_ACCESS_BOOTSTRAP === 'true';
+// The review candidate cannot publish a bootstrap page as if it were the app.
+if (process.env.CF_PAGES === '1'
+  && process.env.CF_PAGES_BRANCH === 'qa/integral-claude-reviewed-20261111'
+  && process.env.ADPHOR_QA_ACCESS_BOOTSTRAP === 'true') {
+  throw new Error('QA_DEPLOY_BLOCKED: review candidate requires bootstrap disabled');
+}
 if ((process.env.CF_PAGES || process.env.WORKERS_CI) && !productionPages && !protectedStaging && !consolidatedQa && !accessBootstrap) {
   throw new Error('QA_DEPLOY_BLOCKED: expected production branch or explicitly protected QA staging');
 }
