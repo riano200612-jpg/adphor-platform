@@ -194,7 +194,8 @@ function renderPage() {
     mountVisitPreparation($('page-content'),{projectId:state.projectId,projectName:project().name,members:team(),projects:state.projects,onProjectChange:selectWorkspaceProject,visitRepository:repo.mode==='cloud'?repo.visits:null,canCreate:repo.visits?.writesEnabled===true&&['admin','coordinator'].includes(role())});return;
   }
   if (state.page === 'meetings') {
-    mountMeetingAssessment($('page-content'),{projectName:project().name,sector:project().sector||project().location||'',role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
+    const meetingProjectId=state.projectId;
+    mountMeetingAssessment($('page-content'),{projectName:project().name,sector:project().sector||project().location||'',role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:meetingProjectId,isProjectCurrent:()=>state.projectId===meetingProjectId,members:team()});return;
   }
   if (state.page === 'pqrs') {
     if(portoVisible()) mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});

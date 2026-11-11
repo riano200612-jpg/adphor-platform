@@ -1,10 +1,8 @@
+import {calendarInstant,validateCalendarBusyIntervals} from './calendar-availability.js';
 // Read-only calendar alternatives. No working-hours or companion policy is inferred.
 const HALF_HOUR_MS=30*60*1000;
 const HORIZON_MS=48*60*60*1000;
-const instant=value=>{
- if(typeof value!=='string'||!/(?:Z|[+-]\d{2}:\d{2})$/.test(value))return NaN;
- return Date.parse(value);
-};
+const instant=calendarInstant;
 function validate(start,durationMinutes,limit=5){
  const initial=instant(start);
  if(!Number.isFinite(initial))throw Error('Inicio no válido para sugerencias.');
@@ -16,12 +14,7 @@ export function suggestMeetingSlots({busy,start,durationMinutes,limit=5,verified
  const initial=validate(start,durationMinutes,limit);
  const lower=instant(verifiedWindow?.start),upper=instant(verifiedWindow?.end);
  if(!Number.isFinite(lower)||!Number.isFinite(upper)||upper<=lower)throw Error('Falta un intervalo de disponibilidad consultado válido.');
- if(!Array.isArray(busy))throw Error('La disponibilidad corporativa no es válida.');
- const blocked=busy.map(slot=>{
-  const a=instant(slot?.start),b=instant(slot?.end);
-  if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a)throw Error('Google Calendar devolvió un intervalo ocupado no válido.');
-  return [a,b];
- });
+ const blocked=validateCalendarBusyIntervals(busy).map(slot=>[instant(slot.start),instant(slot.end)]);
  const duration=durationMinutes*60000,slots=[];
  for(let t=initial+HALF_HOUR_MS;t<=initial+HORIZON_MS&&slots.length<limit;t+=HALF_HOUR_MS){
   if(t-HALF_HOUR_MS<lower||t+duration+HALF_HOUR_MS>upper)continue;

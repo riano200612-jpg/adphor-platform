@@ -1,3 +1,4 @@
+import {validateCalendarAvailabilityResponse} from './calendar-availability.js';
 import {createSharedVisitRepository} from './shared-visits.js';
 import { createEvidenceApiRepository } from './evidence-api.js';
 import { createPrivateMediaRepository } from './private-media.js';
@@ -74,10 +75,7 @@ export function createCloudRepository(url, key) {
       if (response.status===503) throw Error('El calendario corporativo o el servicio QA no está habilitado.');
       if (!response.ok) throw Error('No se pudo verificar el calendario corporativo.');
       const data=await response.json();
-      if (data.project_id!==projectId || !Array.isArray(data.busy) || data.busy.some(slot=>
-        !Number.isFinite(Date.parse(slot?.start)) || !Number.isFinite(Date.parse(slot?.end)) ||
-        Date.parse(slot.end)<=Date.parse(slot.start))) throw Error('Respuesta de disponibilidad inválida.');
-      return data.busy;
+      return validateCalendarAvailabilityResponse(data,projectId);
     },
     async assessMeeting(projectId, fields) {
       if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Evaluación solo disponible en QA aislado.');

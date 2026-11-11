@@ -58,3 +58,28 @@ test('provider failure and obsolete responses never leave selectable alternative
  await expect(alternatives.getByRole('button')).toHaveCount(0);
  await expect(page.getByText('synthetic provider failure')).toHaveCount(0);
 });
+
+test('obsolete suggestion finally cannot enable controls owned by a newer manual check',async({page,baseURL})=>{
+ const pending=[];
+ const initial=await openFixture(page,baseURL,async()=>new Promise(resolve=>pending.push(resolve)));
+ const suggest=page.getByRole('button',{name:'Sugerir otros horarios',exact:true});
+ const verify=page.getByRole('button',{name:'Verificar horario en Google Calendar',exact:true});
+ const alternatives=page.getByRole('region',{name:'Alternativas de horario'});
+ await suggest.click();await expect.poll(()=>pending.length).toBe(1);
+ await expect(verify).toBeDisabled();
+ await page.getByLabel('Inicio',{exact:true}).fill(bogotaInput(new Date(+initial+1800000)));
+ await expect(verify).toBeEnabled();await verify.click();
+ await expect.poll(()=>pending.length).toBe(2);
+ pending[0]([]);
+ await expect(verify).toBeDisabled();await expect(suggest).toBeDisabled();
+ await expect(alternatives.getByRole('button')).toHaveCount(0);
+ pending[1]([]);
+ await expect(verify).toBeEnabled();await expect(suggest).toBeEnabled();
+ await expect(page.getByRole('button',{name:'Revisar solicitud de reunión',exact:true})).toBeVisible();
+});
+test('manual verification rejects timezone-free busy data instead of showing available',async({page,baseURL})=>{
+ await openFixture(page,baseURL,async()=>[{start:'2026-11-14T15:00:00',end:'2026-11-14T16:00:00'}]);
+ await page.getByRole('button',{name:'Verificar horario en Google Calendar',exact:true}).click();
+ await expect(page.getByRole('status')).toHaveAttribute('data-availability','CONSULTA_FALLIDA');
+ await expect(page.getByRole('button',{name:'Revisar solicitud de reunión',exact:true})).toBeHidden();
+});

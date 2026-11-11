@@ -23,6 +23,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     <div class="visit-columns">
       <section class="panel visit-editor" aria-labelledby="visit-editor-title">
         <h2 id="visit-editor-title">Preparar visita</h2>
+        <p class="muted">Programada no significa realizada ni cerrada. La ejecución y el cierre requieren un contrato de seguimiento aprobado.</p>
         <p class="muted">Completa los datos y revisa el borrador. Si cambias de copropiedad, se descarta la preparación actual.</p>
         <div data-visit-project></div>
         <fieldset><legend>1. Datos de la visita</legend><div class="visit-fields">

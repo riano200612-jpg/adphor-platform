@@ -2,7 +2,7 @@
 // No network calls, model claims, background learning or cross-project access.
 const normalized = s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const moduleGuidance = {
- agenda:'Consulta las reuniones verificadas de la copropiedad seleccionada. Filtra por asunto, fecha de Colombia y estado. La carga es puntual; los cambios de horario y cancelaciones requieren habilitación administrativa.',
+ agenda:'Consulta las reuniones verificadas de la copropiedad seleccionada. Filtra por asunto, fecha de Colombia y estado. La carga es puntual. La reprogramación y cancelación corporativas aún no están conectadas en esta versión.',
  dashboard:'Selecciona una copropiedad asignada y revisa sus indicadores y reuniones verificadas. Para preparar una solicitud, abre Reuniones.',
  meetings:'Selecciona el tipo y revisa la duración. Elige un acompañante o «Sin acompañamiento requerido». Si está habilitada la consulta de Calendar, verifica el horario antes de revisar la solicitud. La revisión no crea una reserva.',
  pqrs:'Revisa los casos de la copropiedad seleccionada. Abre un expediente para consultar su estado e historial. Si puedes radicar, verifica los datos antes de enviar.',

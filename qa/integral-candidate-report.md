@@ -25,7 +25,7 @@ Visitas no certifica todavía ejecución de visitas, ingreso/salida, resultados,
 
 ## Pruebas
 
-306/306 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
+323/323 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
 
 ## Publicación y reversión
 
@@ -42,3 +42,7 @@ La revisión de solo lectura confirma que existe la migración registrada, la ta
 Se corrigió el arranque para impedir fallback a demo en el hostname QA conocido o al configurar el backend QA: si falta clave/URL correcta o se pide el modo de solo lectura incompatible, se muestra configuración bloqueada. Esta corrección está en código candidato; las variables y el artefacto servido todavía no están verificados.
 
 Agenda no cumple todavía el flujo transaccional de José. Reprogramación, cancelación, auditoría y reconciliación tienen servicios aislados/simulados, sin conexión corporativa a la interfaz. Se integraron alternativas de horario basadas en intervalos ocupados y límites de consulta, con cinco opciones como máximo. Sus 13 pruebas locales pasan, pero no certifican Google Calendar, jornada laboral ni disponibilidad real de acompañantes. El botón manual se conserva y elegir una alternativa exige reverificación.
+
+## Corrección de concurrencia posterior
+
+La revisión posterior a `96e106d` introduce propiedad compartida de las consultas: un finally obsoleto no puede habilitar controles de una operación nueva. La verificación manual y las alternativas comparten validación estricta de intervalos y del sobre de respuesta. La confirmación de Visitas verifica autor, responsable, motivo y horario, además de identificadores. Evidencias y limitaciones actuales: `qa/meeting-concurrency-closure.md`. No se ejecutaron operaciones remotas ni nuevas migraciones en esta corrección.

@@ -31,3 +31,9 @@ test('Miss navigates to agenda only when available and retains the property guar
  assert.equal(answerMissAdphor('ver agenda',{...ctx,projectId:'p2'}).page,null);
  assert.equal(answerMissAdphor('ver agenda',{...ctx,availablePages:[]}).page,null);
 });
+
+test('Miss does not imply that an administrative switch enables corporate Agenda writes',()=>{
+ const result=answerMissAdphor('¿Cómo uso este módulo?',{project:{id:'p1'},projectId:'p1',page:'agenda',availablePages:['agenda'],mode:'cloud'});
+ assert.match(result.text,/aún no están conectadas/);
+ assert.doesNotMatch(result.text,/requieren habilitación administrativa/);
+});

@@ -1,3 +1,5 @@
+import {createMeetingRequestGate} from './services/meeting-request-gate.js';
+import {calendarHasConflict} from './services/calendar-availability.js';
 import {loadMeetingSlotSuggestions} from './services/meeting-slot-suggestions.js';
 import { drawCompanionOptions } from './ui-companion-options.js';
 import {enhanceMeetings,bogotaInput,bogotaInstant} from './ui-meeting-experience.js';
@@ -20,7 +22,7 @@ export function meetingGuidance({subject, start, accompaniment, availability, ca
 
 // This is an interactive local calendar in DEMO mode. Cloud mode remains assessment-only
 // until authenticated transactional booking is verified on isolated QA PostgreSQL.
-export function mountMeetingAssessment(root,{repo,projectId,projectName=projectId,role='viewer',members=[],sector=''}) {
+export function mountMeetingAssessment(root,{repo,projectId,projectName=projectId,role='viewer',members=[],sector='',isProjectCurrent=()=>true}) {
  const demo=repo.mode==='demo-calendar';
  root.innerHTML='<section class="panel"><h2>Reuniones y agenda gerencial</h2><p data-notice></p><form><label>Tipo de reunión<select name="meetingType"><option>Consejo</option><option>Asamblea</option><option>Comité</option><option>Gerencia</option><option>Otra</option></select></label><label>Subtipo<select name="subType"><option value="">Ninguno</option><option>Pre-Asamblea</option><option>Ordinaria</option><option>Extraordinaria</option></select></label><label>Modalidad<select name="modality"><option>Presencial</option><option>Virtual</option><option>Mixta</option></select></label><label>Especificación<input name="specification" maxlength="100"></label><label>Delegado asignado<input name="delegate" maxlength="120"></label><label>Asunto<input name="subject" required minlength="3" maxlength="200"></label><label>Notas<textarea name="notes" maxlength="5000"></textarea></label><label>Inicio<input name="start" type="datetime-local" required></label><label>Fin<input name="end" type="datetime-local"></label><label>Duración sugerida (horas)<input name="duration" type="number" min="0.25" max="12" step="0.25" placeholder="Automática según tipo"></label><label>Prioridad<select name="priority"><option value="bajo">Baja</option><option value="medio" selected>Media</option><option value="alto">Alta</option></select></label><label><input name="management" type="checkbox"> Solicitar asistencia de Gerencia</label><button>Evaluar y agendar</button><button type="button" data-clear>Nuevo horario</button></form><p role="status"></p><h3>Calendario de la copropiedad</h3><div data-list></div></section>';
  const escort=document.createElement('fieldset');escort.className='meeting-escorts';escort.innerHTML='<legend>Acompañamiento</legend><p>Selecciona a un responsable de tu copropiedad o indica que no se requiere acompañamiento.</p><div class="meeting-escort-carousel" role="radiogroup" aria-label="Responsable de acompañamiento"></div>';
@@ -109,24 +111,27 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   review.hidden=true;
   review.textContent='Revisar solicitud de reunión';
   form.append(review);
-  let revision=0;
-  const invalidateAvailability=()=>{
-   revision++;
+  const connected=()=>availability.isConnected&&suggest.isConnected&&isProjectCurrent();
+  const requests=createMeetingRequestGate({snapshot,connected,onBusy:busy=>{
+   availability.disabled=busy;suggest.disabled=busy;
+  }});
+  const clearAvailability=()=>{
    review.hidden=true;
    if (status.dataset.availability) status.textContent='';
    delete status.dataset.availability;
    suggestions.replaceChildren();
   };
+  const invalidateAvailability=()=>{requests.invalidate();if(connected())clearAvailability();};
   form.addEventListener('input',invalidateAvailability);
   form.addEventListener('reset',invalidateAvailability);
   form.addEventListener('change',invalidateAvailability);
   suggest.onclick=async()=>{
-   invalidateAvailability();const requestRevision=revision,selection=snapshot();
-   const isCurrent=()=>suggest.isConnected&&revision===requestRevision&&selection===snapshot();
+   const request=requests.begin();if(!request)return;
+   clearAvailability();const isCurrent=request.isCurrent;
    let range;
    try{range=timeRange();if(+range.start-Date.now()<86400000)throw Error('El inicio debe tener al menos 24 horas de anticipación.');}
-   catch(error){suggestions.textContent=error.message;return;}
-   suggest.disabled=true;suggestions.textContent='Consultando alternativas en el calendario corporativo…';
+   catch(error){if(isCurrent())suggestions.textContent=error.message;request.finish();return;}
+   suggestions.textContent='Consultando alternativas en el calendario corporativo…';
    try{
     const {slots}=await loadMeetingSlotSuggestions({repo,projectId,start:range.start.toISOString(),durationMinutes:range.durationMinutes});
     if(!isCurrent())return;
@@ -149,36 +154,33 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
     }
    }catch{
     if(isCurrent()){suggestions.replaceChildren();suggestions.textContent='No se pudo comprobar la disponibilidad corporativa. No se generaron sugerencias.';}
-   }finally{suggest.disabled=false;}
+   }finally{request.finish();}
   };
   availability.onclick=async()=>{
-   invalidateAvailability();
-   const requestRevision=revision;
-   const selection=snapshot();
-   const isCurrent=()=>availability.isConnected && revision===requestRevision && selection===snapshot();
+   const request=requests.begin();if(!request)return;
+   clearAvailability();const isCurrent=request.isCurrent;
    let start, end;
    try {
     ({start,end}=timeRange());
    } catch (error) {
-    status.textContent=error.message;
-    return;
+    if(isCurrent())status.textContent=error.message;
+    request.finish();return;
    }
    if (!Number.isFinite(+start) || !Number.isFinite(+end) || +end<=+start || +end-+start>43200000) {
-    status.textContent='Indica un horario válido de hasta 12 horas.';
-    return;
+    if(isCurrent())status.textContent='Indica un horario válido de hasta 12 horas.';
+    request.finish();return;
    }
    if (+start-Date.now()<86400000) {
-    status.textContent='El horario requiere al menos 24 horas de anticipación para esta comprobación.';
-    return;
+    if(isCurrent())status.textContent='El horario requiere al menos 24 horas de anticipación para esta comprobación.';
+    request.finish();return;
    }
-   availability.disabled=true;
    status.dataset.availability='consultando';
    status.textContent='Consultando el calendario corporativo…';
    try {
     const buffer=1800000;
     const busy=await repo.meetingAvailability(projectId,new Date(+start-buffer).toISOString(),new Date(+end+buffer).toISOString());
     if (!isCurrent()) return;
-    const conflict=busy.some(slot=>Date.parse(slot.start)<+end+buffer && Date.parse(slot.end)>+start-buffer);
+    const conflict=calendarHasConflict({busy,start:start.toISOString(),end:end.toISOString()});
     status.dataset.availability=conflict ? 'OCUPADO' : 'DISPONIBLE';
     status.textContent=conflict ? 'Horario ocupado o en conflicto con el margen de 30 minutos.'
      : 'Google Calendar no reporta conflictos para este horario. La comprobación es informativa y no reserva el evento.';
@@ -205,7 +207,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
      status.textContent='No se pudo verificar el calendario corporativo. Vuelve a intentar la consulta.';
     }
    } finally {
-    availability.disabled=false;
+    request.finish();
    }
   };
  }
