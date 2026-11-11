@@ -24,6 +24,7 @@ export function createCloudRepository(url, key) {
   if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
   const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
   const authentication=createCloudAuthentication(client,{required:authPolicy.required,
+    allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
     allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
   const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };

@@ -126,3 +126,31 @@ test('contextual guidance uses only the current visible module and authorized pr
  assert.match(answerMissAdphor(question,{...meetings,projectId:'other'}).text,/copropiedad autorizada/);
  assert.equal(answerMissAdphor(question,meetings).page,null);
 });
+
+
+test('Miss overdue counts follow the Colombia day across UTC midnight',()=>{
+ const ctx={...context,now:Date.parse('2026-11-12T02:00:00Z'),tickets:[
+  {project_id:'p1',status:'open',due_date:'2026-11-11'},
+  {project_id:'p1',status:'open',due_date:'2026-11-10'},
+  {project_id:'p1',status:'closed',due_date:'2026-11-09'},
+  {project_id:'p2',status:'open',due_date:'2026-11-09'}]};
+ assert.match(answerMissAdphor('casos pendientes',ctx).text,/1 con fecha vencida/);
+ assert.match(answerMissAdphor('casos pendientes',{...ctx,now:Date.parse('2026-11-12T05:00:00Z')}).text,/2 con fecha vencida/);
+});
+
+test('Miss rejects impossible date-only deadlines',async()=>{
+ const {isPastBogotaDay}=await import('../src/js/ui-miss-adphor-chat.js');
+ for(const value of ['2026-02-30','2026-13-01','invalid',null])assert.equal(isPastBogotaDay(value,Date.parse('2026-11-12T12:00:00Z')),false);
+ assert.equal(isPastBogotaDay('2024-02-29',Date.parse('2026-11-12T12:00:00Z')),true);
+});
+
+test('Miss meeting evidence is scoped, confirmed, ordered and does not mutate source',async()=>{
+ const {verifiedMissMeetings}=await import('../src/js/ui-miss-adphor-chat.js');
+ const later={project_id:'p1',title:'Tarde',start_at:'2026-11-12T19:00:00Z',is_calendar_verified:true,source_status:'Confirmada'};
+ const earlier={...later,title:'Temprano',start_at:'2026-11-12T14:00:00Z'};
+ const rows=[later,{...earlier,project_id:'p2'},earlier,{...later,source_status:'Cancelada'},null];
+ assert.deepEqual(verifiedMissMeetings(rows,'p1'),[earlier,later]);
+ assert.equal(rows[0],later);
+ for(const invalid of [null,{},[{...later,start_at:'invalid'}]] )assert.throws(()=>verifiedMissMeetings(invalid,'p1'));
+ assert.throws(()=>verifiedMissMeetings(rows,''));
+});

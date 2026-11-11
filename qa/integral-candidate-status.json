@@ -5,7 +5,7 @@
   "basis": "Reviewed source and isolated tests only; administrative evidence retained privately. No authenticated acceptance or deployment certification.",
   "tests": {
     "javascript": {
-      "pass": 346,
+      "pass": 355,
       "fail": 0,
       "scope": "unit and isolated integration"
     },
@@ -22,7 +22,14 @@
       "tests": 7,
       "executed": false
     },
-    "browser_real": "BLOCKED"
+    "browser_real": "BLOCKED",
+    "candidate_browser_attempt": {
+      "tests": 7,
+      "passed": 0,
+      "runner_failed": 7,
+      "cause": "No page opened: official Chromium download invalid ZIP; system Chromium launch blocked by socket EPERM",
+      "application_assertions_executed": false
+    }
   },
   "modules": [
     {
@@ -267,5 +274,17 @@
     "live_supabase": "NOT EXECUTED",
     "browser_e2e": "BLOCKED",
     "scope": "mounted form content deduplication and stable retry identity; no SQL adapter changes"
+  },
+  "claude_auth_integration": {
+    "source": "2e0620ed2d8031f8d5b6fb4b8f5f8bc8da2bbd71",
+    "remote_base": "e7d5040021216fde4310023b1af15bc328e6c400",
+    "checksums": 10,
+    "bundle_fsck": "PASS",
+    "patch_apply_check": "PASS",
+    "source_tests": 350,
+    "final_tests": 355,
+    "demo_alias": "default off; mandatory MFA rejects alias even with explicit opt-in",
+    "phase_b": "Miss deadlines use Colombia calendar day; verified meeting replies validate and order scoped records",
+    "release_ready": false
   }
 }

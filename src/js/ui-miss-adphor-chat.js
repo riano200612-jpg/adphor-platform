@@ -1,3 +1,4 @@
+import {bogotaAgendaDate} from './services/verified-agenda.js';
 // Miss ADPHOR — grounded, read-only assistant for the authenticated project.
 // No network calls, model claims, background learning or cross-project access.
 const normalized = s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -30,7 +31,7 @@ export function answerMissAdphor(question, context={}) {
  }
  if(/pendient|vencid|atrasad|casos|novedad|mantenimiento|estado/.test(q)) {
   const active=scoped.filter(t=>!['cerrada','cerrado','closed'].includes(normalized(t.status)));
-  const late=active.filter(t=>t.due_date && /^\d{4}-\d{2}-\d{2}$/.test(t.due_date) && t.due_date < new Date().toISOString().slice(0,10));
+  const late=active.filter(t=>t.due_date && /^\d{4}-\d{2}-\d{2}$/.test(t.due_date) && isPastBogotaDay(t.due_date,context.now ?? Date.now()));
   return go('tickets',prefix+`En ${name} hay ${scoped.length} casos visibles: ${active.length} sin cerrar y ${late.length} con fecha vencida según los registros cargados. Abre la Bitácora para revisar el detalle.`);
  }
  if(/prioridad|urgente|alta/.test(q)){
@@ -68,6 +69,20 @@ export function answerMissAdphor(question, context={}) {
  }
  if(/permiso|rol|puedo hacer/.test(q))return {text:`Tu rol actual es ${role}. Los permisos de escritura se verifican en el backend; yo solo puedo orientarte.`,page:null};
  return {text:'Puedo ayudarte con Bitácora, PQRS, Recorridos, Reuniones, Informes y el enjambre. No tengo una respuesta verificada para esa consulta; reformúlala o abre el módulo correspondiente.',page:null};
+}
+// A date-only deadline expires after the Colombia calendar day has ended.
+export function isPastBogotaDay(value,now=Date.now()) {
+ if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+ const parsed=new Date(value+'T00:00:00Z');
+ if(!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==value)return false;
+ const today=bogotaAgendaDate(now);
+ return Boolean(today)&&value<today;
+}
+export function verifiedMissMeetings(rows,projectId) {
+ if(!projectId||!Array.isArray(rows))throw Error('Respuesta de reuniones no válida.');
+ const scoped=rows.filter(row=>row?.project_id===projectId&&row.is_calendar_verified===true&&row.source_status==='Confirmada');
+ if(scoped.some(row=>!row.title||!Number.isFinite(Date.parse(row.start_at))))throw Error('Horario de reunión no válido.');
+ return [...scoped].sort((a,b)=>Date.parse(a.start_at)-Date.parse(b.start_at));
 }
 export function isPqrsAttentionQuestion(question) {
  return /^(?:miss adphor,? *)?que asuntos(?: importantes)? requieren mi atencion hoy$/.test(
@@ -108,8 +123,7 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetin
    result={text:'No dispongo de una fuente de reuniones verificadas para esta consulta.',page:null};
    if (loadMeetings) {
     try {
-     const rows=(await loadMeetings(current.projectId)).filter(row=>row.project_id===current.projectId &&
-       row.is_calendar_verified===true && row.source_status==='Confirmada');
+     const rows=verifiedMissMeetings(await loadMeetings(current.projectId),current.projectId);
      const date=new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'});
      const details=rows.slice(0,5).map(row=>row.title+' · '+date.format(new Date(row.start_at))).join(' / ');
      result={text:(rows.length ? `${rows.length} reuniones verificadas. ${details}.` : 'No hay reuniones verificadas para esta copropiedad en la carga disponible.')+

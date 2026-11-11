@@ -1,6 +1,6 @@
 import {createManagedMfa} from './managed-mfa.js';
 
-export function createCloudAuthentication(client, {required, allowEnrollment}) {
+export function createCloudAuthentication(client, {required, allowEnrollment, allowDemoAlias=false}) {
   const auth = client.auth;
   const mfa = createManagedMfa(auth, {required, allowEnrollment});
   const read = result => {if(result.error) throw Error(result.error.message); return result.data;};
@@ -25,7 +25,10 @@ export function createCloudAuthentication(client, {required, allowEnrollment}) {
   return {
     async login({email,password}) {
       mfa.clear();
-      const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
+      // The demo alias is opt-in and never applies when MFA is mandatory (known QA).
+      // Otherwise 'adphor' is sent as typed and Supabase rejects it as an invalid login.
+      const loginEmail = allowDemoAlias && !required && email.trim().toLowerCase() === 'adphor'
+        ? 'demo-adphor@example.invalid' : email.trim();
       const data = read(await auth.signInWithPassword({email:loginEmail,password}));
       try {
         if(await mfa.begin(data.user.id)) return {mfaRequired:true,enrollmentRequired:mfa.needsEnrollment()};

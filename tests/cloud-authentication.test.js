@@ -96,3 +96,46 @@ test('QA artifact reports only non-secret configuration and labels it as build-o
  assert.equal(publicQaBuildConfig({...env,VITE_VISITS_SQL_ENABLED:'true',VITE_AGENTS_API_URL:'https://example.invalid'},metadata).visitsSqlEnabled,true);
  assert.throws(()=>publicQaBuildConfig(env,{...metadata,branch:'codex/flujo-mantenimiento'}),/QA_AUTH_CONFIG_BLOCKED/);
 });
+
+// Alias de demostración: opt-in, nunca en modo MFA obligatorio.
+function loginProbe({required,allowDemoAlias}) {
+  const sent=[];
+  const client={auth:{
+    signInWithPassword:async({email})=>{sent.push(email);return {error:{message:'Invalid login credentials'}};},
+    signOut:async()=>({data:{}}),
+    mfa:{listFactors:async()=>({data:{all:[]}}),getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal1'}})},
+  }};
+  return {sent,flow:createCloudAuthentication(client,{required,allowEnrollment:false,allowDemoAlias})};
+}
+test('el alias "adphor" no llega a la cuenta demo por defecto',async()=>{
+  const p=loginProbe({required:false,allowDemoAlias:false});
+  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+  assert.deepEqual(p.sent,['adphor']);
+});
+test('el alias solo se activa con opt-in explícito y sin MFA obligatorio',async()=>{
+  const p=loginProbe({required:false,allowDemoAlias:true});
+  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+  assert.deepEqual(p.sent,['demo-adphor@example.invalid']);
+});
+test('en modo MFA obligatorio el alias nunca se resuelve aunque esté activado',async()=>{
+  const p=loginProbe({required:true,allowDemoAlias:true});
+  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+  assert.deepEqual(p.sent,['adphor']);
+});
+test('correos reales se envían tal cual, sin alias',async()=>{
+  const p=loginProbe({required:false,allowDemoAlias:true});
+  await assert.rejects(p.flow.login({email:'owner@example.invalid',password:'synthetic'}),/Invalid login/);
+  assert.deepEqual(p.sent,['owner@example.invalid']);
+});
+
+test('omitting demo alias option keeps it disabled',async()=>{
+ const p=loginProbe({required:false});
+ await assert.rejects(p.flow.login({email:' ADPHOR ',password:'synthetic'}),/Invalid login/);
+ assert.deepEqual(p.sent,['ADPHOR']);
+});
+test('known QA backend blocks demo alias even if the MFA environment flag is false',async()=>{
+ const policy=qaAuthPolicy({url:QA_URL,requireMfa:'false',hostname:QA_HOST});
+ const p=loginProbe({required:policy.required,allowDemoAlias:true});
+ await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+ assert.deepEqual(p.sent,['adphor']);
+});
