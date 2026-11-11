@@ -54,3 +54,13 @@ Se intentó autenticación oficial Google con participación del propietario. Cl
 ## Reconciliación posterior de Pages y evidencia del propietario
 
 La actualización del informe maestro y captura posterior confirman que el propietario guardó ambas ramas en Preview personalizado. No se le debe pedir otra vez que las añada. Los skipped anteriores son históricos; falta leer los deployments posteriores al guardado. Se reprodujo otro bloqueo independiente: el código de c6286a3 no admitía la rama candidata en Vite ni en el manifiesto. La corrección admite exclusivamente las dos ramas QA con las mismas compuertas y bloquea bootstrap en la candidata. Respaldo con prefijo oficial CF-Pages-Skip, sin publicación. Detalle y recuperación segura de Preview: `qa/pages-skipped-reconciliation-20261111.md`.
+
+## Integración selectiva Claude 42a9a27
+
+Entrega verificada sobre base 0b5c7c8. HEAD remoto previo d4241887ea48499dee980267a381002c23d6860e, conservado íntegro. ZIP recibido `files (1)(1).zip`, SHA-256 `12e73a7d794679426c1d8db40b0bbf00c124ca2f07178a88b6831c4c850531c7`. SHA256SUMS completo PASS; bundle completo restaurado y git fsck --full PASS; parche git apply --check PASS. No merge del bundle.
+
+Se incorporan la identidad de contenido y 16 pruebas SQL de Claude; la UI utiliza un estado de revisión con mapa de solicitudes por contenido dentro del formulario. Guardar confirmado impide otra confirmación idéntica en ese montaje. Editar invalida revisión; revertir recupera el request_id original, incluso tras error SQL o pérdida de respuesta. La confirmación requiere respuesta válida del repositorio. El adaptador SQL, validaciones de autor/contenido/fecha, Calendar, flags y controles de concurrencia Work se conservan sin cambios.
+
+Pruebas: 20/20 dirigidas y 346/346 suite JavaScript PASS; build Vite PASS; sintaxis y diff --check PASS. SQL real aislado PGlite con claims simulados; NO prueba remota Supabase/AAL2 ni E2E navegador. La deduplicación UI se limita al montaje actual; no se promete deduplicación de contenido entre sesiones/recargas con nuevas solicitudes. Idempotencia SQL permanece basada en request_id.
+
+Respaldo en la misma rama con prefijo [CF-Pages-Skip], sin despliegue. Sin cambios Cloudflare, Supabase remoto, MFA/RLS, flags o producción. Reversión mediante commit inverso selectivo revisado, sin reset/force-push ni retirar cambios concurrentes. Publicación, activación de escrituras y ensayos remotos requieren autorización separada.

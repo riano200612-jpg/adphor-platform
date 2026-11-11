@@ -1,5 +1,28 @@
 import {mountProjectSelector} from './ui-project-selector.js';
 
+// Content identity is scoped to this mounted form, not a global deduplication rule.
+export function visitContentKey({projectId, kind, start, responsibleId}) {
+  return JSON.stringify([projectId, String(kind ?? '').trim(), start ?? '', responsibleId ?? '']);
+}
+
+export function createVisitReviewState(newId = () => crypto.randomUUID()) {
+  const requests = new Map();
+  const saved = new Set();
+  let reviewed;
+  return {
+    review(data) {
+      const key = visitContentKey(data);
+      if (saved.has(key)) { reviewed = undefined; return undefined; }
+      if (!requests.has(key)) requests.set(key, {...data, requestId: newId()});
+      reviewed = requests.get(key);
+      return reviewed;
+    },
+    invalidate() { reviewed = undefined; },
+    current() { return reviewed; },
+    confirmed(request) { saved.add(visitContentKey(request)); reviewed = undefined; }
+  };
+}
+
 export function visitDraftGuidance({projectId, kind, start, responsibleId, allowedResponsibleIds}) {
   if (!projectId) return 'Selecciona una copropiedad asignada.';
   if (!kind.trim()) return 'Indica el tipo o motivo de la visita.';
@@ -146,21 +169,25 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     save.textContent = shared?'Confirmar y registrar visita':'Confirmar y guardar borrador de prueba';
     save.hidden = true;
     summary.before(save);
-    let reviewed;
+    const reviewState = createVisitReviewState();
     let saving = false;
     review.addEventListener('click', () => {
       const data = draft();
       if (saving || !ready(data)) return;
-      reviewed ??= {...data, requestId: crypto.randomUUID()};
+      if (!reviewState.review(data)) {
+        save.hidden = true;
+        summary.textContent = shared ? 'Esta programación ya está registrada en esta sesión.' : 'Este borrador ya fue guardado en esta sesión.';
+        return;
+      }
       save.hidden = false;
     });
     fields.addEventListener('input', () => {
-      reviewed = undefined;
+      reviewState.invalidate();
       save.hidden = true;
     });
     save.addEventListener('click', async () => {
-      if (!reviewed || saving) return;
-      const request = reviewed;
+      if (!reviewState.current() || saving) return;
+      const request = reviewState.current();
       saving = true;
       save.disabled = true;
       fields.disabled = true;
@@ -170,6 +197,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         if (saved?.request_id !== request.requestId || saved.project_id !== projectId) {
           throw new Error('Invalid persistence confirmation');
         }
+        reviewState.confirmed(request);
         if (summary.isConnected) summary.textContent = shared?'Programación de visita guardada en SQL. No registra ejecución, ingreso ni salida.':'Borrador de prueba guardado y confirmado.';
         save.hidden = true;
         if(canList) await loadList();

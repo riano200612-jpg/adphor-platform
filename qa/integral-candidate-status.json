@@ -5,7 +5,7 @@
   "basis": "Reviewed source and isolated tests only; administrative evidence retained privately. No authenticated acceptance or deployment certification.",
   "tests": {
     "javascript": {
-      "pass": 327,
+      "pass": 346,
       "fail": 0,
       "scope": "unit and isolated integration"
     },
@@ -256,5 +256,16 @@
     "last_successful_preview": "BLOCKED: latest list after owner save not available",
     "served_sha": "BLOCKED",
     "rollback": "Preview recovery only; native production rollback prohibited"
+  },
+  "claude_selective": {
+    "source": "42a9a27b63a198bc53e05e1b7d20c0b382acca7c",
+    "remote_base": "d4241887ea48499dee980267a381002c23d6860e",
+    "zip_sha256": "12e73a7d794679426c1d8db40b0bbf00c124ca2f07178a88b6831c4c850531c7",
+    "checksums_bundle_patch": "PASS",
+    "targeted_tests": 20,
+    "sql_contract_tests": 16,
+    "live_supabase": "NOT EXECUTED",
+    "browser_e2e": "BLOCKED",
+    "scope": "mounted form content deduplication and stable retry identity; no SQL adapter changes"
   }
 }
