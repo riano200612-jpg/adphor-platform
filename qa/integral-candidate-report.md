@@ -25,7 +25,7 @@ Visitas no certifica todavía ejecución de visitas, ingreso/salida, resultados,
 
 ## Pruebas
 
-291/291 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
+293/293 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
 
 ## Publicación y reversión
 
@@ -33,4 +33,12 @@ Solo se autoriza respaldo de código en rama QA excluida de los filtros de despl
 
 Las evidencias administrativas se conservan privadamente y se excluyen del árbol publicable. No se suben datos corporativos, originales ni credenciales al repositorio público.
 
-No se realizaron migraciones remotas, activaciones de flags, despliegues, fusiones de PR ni escrituras corporativas en esta integración. La aprobación de publicación Pages sigue pendiente. Deployment ID y SHA servido no confirmados. Reversión de revisión: conservar referencias anteriores y descartar esta rama; no ejecutar SQL destructivo ni mover ramas protegidas.
+Cronología corregida: Work aplicó la migración QA `20261111133108_qa_shared_visits_scheduled_contract` en la ejecución anterior a la integración de Claude; su exportación ya estaba incluida en `a6aea10` (11 de noviembre, 08:49 Colombia). No fue una operación paralela. Durante la integración de Claude y esta reconciliación solo se hicieron consultas remotas de lectura; no se aplicaron ni repitieron migraciones, activaron flags, desplegaron versiones, fusionaron PR ni escribieron registros corporativos. La versión de migración identifica el historial, pero no prueba por sí sola la hora exacta de ejecución. La aprobación de publicación Pages sigue pendiente. Deployment ID y SHA servido no confirmados. Reversión de revisión: conservar referencias anteriores y descartar esta rama; no ejecutar SQL destructivo ni mover ramas protegidas.
+
+## Reconciliación de auditoría
+
+La revisión de solo lectura confirma que existe la migración registrada, la tabla vacía, RLS con tres políticas y RPC SECURITY INVOKER. Una consulta administrativa no prueba una sesión AAL2 real. La confirmación funcional del guardado sigue bloqueada por la ausencia de sesión autorizada y de autorización expresa para habilitar escritura y crear el registro piloto.
+
+Se corrigió el arranque para impedir fallback a demo en el hostname QA conocido o al configurar el backend QA: si falta clave/URL correcta o se pide el modo de solo lectura incompatible, se muestra configuración bloqueada. Esta corrección está en código candidato; las variables y el artefacto servido todavía no están verificados.
+
+Agenda no cumple todavía el flujo transaccional de José. Reprogramación, cancelación, auditoría y reconciliación tienen servicios aislados/simulados, sin conexión corporativa a la interfaz. Las sugerencias automáticas de horarios corporativos tampoco están certificadas; el botón de comprobación manual no las sustituye.

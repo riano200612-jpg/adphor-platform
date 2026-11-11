@@ -9,7 +9,7 @@ export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
  <label>Estado de reunión<select data-agenda-status><option value="">Todos</option></select></label>
  <button class="btn secondary" type="button" data-agenda-refresh>Actualizar consulta</button></div>
  <p data-agenda-message role="status" aria-live="polite"></p><ul class="visit-results" data-agenda-results></ul></section>
- <p class="muted">Miss ADPHOR puede orientar esta consulta. La reprogramación y cancelación requieren habilitación administrativa.</p></section>`;
+ <p class="muted">Miss ADPHOR puede orientar esta consulta. Reprogramación y cancelación no disponibles en esta versión: el servicio transaccional corporativo aún no está conectado.</p></section>`;
  root.querySelector('[data-agenda-property]').textContent=projectName||'Copropiedad seleccionada';
  const message=root.querySelector('[data-agenda-message]');
  const list=root.querySelector('[data-agenda-results]');

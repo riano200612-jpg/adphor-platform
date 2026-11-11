@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCloudAuthentication} from '../src/js/services/cloud-authentication.js';
-import {qaAuthPolicy,assertQaBuildAuth,QA_REF,QA_URL,QA_HOST} from '../src/js/services/qa-auth-policy.js';
+import {qaAuthPolicy,assertQaBuildAuth,applicationRepositoryMode,QA_REF,QA_URL,QA_HOST} from '../src/js/services/qa-auth-policy.js';
 
 function fixture({factors=[],challengeLevel='aal2',profileError=false}={}) {
   const calls=[];let level='aal1';
@@ -64,4 +64,17 @@ test('AAL2 drift at profile boundary is denied before issuing its query',async()
 test('profile failure after MFA reports authorization, not password failure',async()=>{
   const f=fixture({profileError:true});await f.flow.login({email:'owner@example.invalid',password:'synthetic'});await f.flow.enrollMfa();
   await assert.rejects(f.flow.completeMfa('123456'),/perfil autorizado/);
+});
+
+test('known QA fails closed instead of silently using demo data',()=>{
+ const valid={url:QA_URL,key:'publishable-test-key',hostname:QA_HOST};
+ assert.equal(applicationRepositoryMode(valid),'cloud');
+ for(const override of [{url:''},{key:''},{readonly:true},{url:'https://wrong.supabase.co'}]){
+  assert.equal(applicationRepositoryMode({...valid,...override}),'blocked');
+ }
+ assert.equal(applicationRepositoryMode({url:QA_URL,key:''}),'blocked');
+});
+test('local explicit demo and existing non-QA configuration remain unchanged',()=>{
+ assert.equal(applicationRepositoryMode({hostname:'localhost'}),'demo');
+ assert.equal(applicationRepositoryMode({url:'https://example.invalid',key:'test',hostname:'localhost'}),'cloud');
 });

@@ -17,3 +17,10 @@ export function assertQaBuildAuth(env) {
     throw Error('QA_AUTH_CONFIG_BLOCKED: expected isolated QA URL/ref, mandatory MFA and QA enrollment flags.');
   }
 }
+
+// Never silently substitute demo data on the known QA portal or QA backend.
+export function applicationRepositoryMode({url,key,readonly=false,hostname=''}) {
+  const qa=hostname===QA_HOST || url===QA_URL;
+  if(qa && (url!==QA_URL || !key || readonly))return 'blocked';
+  return !readonly && url && key ? 'cloud' : 'demo';
+}
