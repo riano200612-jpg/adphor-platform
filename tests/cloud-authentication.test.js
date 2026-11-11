@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCloudAuthentication} from '../src/js/services/cloud-authentication.js';
-import {qaAuthPolicy,assertQaBuildAuth,applicationRepositoryMode,QA_REF,QA_URL,QA_HOST} from '../src/js/services/qa-auth-policy.js';
+import {qaAuthPolicy,assertQaBuildAuth,publicQaBuildConfig,applicationRepositoryMode,QA_REF,QA_URL,QA_HOST} from '../src/js/services/qa-auth-policy.js';
 
 function fixture({factors=[],challengeLevel='aal2',profileError=false}={}) {
   const calls=[];let level='aal1';
@@ -30,7 +30,7 @@ test('known QA requires MFA even when its optional flag is absent or false',()=>
   assert.equal(qaAuthPolicy({url:'https://oqizvirqjwbbhyyjpthq.supabase.co',requireMfa:'false'}).required,false);
 });
 test('QA build rejects every missing or mismatched security flag',()=>{
-  const env={VITE_SUPABASE_URL:QA_URL,VITE_REQUIRE_MFA:'true',VITE_PORTO_QA_ENABLED:'true',VITE_PORTO_STAGING_REF:QA_REF};
+  const env={VITE_SUPABASE_ANON_KEY:'sb_publishable_SYNTHETIC_TEST_ONLY',VITE_SUPABASE_URL:QA_URL,VITE_REQUIRE_MFA:'true',VITE_PORTO_QA_ENABLED:'true',VITE_PORTO_STAGING_REF:QA_REF};
   assert.doesNotThrow(()=>assertQaBuildAuth(env));
   for(const key of Object.keys(env))assert.throws(()=>assertQaBuildAuth({...env,[key]:''}),/QA_AUTH_CONFIG_BLOCKED/);
 });
@@ -77,4 +77,21 @@ test('known QA fails closed instead of silently using demo data',()=>{
 test('local explicit demo and existing non-QA configuration remain unchanged',()=>{
  assert.equal(applicationRepositoryMode({hostname:'localhost'}),'demo');
  assert.equal(applicationRepositoryMode({url:'https://example.invalid',key:'test',hostname:'localhost'}),'cloud');
+});
+
+test('protected QA build refuses readonly demo mode even with the correct backend',()=>{
+ const env={VITE_SUPABASE_ANON_KEY:'sb_publishable_SYNTHETIC_TEST_ONLY',VITE_SUPABASE_URL:QA_URL,VITE_REQUIRE_MFA:'true',VITE_PORTO_QA_ENABLED:'true',VITE_PORTO_STAGING_REF:QA_REF,VITE_ADPHOR_QA_READONLY:'true'};
+ assert.throws(()=>assertQaBuildAuth(env),/QA_AUTH_CONFIG_BLOCKED/);
+});
+test('QA artifact reports only non-secret configuration and labels it as build-only evidence',()=>{
+ const key='sb_publishable_SYNTHETIC_TEST_ONLY';
+ const env={VITE_SUPABASE_ANON_KEY:key,VITE_SUPABASE_URL:QA_URL,VITE_REQUIRE_MFA:'true',VITE_PORTO_QA_ENABLED:'true',VITE_PORTO_STAGING_REF:QA_REF,ADPHOR_QA_ACCESS_VERIFIED:'true'};
+ const metadata={sha:'a'.repeat(40),branch:'qa/pqrs-carrusel-integracion-20261104'};
+ const manifest=publicQaBuildConfig(env,metadata);
+ assert.equal(manifest.sha,metadata.sha);assert.equal(manifest.publicKeyPresent,true);
+ assert.equal(manifest.visitsSqlEnabled,false);assert.equal(manifest.readOnlyMode,false);
+ assert.equal(manifest.agentsApiConfigured,false);assert.equal(manifest.accessVerifiedFlag,true);
+ assert.equal(manifest.buildConfigurationOnly,true);assert.equal(JSON.stringify(manifest).includes(key),false);
+ assert.equal(publicQaBuildConfig({...env,VITE_VISITS_SQL_ENABLED:'true',VITE_AGENTS_API_URL:'https://example.invalid'},metadata).visitsSqlEnabled,true);
+ assert.throws(()=>publicQaBuildConfig(env,{...metadata,branch:'codex/flujo-mantenimiento'}),/QA_AUTH_CONFIG_BLOCKED/);
 });

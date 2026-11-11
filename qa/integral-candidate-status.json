@@ -5,7 +5,7 @@
   "basis": "Reviewed source and isolated tests only; administrative evidence retained privately. No authenticated acceptance or deployment certification.",
   "tests": {
     "javascript": {
-      "pass": 323,
+      "pass": 325,
       "fail": 0,
       "scope": "unit and isolated integration"
     },
@@ -227,5 +227,21 @@
     "rules": "complete timestamp, explicit known offset, real date, ordered endpoints, requested property and America/Bogota response",
     "manual_and_suggestions": "shared validator"
   },
-  "visits_pilot": "Prepared in qa/visits-authenticated-pilot.md; not authorized or executed"
+  "visits_pilot": "Prepared in qa/visits-authenticated-pilot.md; not authorized or executed",
+  "access_certification": {
+    "github_candidate_initial": "6ae113fde8703c4fe9ace9aac00d589e1dbe5147",
+    "administrative_login": "FAIL: official Google sign-in returned Unable to sign in",
+    "application_id": "BLOCKED",
+    "audience": "BLOCKED",
+    "deployment_id": "BLOCKED",
+    "served_sha": "BLOCKED",
+    "anonymous_head": {
+      "status": 403,
+      "redirect_followed": false,
+      "attributed_to_access": false
+    },
+    "live_variables": "BLOCKED",
+    "browser_runtime": "BLOCKED: official Chromium download failed; seven tests not executed",
+    "local_build_proof": "PASS: two controlled synthetic QA builds, 13 identical files; not live provider configuration"
+  }
 }

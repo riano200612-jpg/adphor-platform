@@ -25,7 +25,7 @@ Visitas no certifica todavía ejecución de visitas, ingreso/salida, resultados,
 
 ## Pruebas
 
-323/323 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
+325/325 JavaScript PASS, incluyendo SQL auténtico aislado PGlite y bloqueo de escrituras por defecto. Build Vite PASS. La línea base Python permanece en 136/136, sin cambios nuevos de backend. No se ejecutaron nuevas baterías Chromium/Crostini. Los E2E preparados no constituyen PASS de navegador.
 
 ## Publicación y reversión
 
@@ -46,3 +46,7 @@ Agenda no cumple todavía el flujo transaccional de José. Reprogramación, canc
 ## Corrección de concurrencia posterior
 
 La revisión posterior a `96e106d` introduce propiedad compartida de las consultas: un finally obsoleto no puede habilitar controles de una operación nueva. La verificación manual y las alternativas comparten validación estricta de intervalos y del sobre de respuesta. La confirmación de Visitas verifica autor, responsable, motivo y horario, además de identificadores. Evidencias y limitaciones actuales: `qa/meeting-concurrency-closure.md`. No se ejecutaron operaciones remotas ni nuevas migraciones en esta corrección.
+
+## Certificación de infraestructura posterior
+
+Se intentó autenticación oficial Google con participación del propietario. Cloudflare devolvió Unable to sign in, sin sesión administrativa. El HEAD anónimo al alias QA devolvió 403 sin redirección; no se atribuye a una política Access sin configuración y prueba autenticada. Se ampliaron los metadatos públicos del artefacto (sin clave) y la compilación rechaza clave ausente o modo readonly incompatible. Dos builds locales con configuración sintética fueron idénticos; no certifican variables del proveedor. Estado y plan: `qa/access-pages-certification-20261111.md`.
