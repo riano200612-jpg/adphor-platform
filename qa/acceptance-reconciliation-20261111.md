@@ -14,7 +14,7 @@ La revisión actual realizó SELECT administrativos únicamente. Confirma tabla 
 | Login/MFA | Auth y AAL2 existentes; QA bloquea fallback a demo | PASS aislado; token AAL2 real BLOCKED | BLOCKED: sesión/artefacto no certificados |
 | Home/calendario | Consulta de reuniones verificadas por copropiedad | PASS contratos; lectura autenticada y recarga BLOCKED | BLOCKED |
 | Reuniones | Formulario, duración, revisión informativa | PASS aislado; creación corporativa FAIL por servicio no conectado | BLOCKED |
-| Horarios sugeridos | No certificada generación automática corporativa; existe comprobación manual | FAIL para sugerencias reales; Google Calendar real BLOCKED | BLOCKED |
+| Horarios sugeridos | Hasta cinco alternativas de calendario, margen 30 minutos, duración y reverificación; sin inferir jornada ni acompañantes | PASS 13 pruebas locales; Google Calendar real y políticas corporativas BLOCKED | BLOCKED |
 | Acompañamientos | Selector filtrado y Sin acompañamiento requerido conservados | PASS de línea base; permisos/disponibilidad reales BLOCKED | BLOCKED |
 | Visitas programadas | Formulario y qa_visits/qa_create_visit; flag apagado | PASS SQL aislado/idempotencia; AAL2 y guardado remoto BLOCKED | BLOCKED |
 | Ciclo completo de Visitas | No cubre ejecución, ingreso/salida, resultados o seguimiento | FAIL: contrato y operación adicionales pendientes | No certificado |
@@ -26,7 +26,7 @@ La revisión actual realizó SELECT administrativos únicamente. Confirma tabla 
 
 ## Pruebas actuales
 
-- JavaScript: 293/293 PASS; dos regresiones nuevas para impedir sustitución silenciosa por demo en QA.
+- JavaScript: 306/306 PASS; dos regresiones nuevas para impedir sustitución silenciosa por demo en QA.
 - Pruebas dirigidas Auth y Visitas: 13/13 PASS, incluidas dentro de las 293.
 - Build Vite, sintaxis app.js y git diff --check: PASS.
 - Python: evidencia previa 136/136 PASS; backend no modificado en este incremento.

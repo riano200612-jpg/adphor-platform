@@ -1,6 +1,6 @@
 import {defineConfig} from '@playwright/test';
 export default defineConfig({
- testDir:'../tests/e2e',testMatch:['visits-isolated.spec.js','agenda-verified.spec.js'],
+ testDir:'../tests/e2e',testMatch:['visits-isolated.spec.js','agenda-verified.spec.js','meeting-suggestions.spec.js'],
  fullyParallel:false,workers:1,retries:0,timeout:30000,globalTimeout:180000,
  outputDir:'../test-results/candidate-e2e',
  reporter:[['line'],['html',{outputFolder:'test-results/candidate-report',open:'never'}],['json',{outputFile:'test-results/candidate-results.json'}]],

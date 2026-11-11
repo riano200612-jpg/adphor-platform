@@ -5,7 +5,7 @@
   "basis": "Reviewed source and isolated tests only; administrative evidence retained privately. No authenticated acceptance or deployment certification.",
   "tests": {
     "javascript": {
-      "pass": 293,
+      "pass": 306,
       "fail": 0,
       "scope": "unit and isolated integration"
     },
@@ -19,7 +19,7 @@
     },
     "build": "PASS",
     "browser_collection": {
-      "tests": 3,
+      "tests": 5,
       "executed": false
     },
     "browser_real": "BLOCKED"
@@ -205,5 +205,15 @@
     "exact_application_time": "not asserted from migration version"
   },
   "effective_served_repository": "UNVERIFIED: provider variables and served artifact unavailable",
-  "qa_demo_fallback": "blocked in candidate for known QA hostname or exact QA backend"
+  "qa_demo_fallback": "blocked in candidate for known QA hostname or exact QA backend",
+  "meeting_suggestions": {
+    "implemented": true,
+    "local_tests": "13/13 PASS (included in 306)",
+    "authenticated": "BLOCKED",
+    "published": "BLOCKED",
+    "calendar_scope": "read-only busy intervals, buffered and bounded by queried window",
+    "corporate_working_hours": "not inferred; approval missing",
+    "companion_availability": "not inferred; service not certified",
+    "booking_created": false
+  }
 }

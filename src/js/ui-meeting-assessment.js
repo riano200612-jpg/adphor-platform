@@ -1,3 +1,4 @@
+import {loadMeetingSlotSuggestions} from './services/meeting-slot-suggestions.js';
 import { drawCompanionOptions } from './ui-companion-options.js';
 import {enhanceMeetings,bogotaInput,bogotaInstant} from './ui-meeting-experience.js';
 import {buildClientMeetingTitle,meetingDurationHours} from './services/client-meeting-mapping.js';
@@ -43,7 +44,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  if(role==='admin' && !demo){
    const help=document.createElement('div');help.className='panel';
    const title=document.createElement('h3');title.textContent='Fotografías, dependencias y funciones del equipo';
-   const note=document.createElement('p');note.textContent='El carrusel de fotos reales del sábado está en el visor privado del cliente. Carga una vez el ZIP de datos y el multimedia para relacionar copropiedad, responsable, cargo, sector y foto. No se han publicado fotos ni creado asignaciones automáticas.';
+   const note=document.createElement('p');note.textContent='El equipo y sus fotografías se consultan según los permisos de la copropiedad. Una imagen o asignación ausente no concede permisos adicionales.';
    const action=document.createElement('button');action.type='button';action.className='btn secondary';action.dataset.page='qa-source';action.textContent='Ver equipo y fotografías reales';
    help.append(title,note,action);escort.after(help);
  }
@@ -89,7 +90,20 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   availability.type='button';
   availability.textContent='Verificar horario en Google Calendar';
   form.append(availability);
+  const suggest=document.createElement('button');suggest.type='button';
+  suggest.textContent='Sugerir otros horarios';form.append(suggest);
+  const suggestions=document.createElement('section');
+  suggestions.setAttribute('aria-label','Alternativas de horario');
+  suggestions.setAttribute('aria-live','polite');form.append(suggestions);
   const snapshot=()=>JSON.stringify([...new FormData(form)]);
+  const timeRange=()=>{
+   const start=bogotaInstant(form.elements.start.value);
+   const hours=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
+   const end=form.elements.end.value?bogotaInstant(form.elements.end.value):new Date(+start+hours*3600000);
+   const durationMinutes=(+end-+start)/60000;
+   if(!Number.isInteger(durationMinutes)||durationMinutes<15||durationMinutes>720)throw Error('Indica un horario válido de 15 minutos a 12 horas.');
+   return {start,end,durationMinutes};
+  };
   const review=document.createElement('button');
   review.type='button';
   review.hidden=true;
@@ -101,9 +115,42 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    review.hidden=true;
    if (status.dataset.availability) status.textContent='';
    delete status.dataset.availability;
+   suggestions.replaceChildren();
   };
   form.addEventListener('input',invalidateAvailability);
   form.addEventListener('reset',invalidateAvailability);
+  form.addEventListener('change',invalidateAvailability);
+  suggest.onclick=async()=>{
+   invalidateAvailability();const requestRevision=revision,selection=snapshot();
+   const isCurrent=()=>suggest.isConnected&&revision===requestRevision&&selection===snapshot();
+   let range;
+   try{range=timeRange();if(+range.start-Date.now()<86400000)throw Error('El inicio debe tener al menos 24 horas de anticipación.');}
+   catch(error){suggestions.textContent=error.message;return;}
+   suggest.disabled=true;suggestions.textContent='Consultando alternativas en el calendario corporativo…';
+   try{
+    const {slots}=await loadMeetingSlotSuggestions({repo,projectId,start:range.start.toISOString(),durationMinutes:range.durationMinutes});
+    if(!isCurrent())return;
+    suggestions.replaceChildren();
+    const note=document.createElement('p');
+    note.textContent=slots.length
+     ?'Alternativas sin conflictos reportados por el calendario, en hora Colombia. No verifican jornada laboral ni disponibilidad de acompañantes. No son reservas: selecciona una y vuelve a verificarla.'
+     :'El calendario no devolvió alternativas sin conflictos en las próximas 48 horas consultadas.';
+    suggestions.append(note);
+    const fmt=new Intl.DateTimeFormat('es-CO',{timeZone:'America/Bogota',dateStyle:'medium',timeStyle:'short'});
+    for(const slot of slots){
+     const pick=document.createElement('button');pick.type='button';
+     pick.textContent=fmt.formatRange(new Date(slot.start),new Date(slot.end));
+     pick.onclick=()=>{
+      if(!isCurrent())return;
+      form.elements.start.value=bogotaInput(slot.start);form.elements.end.value=bogotaInput(slot.end);
+      form.elements.start.dispatchEvent(new Event('input',{bubbles:true}));
+      status.textContent='Horario propuesto seleccionado. Comprueba de nuevo su disponibilidad antes de revisar la solicitud. No se reservó ningún evento.';
+     };suggestions.append(pick);
+    }
+   }catch{
+    if(isCurrent()){suggestions.replaceChildren();suggestions.textContent='No se pudo comprobar la disponibilidad corporativa. No se generaron sugerencias.';}
+   }finally{suggest.disabled=false;}
+  };
   availability.onclick=async()=>{
    invalidateAvailability();
    const requestRevision=revision;
@@ -111,9 +158,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    const isCurrent=()=>availability.isConnected && revision===requestRevision && selection===snapshot();
    let start, end;
    try {
-    start=bogotaInstant(form.elements.start.value);
-    const duration=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
-    end=form.elements.end.value ? bogotaInstant(form.elements.end.value) : new Date(+start+duration*3600000);
+    ({start,end}=timeRange());
    } catch (error) {
     status.textContent=error.message;
     return;
