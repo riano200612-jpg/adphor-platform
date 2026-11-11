@@ -18,6 +18,7 @@ test('shared scheduled-visit contract: review, confirmation and SQL lookup after
  const db=new PGlite();
  try {
   await db.exec(`
+   create role anon;
    create role authenticated;
    create schema auth;
    grant usage on schema auth to authenticated;
