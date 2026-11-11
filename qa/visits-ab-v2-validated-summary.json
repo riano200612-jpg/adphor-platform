@@ -1,0 +1,155 @@
+{
+  "source_sha256": "714668d76b5b62d667f7e2936685b508260c2480d5cf0cc45fc27e0e3d69edf3",
+  "runs": [
+    {
+      "file": "ab-A-1.json",
+      "sha256": "64dc1d273a6884f123f30e39416cae28d59f93c7dbc39c28a9c684a9288652cb",
+      "stages": 7,
+      "status": "PASS",
+      "peakCgroupMiB": 427,
+      "peakRssTreeMiB": 314,
+      "peakLoad1m": 2.85
+    },
+    {
+      "file": "ab-A-2.json",
+      "sha256": "2ff150a4b1ebedd7c852086671bed2432033d6e07ec089aed84673ab6a3fa0a0",
+      "stages": 7,
+      "status": "PASS",
+      "peakCgroupMiB": 482,
+      "peakRssTreeMiB": 314,
+      "peakLoad1m": 3.67
+    },
+    {
+      "file": "ab-A-3.json",
+      "sha256": "10b5fa033d27547449b692f952296f8851183996ab0e09e853d2a75dde345f7e",
+      "stages": 7,
+      "status": "PASS",
+      "peakCgroupMiB": 469,
+      "peakRssTreeMiB": 425,
+      "peakLoad1m": 3.78
+    },
+    {
+      "file": "ab-B-1.json",
+      "sha256": "01817b20506ca4782b5c21519146780cf36546f2e18429c70711c3b776803964",
+      "stages": 9,
+      "status": "PASS",
+      "peakCgroupMiB": 540,
+      "peakRssTreeMiB": 421,
+      "peakLoad1m": 4.58
+    },
+    {
+      "file": "ab-B-2.json",
+      "sha256": "d53771af05ead7b7cabd546dc760fa40c4f5c598d7ce9657408ec418bb3d7087",
+      "stages": 9,
+      "status": "PASS",
+      "peakCgroupMiB": 531,
+      "peakRssTreeMiB": 406,
+      "peakLoad1m": 4.46
+    },
+    {
+      "file": "ab-B-3.json",
+      "sha256": "49755a5979a3fc99f9bfc58a762a5a293547e0bda5fa68afdcf5587fc490fe88",
+      "stages": 9,
+      "status": "PASS",
+      "peakCgroupMiB": 535,
+      "peakRssTreeMiB": 430,
+      "peakLoad1m": 4.6
+    },
+    {
+      "file": "ab-C-1.json",
+      "sha256": "c4c0534b2ba62a45c803d2d9b3f300bba76e0b0196b182dc35ea8d1b1f5ee12c",
+      "stages": 5,
+      "status": "PASS",
+      "peakCgroupMiB": 883,
+      "peakRssTreeMiB": 723,
+      "peakLoad1m": 4.88
+    },
+    {
+      "file": "ab-C-2.json",
+      "sha256": "013656109c23735cb9f57d67535d37079c026b4f24c3ceff6786df43e2237767",
+      "stages": 5,
+      "status": "PASS",
+      "peakCgroupMiB": 885,
+      "peakRssTreeMiB": 725,
+      "peakLoad1m": 4.88
+    },
+    {
+      "file": "ab-C-3.json",
+      "sha256": "ee3adc3040fe7380a0cccdb41fb3133c1dea4ce6b296134ec675b134b669544a",
+      "stages": 5,
+      "status": "PASS",
+      "peakCgroupMiB": 887,
+      "peakRssTreeMiB": 743,
+      "peakLoad1m": 4.15
+    },
+    {
+      "file": "ab-D-1.json",
+      "sha256": "1811275eda5be783e7a0bdba8409711cb6c54681c6c0214ea4d1acea595373f2",
+      "stages": 11,
+      "status": "PASS",
+      "peakCgroupMiB": 899,
+      "peakRssTreeMiB": 754,
+      "peakLoad1m": 4.61
+    },
+    {
+      "file": "ab-D-2.json",
+      "sha256": "475498295d179992d5218b64f2e82e00b0b2473794fce372991ff1db24f4131b",
+      "stages": 11,
+      "status": "PASS",
+      "peakCgroupMiB": 944,
+      "peakRssTreeMiB": 816,
+      "peakLoad1m": 6.07
+    },
+    {
+      "file": "ab-D-3.json",
+      "sha256": "7af31bd807223d8982b1546dbf04c38d696e65deaf4971ed672a0fdf3d57c3ab",
+      "stages": 11,
+      "status": "PASS",
+      "peakCgroupMiB": 923,
+      "peakRssTreeMiB": 746,
+      "peakLoad1m": 4.94
+    }
+  ],
+  "medians": {
+    "A": {
+      "chromium_launch": 12172,
+      "chromium_context": 1907,
+      "chromium_page": 2408,
+      "chromium_about_blank": 1631,
+      "cleanup_browser": 3140,
+      "cleanup_vite": 0,
+      "cleanup_pglite": 0
+    },
+    "B": {
+      "vite_start": 1127,
+      "vite_first_request": 728,
+      "chromium_launch": 17832,
+      "chromium_context": 3682,
+      "chromium_page": 2602,
+      "chromium_about_blank": 1730,
+      "cleanup_browser": 2436,
+      "cleanup_vite": 106,
+      "cleanup_pglite": 0
+    },
+    "C": {
+      "pglite_create": 26774,
+      "pglite_query": 12,
+      "cleanup_browser": 0,
+      "cleanup_vite": 0,
+      "cleanup_pglite": 23
+    },
+    "D": {
+      "pglite_create": 23395,
+      "pglite_query": 9,
+      "vite_start": 1082,
+      "vite_first_request": 1316,
+      "chromium_launch": 35380,
+      "chromium_context": 3781,
+      "chromium_page": 18170,
+      "chromium_about_blank": 14297,
+      "cleanup_browser": 8075,
+      "cleanup_vite": 86,
+      "cleanup_pglite": 39
+    }
+  }
+}

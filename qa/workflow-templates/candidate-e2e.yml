@@ -1,0 +1,28 @@
+# INACTIVE TEMPLATE. Move to .github/workflows ONLY after explicit authorization.
+# Verify Actions allowance/cost and Cloudflare branch filters before any push.
+name: ADPHOR isolated candidate E2E
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-browser:
+    if: github.ref == 'refs/heads/qa/integral-functional-20261111'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --init --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: npm ci
+      - name: Isolated browser and SQL only
+        run: node qa/run-candidate-e2e.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adphor-isolated-candidate-evidence
+          path: test-results/
+          retention-days: 7

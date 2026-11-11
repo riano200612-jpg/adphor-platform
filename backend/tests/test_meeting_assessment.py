@@ -1,5 +1,8 @@
 """Synthetic HTTP contracts: mocked identity/membership, not JWT/RLS or E2E."""
+import base64
+import json
 import unittest
+from unittest.mock import AsyncMock, Mock, patch
 from dataclasses import replace
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
@@ -14,10 +17,12 @@ QA = ConsultationSettings(deployment='staging', mode='synthetic',
 class AssessmentTests(unittest.TestCase):
     def setUp(self):
         self.role = 'admin'
+        self.aal = 'aal2'
         async def identity(request: Request):
             if request.headers.get('Authorization') != 'Bearer synthetic':
                 raise HTTPException(401)
-            return {'id': 'qa-user'}
+            claims = base64.urlsafe_b64encode(json.dumps({'sub':'qa-user','aal':self.aal}).encode()).decode()
+            return {'id': 'qa-user', 'token': f'header.{claims}.signature'}
         async def membership(request, actor, project, allowed):
             if project != 'qa-a' or self.role not in allowed:
                 raise HTTPException(403)
@@ -34,6 +39,47 @@ class AssessmentTests(unittest.TestCase):
         return (client or self.client).post('/meetings/assess',
             json={'project_id':'qa-a', 'subject':'Riesgo estructural', **overrides},
             headers={'Authorization':'Bearer synthetic'})
+
+    def availability(self, project='qa-a'):
+        return self.client.post('/meetings/availability', headers={'Authorization':'Bearer synthetic'},
+            json={'project_id':project,'start':'2026-11-10T08:00:00-05:00','end':'2026-11-10T18:00:00-05:00'})
+
+    def test_availability_requires_aal2_and_membership_before_oauth(self):
+        with patch('backend.src.adphor_ai.meeting_api.httpx.AsyncClient') as transport:
+            self.aal = 'aal1'
+            self.assertEqual(self.availability().status_code,403)
+            self.aal = 'aal2'
+            self.assertEqual(self.availability('qa-b').status_code,403)
+            transport.assert_not_called()
+
+    def test_availability_missing_configuration_fails_closed(self):
+        with patch.dict('os.environ', {'ADPHOR_QA_CALENDAR_ID':''}):
+            self.assertEqual(self.availability().status_code,503)
+
+    def test_corporate_availability_refresh_and_google_error(self):
+        self.client = self.make_client(replace(QA,
+            supabase_url='https://qfctnnnnltghepwujpdm.supabase.co',
+            staging_project_ref='qfctnnnnltghepwujpdm',
+            frontend_origin='https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev'))
+        variables = {
+            'ADPHOR_QA_CALENDAR_ID':'synthetic-calendar',
+            'ADPHOR_QA_CALENDAR_OAUTH_CLIENT_ID':'synthetic-client',
+            'ADPHOR_QA_CALENDAR_OAUTH_CLIENT_SECRET':'synthetic-secret',
+            'ADPHOR_QA_CALENDAR_OAUTH_REFRESH_TOKEN':'synthetic-refresh',
+        }
+        grant = Mock()
+        grant.json.return_value = {'access_token':'synthetic-access'}
+        calendar = Mock()
+        calendar.json.return_value = {'calendars':{'synthetic-calendar':{'busy':[]}}}
+        with patch.dict('os.environ', variables), patch('backend.src.adphor_ai.meeting_api.httpx.AsyncClient') as factory:
+            client = factory.return_value.__aenter__.return_value
+            client.post = AsyncMock(side_effect=[grant, calendar, grant, calendar])
+            self.assertEqual(self.availability().json(), {
+                'project_id':'qa-a', 'busy':[], 'timezone':'America/Bogota'})
+            self.assertEqual(client.post.await_args_list[0].kwargs['data']['grant_type'], 'refresh_token')
+            self.assertEqual(client.post.await_args_list[1].kwargs['headers']['Authorization'], 'Bearer synthetic-access')
+            calendar.json.return_value = {'calendars':{'synthetic-calendar':{'errors':[{'reason':'internalError'}]}}}
+            self.assertEqual(self.availability().status_code,502)
 
     def test_rules_and_no_side_effects(self):
         response = self.post()

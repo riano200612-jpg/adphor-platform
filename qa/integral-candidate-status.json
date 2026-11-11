@@ -1,0 +1,199 @@
+{
+  "base": "29f73b1be09744668f4474be3189d8bb9f414a16",
+  "branch": "qa/integral-claude-reviewed-20261111",
+  "release_ready": false,
+  "basis": "Reviewed source and isolated tests only; administrative evidence retained privately. No authenticated acceptance or deployment certification.",
+  "tests": {
+    "javascript": {
+      "pass": 291,
+      "fail": 0,
+      "scope": "unit and isolated integration"
+    },
+    "python": {
+      "pass": 136,
+      "fail": 0
+    },
+    "pqrs_sql": {
+      "checks": 30,
+      "scope": "PGlite synthetic SQL claims; not Supabase JWT"
+    },
+    "build": "PASS",
+    "browser_collection": {
+      "tests": 3,
+      "executed": false
+    },
+    "browser_real": "BLOCKED"
+  },
+  "modules": [
+    {
+      "module": "0. Identidad corporativa",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "tests/branding.test.js",
+        "src/css/visits.css"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "1. Login",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "tests/cloud-authentication.test.js",
+        "tests/client-login-workflow.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "2. MFA AAL2",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "tests/required-mfa.test.js",
+        "tests/managed-mfa.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "3. Home",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/app.js",
+        "src/js/services/supabase.js",
+        "tests/qa-pqrs-calendar-readonly.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "4. Reuniones",
+      "status": "FAIL",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/ui-meeting-assessment.js",
+        "tests/client-meeting-duration.test.js",
+        "tests/meeting-slots.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "5. Visitas",
+      "status": "BLOCKED",
+      "local": "See source tests; scheduled visits are not a complete visit lifecycle.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/services/shared-visits.js",
+        "src/js/ui-visit-preparation.js",
+        "supabase/migrations/20261111133108_qa_shared_visits_scheduled_contract.sql",
+        "qa/evidence/shared-visits-applied.json",
+        "tests/shared-visits.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "6. PQRS",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/ui-pqrs.js",
+        "src/js/ui-pqrs-unified.js",
+        "tests/portal-pqrs-quality-gate.test.js",
+        "tests/pqrs-guidance.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "7. Agenda",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/ui-verified-agenda.js",
+        "src/js/services/verified-agenda.js",
+        "tests/verified-agenda.test.js",
+        "tests/e2e/agenda-verified.spec.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "Miss ADPHOR",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/ui-miss-adphor-chat.js",
+        "tests/miss-adphor-chat.test.js",
+        "tests/miss-adphor-guidance.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "PostgreSQL aislado Visitas/Agenda",
+      "status": "PASS",
+      "local": "See source tests; scheduled visits are not a complete visit lifecycle.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "qa/check-visit-concurrency.py",
+        "qa/check-agenda-native.sh",
+        "qa/visit-agenda-contracts.md"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "Fotos y carrusel",
+      "status": "PASS",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/services/property-photos.js",
+        "tests/property-photos.test.js",
+        "tests/qa-companion-carousel.test.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "QA publicado / Cloudflare Access",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "vite.config.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    },
+    {
+      "module": "Directorio",
+      "status": "BLOCKED",
+      "local": "Existing implementation preserved; acceptance remains as previously recorded.",
+      "real": "BLOCKED: authenticated acceptance and deployment certification pending.",
+      "evidence": [
+        "src/js/services/staff-directory.js",
+        "src/js/ui-staff-directory.js"
+      ],
+      "next": "Authorized isolated browser and authenticated QA verification."
+    }
+  ],
+  "qa_remote_confirmed": "590508630f196b45e4dce92b341e7605f3ebc020",
+  "served_sha": null,
+  "deployment_id": null,
+  "shared_visit_migration": {
+    "version": "20261111133108",
+    "project": "qfctnnnnltghepwujpdm",
+    "applied": true,
+    "rows": 0,
+    "rls": true,
+    "policies": 3,
+    "anon_read": false,
+    "anon_rpc": false,
+    "rpc_security_definer": false
+  },
+  "writes_enabled": false,
+  "claude_source": "33eb0f10039a7a40aa7546c354019c4ce76c6bbc"
+}

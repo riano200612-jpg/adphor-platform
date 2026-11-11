@@ -1,3 +1,5 @@
+import {mountVerifiedAgenda} from './ui-verified-agenda.js';
+import {mountVisitPreparation} from './ui-visit-preparation.js';
 import {renderMfaScreen} from './ui-mfa.js';
 import {mountStaffDirectory} from './ui-staff-directory.js';
 import {mountQaPasswordRecovery} from './ui-password-recovery.js';
@@ -21,6 +23,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
 import '../css/client-source-review.css';
 import '../css/premium.css';
+import '../css/visits.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -104,26 +107,33 @@ async function refresh() {
   projectPreference(sessionStorage,state.user?.id,state.projectId);
   state.lastSync = new Date();
 }
+function selectWorkspaceProject(id) {
+  if (!state.projects.some(project=>project.id===id)) return;
+  state.projectId=id; state.filters={}; monthlyResult=null; monthlyKey='';
+  projectPreference(sessionStorage,state.user?.id,id); shell();
+}
 function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['unified','grip','Centro integrado'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
-  nav.splice(1,0,['meetings','calendar','Reuniones'],['pqrs','inbox','PQRS']);
+  nav.splice(1,0,['meetings','calendar','Reuniones'],['agenda','calendar-days','Agenda'],['visits','route','Visitas'],['pqrs','inbox','PQRS']);
   if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo']);
   if (repo.mode === 'cloud' && role()==='admin') nav.push(['qa-source','users','Equipo, fotos y datos reales']);
   if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' || project()?.id === 'demo-01' ? 'Entorno de prueba · origen histórico disponible' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : (project()?.is_demo || project()?.id === 'demo-01') ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div><div id="miss-adphor-chat-root"></div>`;
   mountProjectSelector($('project-control'), {projects:state.projects, selected:state.projectId, onChange(id) {
-    state.projectId=id; state.filters={}; monthlyResult=null; monthlyKey='';
-    projectPreference(sessionStorage,state.user?.id,id); shell();
+    selectWorkspaceProject(id);
   }});
   renderPage();
   mountMissAdphorChat($('miss-adphor-chat-root'),{
     context:()=>({
       project:project(),projectId:state.projectId,tickets:state.tickets,
       role:role(),mode:repo.mode,
-      availablePages:['tickets','pqrs','meetings','recorridos','agent-history','reports']
+      page:state.page,availablePages:nav.map(([id])=>id)
     }),
-    onNavigate(page){state.page=page;state.filters={};shell();}
+    loadMeetings:repo.mode==='cloud' && typeof repo.listVerifiedQaMeetings==='function'
+      ? id=>repo.listVerifiedQaMeetings(id) : undefined,
+    loadPqrs:repo.mode==='cloud' && repo.porto ? id=>repo.porto.listAttention(id) : undefined,
+    onNavigate(page){if(!nav.some(([id])=>id===page))return;state.page=page;state.filters={};shell();$('main')?.focus();}
   });
 }
 function heading(title, subtitle, actions = '') { return `<div class="page-heading"><div><p class="eyebrow">${esc(project()?.name || 'ADPHOR')}</p><h1>${title}</h1><p class="muted">${subtitle}</p></div><div class="heading-actions">${actions}</div></div>`; }
@@ -139,7 +149,7 @@ function card(t) {
 function dashboard() {
   const list = rows();
   const urgent = list.filter(t => overdue(t) || (t.priority === 'Urgente' && t.status !== 'Cerrada')).sort((a,b) => a.due_date.localeCompare(b.due_date));
-  return heading('Todo tu mantenimiento, en un lugar.', 'Tu centro de operaciones. Prioridades claras para tomar mejores decisiones.', newButton()) + `<div class="dashboard-intro"><div><p class="eyebrow">PANORAMA DE TU COPROPIEDAD</p><h2>${esc(project().name)}</h2><p>${repo.mode==='demo'?'Indicadores demostrativos · Información local de prueba':'Indicadores de la bitácora autorizada · Última lectura disponible'}</p></div><div class="quick-links"><button class="btn secondary" data-page="unified">Centro integrado</button><button class="btn secondary" data-page="properties">${state.projects.length} copropiedades autorizadas</button><button class="btn secondary" data-page="reports">Ver informe ${icon('arrow-right')}</button></div></div>` + stats(list) + `<div class="module-grid">${([['pqrs','inbox','Atención a la comunidad','Consulta de procedencia histórica; radicación real pendiente']]).concat([['meetings','calendar','Agenda del equipo','Formulario y acompañamientos; calendario real pendiente']]).concat([['agent-history','wand-magic-sparkles','Centro de inteligencia','Borradores sujetos a revisión humana']]).map(([id,i,title,sub])=>`<button class="module-card" data-page="${id}">${icon(i)}<span><strong>${title}</strong><small>${sub}</small></span></button>`).join('')}</div>` + `<div class="dashboard-grid"><section class="panel"><div class="section-heading"><div><h2>Necesitan tu atención</h2><p>Casos urgentes o fuera del plazo acordado.</p></div><span class="counter">${urgent.length}</span></div>${urgent.length ? `<div class="attention-list">${urgent.slice(0,5).map(t => `<button data-ticket="${esc(t.id)}"><span class="attention-icon">${icon('triangle-exclamation')}</span><span><strong>${esc(t.title)}</strong><small>${esc(person(t.assignee))} · ${fmt(t.due_date)}</small></span>${badge(t)}${icon('chevron-right')}</button>`).join('')}</div>` : '<div class="calm"><span>✓</span><h3>Todo al día</h3><p>No hay novedades urgentes ni vencidas en esta copropiedad.</p></div>'}</section><section class="panel progress-panel"><p class="eyebrow">TRAZABILIDAD OPERATIVA</p><h2>Distribución de la operación</h2>${operationalChart(list)}<p class="muted">Cada cierre requiere la verificación de un coordinador.</p></section></div><section class="panel"><div class="section-heading"><div><h2>Últimas novedades</h2><p>El pulso de ${esc(project().name)}.</p></div><button class="text-btn" data-page="tickets">Ver bitácora ${icon('arrow-right')}</button></div>${list.length ? `<div class="recent-grid">${list.slice(0,3).map(card).join('')}</div>` : empty('Aún no hay novedades', newButton())}</section>`;
+  return heading('Todo tu mantenimiento, en un lugar.', 'Tu centro de operaciones. Prioridades claras para tomar mejores decisiones.', newButton()) + `<div class="dashboard-intro"><div><p class="eyebrow">PANORAMA DE TU COPROPIEDAD</p><h2>${esc(project().name)}</h2><p>${repo.mode==='demo'?'Indicadores demostrativos · Información local de prueba':'Indicadores de la bitácora autorizada · Última lectura disponible'}</p></div><div class="quick-links"><button class="btn secondary" data-page="unified">Centro integrado</button><button class="btn secondary" data-page="properties">${state.projects.length} copropiedades autorizadas</button><button class="btn secondary" data-page="reports">Ver informe ${icon('arrow-right')}</button></div></div>` + stats(list) + `<div class="module-grid">${([['pqrs','inbox','Atención a la comunidad','Consulta de procedencia histórica; radicación real pendiente']]).concat([['meetings','calendar','Reuniones y acompañamientos','Consulta verificada y preparación de solicitudes']]).concat([['agent-history','wand-magic-sparkles','Centro de inteligencia','Borradores sujetos a revisión humana']]).map(([id,i,title,sub])=>`<button class="module-card" data-page="${id}">${icon(i)}<span><strong>${title}</strong><small>${sub}</small></span></button>`).join('')}</div>` + `<div class="dashboard-grid"><section class="panel"><div class="section-heading"><div><h2>Necesitan tu atención</h2><p>Casos urgentes o fuera del plazo acordado.</p></div><span class="counter">${urgent.length}</span></div>${urgent.length ? `<div class="attention-list">${urgent.slice(0,5).map(t => `<button data-ticket="${esc(t.id)}"><span class="attention-icon">${icon('triangle-exclamation')}</span><span><strong>${esc(t.title)}</strong><small>${esc(person(t.assignee))} · ${fmt(t.due_date)}</small></span>${badge(t)}${icon('chevron-right')}</button>`).join('')}</div>` : '<div class="calm"><span>✓</span><h3>Todo al día</h3><p>No hay novedades urgentes ni vencidas en esta copropiedad.</p></div>'}</section><section class="panel progress-panel"><p class="eyebrow">TRAZABILIDAD OPERATIVA</p><h2>Distribución de la operación</h2>${operationalChart(list)}<p class="muted">Cada cierre requiere la verificación de un coordinador.</p></section></div><section class="panel"><div class="section-heading"><div><h2>Últimas novedades</h2><p>El pulso de ${esc(project().name)}.</p></div><button class="text-btn" data-page="tickets">Ver bitácora ${icon('arrow-right')}</button></div>${list.length ? `<div class="recent-grid">${list.slice(0,3).map(card).join('')}</div>` : empty('Aún no hay novedades', newButton())}</section>`;
 }
 function filters() {
   const f = state.filters;
@@ -174,6 +184,12 @@ function renderPage() {
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if (state.page === 'agenda') {
+    mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
+  }
+  if (state.page === 'visits') {
+    mountVisitPreparation($('page-content'),{projectId:state.projectId,projectName:project().name,members:team(),projects:state.projects,onProjectChange:selectWorkspaceProject,visitRepository:repo.mode==='cloud'?repo.visits:null,canCreate:repo.visits?.writesEnabled===true&&['admin','coordinator'].includes(role())});return;
+  }
   if (state.page === 'meetings') {
     mountMeetingAssessment($('page-content'),{projectName:project().name,sector:project().sector||project().location||'',role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:state.projectId,members:team()});return;
   }

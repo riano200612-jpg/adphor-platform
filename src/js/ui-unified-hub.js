@@ -4,7 +4,7 @@ import {mountSourceSnapshot} from './ui-source-snapshot.js';
 export const UNIFIED_MODULES = Object.freeze([
   {id:'dashboard',title:'Inicio',detail:'Resumen por copropiedad'},
   {id:'meetings',title:'Reuniones',detail:'Solicitudes y evaluación gerencial'},
-  {id:'recorridos',title:'Visitas y recorridos',detail:'Bitácora de hallazgos y seguimiento'},
+  {id:'recorridos',title:'Recorridos',detail:'Bitácora de hallazgos y seguimiento'},
   {id:'pqrs',title:'PQRS',detail:'Radicación y seguimiento autorizado'},
   {id:'reports',title:'Informes',detail:'Resultados mensuales verificables'},
   {id:'agent-history',title:'Agentes IA',detail:'Borradores y revisión humana'},
@@ -17,7 +17,7 @@ export function unifiedModuleStatus({mode='demo',portoEnabled=false}={}) {
     note: m.id==='meetings'&&!portoEnabled ?
       'Formulario y carrusel disponibles; sin calendario real ni reservas persistentes' :
       m.id==='pqrs'&&!portoEnabled ? 'Propietarios, consulta y empleados: abre el Portal original conectado mediante /exec; sin enlace no hay radicación' :
-      m.id==='recorridos' ? 'Seguimiento de novedades; formulario de visitas independiente pendiente' :
+      m.id==='recorridos' ? 'Miss ADPHOR · Recorridos registra hallazgos. Para una visita, confirma copropiedad, tipo, fecha y responsable. El formulario independiente y la persistencia de Visitas siguen pendientes.' :
       m.id==='tickets' ? 'Fotografías de mantenimiento; biblioteca multimedia pendiente' :
       m.id==='dashboard' ? 'Panel de datos autorizados' :
       mode==='demo' ? 'Modo de demostración' : 'Ver permisos y datos del módulo'

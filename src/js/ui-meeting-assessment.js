@@ -3,6 +3,20 @@ import {enhanceMeetings,bogotaInput,bogotaInstant} from './ui-meeting-experience
 import {buildClientMeetingTitle,meetingDurationHours} from './services/client-meeting-mapping.js';
 import {listDemoMeetings,scheduleDemoMeeting,cancelDemoMeeting,historyDemoMeeting,decideDemoMeeting,seedDemoMeetingScenarios} from './services/demo-calendar.js';
 
+export function meetingGuidance({subject, start, accompaniment, availability, canCheck}) {
+ if(subject.trim().length<3) return 'Paso 1 de 4. Escribe un asunto de al menos tres caracteres.';
+ if(!start) return 'Paso 2 de 4. Indica la fecha y hora de inicio.';
+ if(!accompaniment) return 'Paso 3 de 4. Selecciona un acompañante o «Sin acompañamiento requerido».';
+ if(!canCheck) return 'Paso 4 de 4. Revisa los datos. La consulta de disponibilidad no está habilitada en esta vista.';
+ switch(availability){
+  case 'DISPONIBLE': return 'Paso 4 de 4. Puedes revisar la solicitud. La revisión no crea una reunión.';
+  case 'OCUPADO': return 'Paso 4 de 4. Elige otro horario que respete el margen de 30 minutos.';
+  case 'CONSULTA_FALLIDA': return 'Paso 4 de 4. No pudimos verificar el horario. Reintenta la consulta.';
+  case 'consultando': return 'Paso 4 de 4. Espera el resultado de Google Calendar.';
+  default: return 'Paso 4 de 4. Revisa la duración y verifica el horario en Google Calendar.';
+ }
+}
+
 // This is an interactive local calendar in DEMO mode. Cloud mode remains assessment-only
 // until authenticated transactional booking is verified on isolated QA PostgreSQL.
 export function mountMeetingAssessment(root,{repo,projectId,projectName=projectId,role='viewer',members=[],sector=''}) {
@@ -34,9 +48,122 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    help.append(title,note,action);escort.after(help);
  }
  const form=root.querySelector('form'),status=root.querySelector('[role=status]'),notice=root.querySelector('[data-notice]'),list=root.querySelector('[data-list]');
- notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'VISTA DE REVISIÓN: formulario, calendario y carrusel habilitados visualmente; todavía NO hay reuniones reales importadas ni backend transaccional autorizado. No se enviarán invitaciones.';
- if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La tabla operativa de reuniones aún no existe en esta base de datos.';}}
+ const agendaGuide=document.createElement('details');
+ agendaGuide.innerHTML='<summary>Miss ADPHOR · Consultar la agenda</summary>';
+ const agendaHelp=document.createElement('p');
+ agendaHelp.textContent=demo
+  ? 'Consulta fechas y estados de las reuniones de esta copropiedad. Los cambios de horario y las cancelaciones solo afectan la simulación de este navegador.'
+  : 'Consulta las reuniones verificadas de la copropiedad seleccionada y revisa su fecha, hora y estado. Esta vista de lectura no permite reprogramar ni cancelar eventos corporativos.';
+ agendaGuide.append(agendaHelp);
+ list.before(agendaGuide);
+ notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'VISTA DE REVISIÓN: consulta de reuniones verificadas según tu autorización y preparación de solicitudes. La creación de eventos y el envío de invitaciones requieren un backend transaccional autorizado.';
+ if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La creación de eventos requiere un servicio transaccional autorizado y certificado.';}}
  if(demo){const load=document.createElement('button');load.type='button';load.className='btn secondary';load.textContent='Cargar 3 reuniones de simulación';load.setAttribute('data-demo-scenarios','');notice.after(load);load.onclick=()=>{try{const n=seedDemoMeetingScenarios(projectId);status.textContent=n?n+' reuniones FICTICIAS añadidas únicamente a este navegador.':'Los escenarios de simulación ya estaban cargados.';render();}catch(error){status.textContent=error.message;}};}
+ const canCheck=!demo && typeof repo.meetingAvailability === 'function' && ['admin','coordinator'].includes(role);
+ const guide=document.createElement('details');
+ guide.innerHTML='<summary>Miss ADPHOR · Guía de la solicitud</summary><p aria-live="polite"></p>';
+ form.before(guide);
+ const guideMessage=guide.querySelector('p');
+ const updateGuide=()=>{
+  if(!guide.open)return;
+  guideMessage.textContent=meetingGuidance({
+   subject:form.elements.subject.value,
+   start:form.elements.start.value,
+   accompaniment:Boolean(form.querySelector('[name=escort_id]:checked')),
+   availability:status.dataset.availability,
+   canCheck
+  });
+ };
+ const guideObserver=new MutationObserver(updateGuide);
+ guide.addEventListener('toggle',()=>{
+  if(guide.open){
+   guideObserver.observe(status,{attributes:true,attributeFilter:['data-availability']});
+   guideObserver.observe(escortChoices,{childList:true,subtree:true});
+   updateGuide();
+  }else guideObserver.disconnect();
+ });
+ form.addEventListener('input',()=>queueMicrotask(updateGuide));
+ form.addEventListener('reset',()=>queueMicrotask(updateGuide));
+ if (canCheck) {
+  const availability=document.createElement('button');
+  availability.type='button';
+  availability.textContent='Verificar horario en Google Calendar';
+  form.append(availability);
+  const snapshot=()=>JSON.stringify([...new FormData(form)]);
+  const review=document.createElement('button');
+  review.type='button';
+  review.hidden=true;
+  review.textContent='Revisar solicitud de reunión';
+  form.append(review);
+  let revision=0;
+  const invalidateAvailability=()=>{
+   revision++;
+   review.hidden=true;
+   if (status.dataset.availability) status.textContent='';
+   delete status.dataset.availability;
+  };
+  form.addEventListener('input',invalidateAvailability);
+  form.addEventListener('reset',invalidateAvailability);
+  availability.onclick=async()=>{
+   invalidateAvailability();
+   const requestRevision=revision;
+   const selection=snapshot();
+   const isCurrent=()=>availability.isConnected && revision===requestRevision && selection===snapshot();
+   let start, end;
+   try {
+    start=bogotaInstant(form.elements.start.value);
+    const duration=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
+    end=form.elements.end.value ? bogotaInstant(form.elements.end.value) : new Date(+start+duration*3600000);
+   } catch (error) {
+    status.textContent=error.message;
+    return;
+   }
+   if (!Number.isFinite(+start) || !Number.isFinite(+end) || +end<=+start || +end-+start>43200000) {
+    status.textContent='Indica un horario válido de hasta 12 horas.';
+    return;
+   }
+   if (+start-Date.now()<86400000) {
+    status.textContent='El horario requiere al menos 24 horas de anticipación para esta comprobación.';
+    return;
+   }
+   availability.disabled=true;
+   status.dataset.availability='consultando';
+   status.textContent='Consultando el calendario corporativo…';
+   try {
+    const buffer=1800000;
+    const busy=await repo.meetingAvailability(projectId,new Date(+start-buffer).toISOString(),new Date(+end+buffer).toISOString());
+    if (!isCurrent()) return;
+    const conflict=busy.some(slot=>Date.parse(slot.start)<+end+buffer && Date.parse(slot.end)>+start-buffer);
+    status.dataset.availability=conflict ? 'OCUPADO' : 'DISPONIBLE';
+    status.textContent=conflict ? 'Horario ocupado o en conflicto con el margen de 30 minutos.'
+     : 'Google Calendar no reporta conflictos para este horario. La comprobación es informativa y no reserva el evento.';
+    if (!conflict) {
+     review.hidden=false;
+     review.onclick=()=>{
+      if (!review.isConnected || !isCurrent() || !form.reportValidity()) return;
+      const formatter=new Intl.DateTimeFormat('es-CO',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Bogota'});
+      const escort=form.querySelector('[name=escort_id]:checked');
+      const summary=[
+       projectName,form.elements.meetingType.value,form.elements.subject.value,
+       formatter.formatRange(start,end),
+       escort?.closest('label')?.textContent?.trim() || 'Acompañamiento pendiente de revisar',
+       'La creación de eventos todavía no está habilitada en QA.'
+      ].join('\n');
+      if (!window.confirm(summary+'\n\n¿Confirmas que estos son los datos de la solicitud?')) return;
+      status.textContent='Datos confirmados para revisión. No se creó un evento.';
+      review.hidden=true;
+     };
+    }
+   } catch {
+    if (isCurrent()) {
+     status.dataset.availability='CONSULTA_FALLIDA';
+     status.textContent='No se pudo verificar el calendario corporativo. Vuelve a intentar la consulta.';
+    }
+   } finally {
+    availability.disabled=false;
+   }
+  };
+ }
  let editing=null, experience;
  let verifiedCloudRows=[];
  function render(){

@@ -1,10 +1,24 @@
 import {uploadPrivateEvidence} from './services/private-evidence.js';
 import { validateQaEvidence } from './services/qa-evidence-policy.js';
+export function pqrsDraftGuidance(form) {
+  if(form.elements.subject.value.trim().length<3) return 'Escribe un asunto de al menos tres caracteres.';
+  if(form.elements.description.value.trim().length<3) return 'Describe qué sucedió y qué solución necesitas.';
+  return 'Revisa la copropiedad, el tipo de solicitud y los adjuntos antes de enviar. Espera un radicado confirmado para comprobar el registro.';
+}
+
 // Uses the current ADPHOR shell/styles; all untrusted strings rendered as text.
 export function mountPqrs(root,{repository,projectId,members=[],role,projectName=projectId}) {
   root.innerHTML='<section class="panel pqrs-page"><div class="pqrs-header"><div><p class="pqrs-kicker">CENTRO DE ATENCIÓN · ADPHOR</p><h2>Peticiones, quejas, reclamos y sugerencias</h2><p class="pqrs-subtitle">Radica y consulta solicitudes de tu copropiedad en un solo lugar.</p></div><button type="button" class="pqrs-new" data-new>+ Nueva PQRS</button></div><p role="status" class="pqrs-message" aria-live="polite"></p><div class="pqrs-toolbar"><label>Filtrar por estado <select data-filter><option value="">Todos</option><option>open</option><option>assigned</option><option>in_progress</option><option>resolved</option><option>closed</option></select></label><button type="button" class="pqrs-refresh" data-refresh>Actualizar lista</button></div><form class="pqrs-form" id="pqrs-create-form"><div class="pqrs-form-title"><h3>Radicar nueva solicitud</h3><p>Completa los datos necesarios para identificar y gestionar el caso.</p></div><div class="pqrs-fields"><label>Tipo<select name="kind"><option value="peticion">Petición</option><option value="queja">Queja</option><option value="reclamo">Reclamo</option><option value="sugerencia">Sugerencia</option></select></label><label>Asunto<input name="subject" required minlength="3" maxlength="200"></label><label>Torre<input name="tower" maxlength="40" placeholder="Ej. Torre 1"></label><label>Apartamento<input name="apartment" maxlength="40" placeholder="Ej. 402"></label><label>Propietario o solicitante<input name="owner" maxlength="120" placeholder="Nombre autorizado"></label><label class="pqrs-wide">Descripción del caso<textarea name="description" required minlength="3" maxlength="6000" rows="4" placeholder="Describe qué sucedió y qué solución necesitas"></textarea></label></div><div class="pqrs-evidence"><label for="pqrs-evidence-files" class="pqrs-evidence-label">📎 Adjuntar evidencia: fotos, videos o documentos</label><input id="pqrs-evidence-files" name="evidence" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf" multiple><p class="pqrs-upload-note">Selecciona hasta 5 archivos de máximo 20 MB cada uno. La carga privada estará disponible cuando se habilite el servicio de adjuntos QA.</p><ul class="pqrs-evidence-list" aria-live="polite"></ul><div class="pqrs-evidence-preview" role="group" aria-label="Vista previa local de evidencias"></div><button type="button" class="btn secondary pqrs-evidence-clear" data-clear-evidence hidden>Quitar adjuntos seleccionados</button></div><div class="pqrs-actions"><button type="submit" class="pqrs-submit">Enviar solicitud PQRS</button></div></form><div class="pqrs-list-head"><h3>Solicitudes registradas</h3><p>Consulta su estado y seguimiento.</p></div><div data-cases class="pqrs-cases"></div></section>';
   const message=root.querySelector('[role=status]'),list=root.querySelector('[data-cases]'),filter=root.querySelector('[data-filter]');
   const form=root.querySelector('form');
+  const guide=document.createElement('details');
+  guide.innerHTML='<summary>Miss ADPHOR · Guía de PQRS</summary><p>Filtra por estado para localizar pendientes. Abre «Ver historial» para revisar el radicado. Cuando tu rol lo permita, revisa la respuesta y los cambios antes de guardarlos.</p><p aria-live="polite"></p>';
+  const draftGuide=guide.lastElementChild;
+  const updateGuide=()=>{if(guide.open)draftGuide.textContent=pqrsDraftGuidance(form);};
+  form.querySelector('.pqrs-form-title').after(guide);
+  guide.addEventListener('toggle',updateGuide);
+  form.addEventListener('input',updateGuide);
+  form.addEventListener('reset',()=>queueMicrotask(updateGuide));
   const evidenceInput=root.querySelector('#pqrs-evidence-files');
   const evidenceList=root.querySelector('.pqrs-evidence-list');
   const clearEvidence=root.querySelector('[data-clear-evidence]');
@@ -41,8 +55,12 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   const statusLabels={open:'Abierta',assigned:'Asignada',in_progress:'En atención',resolved:'Resuelta',closed:'Cerrada'};
   for(const o of filter.options)if(statusLabels[o.value])o.textContent=statusLabels[o.value];
   const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
+  let listRevision=0;
   async function load(){
-    const rows=await repository.list(projectId,filter.value);if(!root.isConnected)return;list.replaceChildren();
+    const revision=++listRevision;
+    const rows=await repository.list(projectId,filter.value);
+    if(!list.isConnected || revision!==listRevision)return;
+    list.replaceChildren();
     for(const row of rows){
       const card=el('article','');card.className='panel';card.append(el('h3',row.subject),el('p',[row.tower&&'Torre '+row.tower,row.apartment&&'Apto '+row.apartment,row.owner&&'Solicitante '+row.owner].filter(Boolean).join(' · ')),el('p',row.description),el('p',`${statusLabels[row.status]||row.status} · ${row.priority} · versión ${row.version}`),el('p',`Radicado: ${row.id}`));
       const history=el('button','Ver historial');history.onclick=()=>run(async()=>{const events=await repository.history(projectId,row.id);let box=card.querySelector('pre');if(!box){box=el('pre','');card.append(box);}box.textContent=events.map(e=>`${e.occurred_at}: ${e.old_status||'creado'} → ${e.new_status}`).join('\n');});card.append(history);

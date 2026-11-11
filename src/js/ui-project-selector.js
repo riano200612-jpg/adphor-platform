@@ -7,12 +7,12 @@ export function searchProjects(projects, query) {
   const term = normalize(query);
   return projects.filter(p => normalize(p.name).includes(term));
 }
-export function mountProjectSelector(root, {projects, selected, onChange}) {
+export function mountProjectSelector(root, {projects, selected, onChange, selectId='project-select'}) {
   root.replaceChildren();
-  const label = document.createElement('label'); label.htmlFor='project-select'; label.textContent='COPROPIEDAD';
+  const label = document.createElement('label'); label.htmlFor=selectId; label.textContent='COPROPIEDAD';
   const search = document.createElement('input'); search.type='search'; search.placeholder='Buscar copropiedad';
   search.setAttribute('aria-label','Buscar copropiedad'); search.autocomplete='off';
-  const select=document.createElement('select'); select.id='project-select';
+  const select=document.createElement('select'); select.id=selectId;
   const status=document.createElement('small'); status.setAttribute('role','status');
   let current=chooseProject(projects,selected);
   function render() {

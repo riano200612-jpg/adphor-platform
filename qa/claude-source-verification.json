@@ -1,0 +1,10 @@
+{
+  "archive_sha256": "70678b2b98852e9a6546890250eed568fe66fb50d2ba7898106fe4bd7aba585c",
+  "bundle_sha256": "58ea883c0f8d9d406780b38059045a60a518382289e1e046938ee5140294b763",
+  "commit": "33eb0f10039a7a40aa7546c354019c4ce76c6bbc",
+  "base": "29f73b1be09744668f4474be3189d8bb9f414a16",
+  "manifest_files_verified": 6,
+  "alternative_migration_applied": false,
+  "selected_correction": "default-off write gate, preserving newer shared repository and UI",
+  "excluded_from_public_tree": "administrative evidence snapshots"
+}
