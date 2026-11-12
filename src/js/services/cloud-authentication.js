@@ -1,9 +1,21 @@
 import {createManagedMfa} from './managed-mfa.js';
 
+// Traduce errores de inicio de sesión a mensajes comprensibles. Nunca se muestra el texto técnico crudo.
+export function loginErrorMessage(error) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const status = Number(error?.status);
+  if (/invalid login credentials/.test(message)) return 'Correo o contraseña incorrectos.';
+  if (/email not confirmed/.test(message)) return 'Tu correo aún no está confirmado. Contacta al administrador de QA.';
+  if (status === 429 || /rate limit|too many requests/.test(message)) return 'Demasiados intentos. Espera unos minutos y vuelve a intentar.';
+  if (/failed to fetch|networkerror|network request failed/.test(message)) return 'No hay conexión con el servicio de acceso. Intenta nuevamente.';
+  return 'No se pudo iniciar sesión. Intenta nuevamente o contacta al administrador de QA.';
+}
+
 export function createCloudAuthentication(client, {required, allowEnrollment, allowDemoAlias=false}) {
   const auth = client.auth;
   const mfa = createManagedMfa(auth, {required, allowEnrollment});
   const read = result => {if(result.error) throw Error(result.error.message); return result.data;};
+  const readLogin = result => {if(result.error) throw Error(loginErrorMessage(result.error)); return result.data;};
   async function finish(id) {
     // A second check at the protected read boundary also covers SDK/session drift.
     if (required) {
@@ -29,7 +41,7 @@ export function createCloudAuthentication(client, {required, allowEnrollment, al
       // Otherwise 'adphor' is sent as typed and Supabase rejects it as an invalid login.
       const loginEmail = allowDemoAlias && !required && email.trim().toLowerCase() === 'adphor'
         ? 'demo-adphor@example.invalid' : email.trim();
-      const data = read(await auth.signInWithPassword({email:loginEmail,password}));
+      const data = readLogin(await auth.signInWithPassword({email:loginEmail,password}));
       try {
         if(await mfa.begin(data.user.id)) return {mfaRequired:true,enrollmentRequired:mfa.needsEnrollment()};
         return await finish(data.user.id);

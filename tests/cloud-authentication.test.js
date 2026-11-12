@@ -109,33 +109,46 @@ function loginProbe({required,allowDemoAlias}) {
 }
 test('el alias "adphor" no llega a la cuenta demo por defecto',async()=>{
   const p=loginProbe({required:false,allowDemoAlias:false});
-  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Correo o contraseña incorrectos/);
   assert.deepEqual(p.sent,['adphor']);
 });
 test('el alias solo se activa con opt-in explícito y sin MFA obligatorio',async()=>{
   const p=loginProbe({required:false,allowDemoAlias:true});
-  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Correo o contraseña incorrectos/);
   assert.deepEqual(p.sent,['demo-adphor@example.invalid']);
 });
 test('en modo MFA obligatorio el alias nunca se resuelve aunque esté activado',async()=>{
   const p=loginProbe({required:true,allowDemoAlias:true});
-  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+  await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Correo o contraseña incorrectos/);
   assert.deepEqual(p.sent,['adphor']);
 });
 test('correos reales se envían tal cual, sin alias',async()=>{
   const p=loginProbe({required:false,allowDemoAlias:true});
-  await assert.rejects(p.flow.login({email:'owner@example.invalid',password:'synthetic'}),/Invalid login/);
+  await assert.rejects(p.flow.login({email:'owner@example.invalid',password:'synthetic'}),/Correo o contraseña incorrectos/);
   assert.deepEqual(p.sent,['owner@example.invalid']);
 });
 
 test('omitting demo alias option keeps it disabled',async()=>{
  const p=loginProbe({required:false});
- await assert.rejects(p.flow.login({email:' ADPHOR ',password:'synthetic'}),/Invalid login/);
+ await assert.rejects(p.flow.login({email:' ADPHOR ',password:'synthetic'}),/Correo o contraseña incorrectos/);
  assert.deepEqual(p.sent,['ADPHOR']);
 });
 test('known QA backend blocks demo alias even if the MFA environment flag is false',async()=>{
  const policy=qaAuthPolicy({url:QA_URL,requireMfa:'false',hostname:QA_HOST});
  const p=loginProbe({required:policy.required,allowDemoAlias:true});
- await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Invalid login/);
+ await assert.rejects(p.flow.login({email:'adphor',password:'synthetic'}),/Correo o contraseña incorrectos/);
  assert.deepEqual(p.sent,['adphor']);
+});
+
+import {loginErrorMessage} from '../src/js/services/cloud-authentication.js';
+test('errores de inicio de sesión se traducen y nunca muestran el texto técnico crudo',()=>{
+  assert.equal(loginErrorMessage({message:'Invalid login credentials'}),'Correo o contraseña incorrectos.');
+  assert.equal(loginErrorMessage({message:'Email not confirmed'}),'Tu correo aún no está confirmado. Contacta al administrador de QA.');
+  assert.match(loginErrorMessage({message:'x',status:429}),/Demasiados intentos/);
+  assert.match(loginErrorMessage({message:'Too many requests'}),/Demasiados intentos/);
+  assert.match(loginErrorMessage({message:'TypeError: Failed to fetch'}),/No hay conexión/);
+  const unknown=loginErrorMessage({message:'Database connection string postgres://secret leaked'});
+  assert.equal(unknown,'No se pudo iniciar sesión. Intenta nuevamente o contacta al administrador de QA.');
+  assert.doesNotMatch(unknown,/postgres|secret|Database/i);
+  assert.equal(loginErrorMessage(undefined),'No se pudo iniciar sesión. Intenta nuevamente o contacta al administrador de QA.');
 });
