@@ -47,6 +47,9 @@ export function createCloudRepository(url, key) {
         .select('id,project_id,title,kind,source_status,start_at,end_at,is_calendar_verified')
         .eq('project_id',projectId).eq('is_calendar_verified',true)
         .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(500);
+      if (result.error?.code === 'PGRST205') {
+        throw new Error('La fuente de reuniones verificadas todavía no está habilitada en QA.');
+      }
       return check(result);
     },
     async listQaPqrsHistory(projectId) {
