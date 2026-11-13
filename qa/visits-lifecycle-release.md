@@ -27,15 +27,34 @@ identidades sintéticas; no certifican sesiones Supabase reales ni autorización
 
 ## Evidencias privadas
 
-El contrato existente `qa_case_evidence` acepta solo `pqrs`/`recorridos` y valida entidades de esas tablas.
-No permite asociar Visitas. Este PR mantiene esa restricción, no crea otro bucket ni reutiliza falsamente
-un tipo de caso. La pantalla informa que los adjuntos de Visitas están pendientes de habilitación.
-Ampliar ese contrato requiere revisión específica de permisos Storage, asociación y pruebas cruzadas.
+Se conserva intacto el contrato existente `qa_case_evidence` para PQRS/recorridos.
+Este PR prepara **en el mismo Supabase QA** la tabla `qa_visit_evidence`, el bucket
+**privado** `qa-visit-evidence` y políticas RLS específicas de Visitas.
+No se crea otro proyecto Supabase ni otra QA. La migración no está aplicada.
+
+- Cada evidencia queda unida por FK a `qa_visits(project_id,request_id)` y por ruta exacta
+  `project_id/visitas/request_id/uploaded_by/id.ext` a un objeto privado.
+- Lectura: `admin`, `coordinator`, `technician` activos en la copropiedad con AAL2.
+  Escritura: solo `admin`/`coordinator`, también con AAL2 y visita existente.
+- Verificación de propiedad del objeto de Storage mediante `owner_id` antes de
+  aceptar metadatos; las fechas de creación pertenecen a PostgreSQL.
+- Cinco archivos por solicitud de carga, máximo 20 MiB cada uno, tipos MIME controlados,
+  no sobrescritura, identificador determinista para reintentos y URL firmada por 90 segundos.
+- El formulario consulta los archivos solo cuando el usuario lo solicita y no revela
+  títulos, rutas ni enlaces privados hasta autorizar y generar la URL temporal.
+- Se habilita únicamente cuando los tres indicadores de Preview estén a `true`:
+  `VITE_VISITS_SQL_ENABLED`, `VITE_QA_VISITS_LIFECYCLE_ENABLED` y
+  `VITE_QA_VISIT_EVIDENCE_ENABLED`. En ausencia de cualquiera, no aparece
+  un control de carga operativa.
+
+El código y las pruebas aisladas **no certifican todavía Storage real**, Access
+ni una sesión MFA AAL2 del cliente. Se requieren pruebas hospedadas y autorización
+separada antes de activar el bucket y las escrituras.
 
 ## Validación
 
-- `npm test`: incluye contrato original y nuevo ciclo, RLS, estados, fechas, versiones y reintentos.
-- `npx playwright test tests/e2e/visits-lifecycle.spec.js`: UI real y SQL aislado, recarga,
+- `npm test`: incluye contratos de Visitas, RLS y Storage privado, AAL2, rechazo de falsificaciones, historial, fechas, versiones, metadatos y reintentos.
+- `npx playwright test tests/e2e/visits-lifecycle.spec.js tests/e2e/visit-private-evidence.spec.js`: UI real y SQL aislado, recarga,
   respuesta perdida después de COMMIT, reintento, doble clic, edición, ingreso, seguimiento, cierre e historial.
 - Workflow `Visitas PostgreSQL concurrency`: dos conexiones PostgreSQL independientes, conflicto
   de versión y reintento idéntico simultáneo. Base efímera de CI; ninguna conexión a Supabase.
@@ -55,9 +74,10 @@ Ampliar ese contrato requiere revisión específica de permisos Storage, asociac
 4. Con `VITE_VISITS_SQL_ENABLED` y `VITE_QA_VISITS_LIFECYCLE_ENABLED` ausentes/false,
    la interfaz conserva consulta con las siete columnas originales y no llama al nuevo RPC.
 5. Tras autorización, integrar y publicar con flags apagados. Verificar SHA, alias, Access y regresión de PQRS/Agenda.
-6. Autorizar por separado activación de ambos flags y publicación del build correspondiente.
+6. Autorizar por separado activación de los dos flags de Visitas y, después de la certificación de Storage, del tercer flag `VITE_QA_VISIT_EVIDENCE_ENABLED` (solo Preview). Cada cambio de variables Vite requiere nueva compilación.
    Las variables frontend requieren nueva compilación; cambiar variables no cambia un bundle existente.
-7. Solo con permiso de escritura de prueba: registrar una visita QA identificada, editar, ingresar,
+7. Antes de habilitar evidencias, probar con JWT real: objeto en bucket privado, metadatos, lectura posterior a recarga, URL de 90 s, AAL1 y copropiedad ajena denegados.
+8. Solo con permiso de escritura de prueba: registrar una visita QA identificada, editar, ingresar,
    guardar seguimiento, completar, recargar, comprobar historial y aislamiento con otra identidad legítima.
    No enviar invitaciones ni usar Calendar para esta prueba. No borrar evidencia para simular éxito.
 
