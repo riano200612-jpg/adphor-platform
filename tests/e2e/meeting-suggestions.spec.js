@@ -103,7 +103,7 @@ test('registered QA conflicts can be checked without falsely enabling corporate 
  const check=page.getByRole('button',{name:'Comprobar cruces en agenda ADPHOR QA',exact:true});
  await expect(check).toBeVisible();
  await check.click();
- await expect(page.locator('[data-qa-register-result]')).toContainText('Se encontraron 1 cruces');
+ await expect(page.locator('[data-qa-register-result]')).toContainText('Se encontró 1 cruce');
  await expect(page.locator('[data-qa-register-result]')).toContainText('No se consultó Google Calendar');
  await expect(page.getByRole('button',{name:'Verificar horario en Google Calendar'})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Revisar solicitud de reunión'})).toHaveCount(0);
