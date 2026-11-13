@@ -24,7 +24,7 @@ async function insertMetadata({visit,id,user=actor,aal='aal2',created_at,storage
 test('Visitas private bucket, FK, user-owned object and immutable history are required in isolated SQL',async()=>{
  const visit=randomUUID(),fileId=randomUUID();
  await f.create(visit);
- const bucket=await f.as(actor,'aal2',"select id,public,file_size_limit from storage.buckets where id='qa-visit-evidence'");
+ const bucket=await f.db.query("select id,public,file_size_limit from storage.buckets where id='qa-visit-evidence'");
  assert.equal(bucket.rows.length,1);assert.equal(bucket.rows[0].public,false);
  await assert.rejects(insertMetadata({visit,id:fileId}),/row-level security|violates row-level|permission denied/i);
  await insertObject({visit,id:fileId});
