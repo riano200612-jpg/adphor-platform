@@ -100,7 +100,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
     if(request!==requestId||!isProjectCurrent()||!qaButton.isConnected||snapshot()!==formSnapshot)return;
     const found=inspectQaRegisteredConflicts(rows,{projectId,start:start.toISOString(),end:end.toISOString()});
     qaResult.textContent=found.conflicts
-     ?`Se encontraron ${found.conflicts} cruces con reuniones registradas en ADPHOR QA (margen de 30 minutos). No se consultó Google Calendar.`
+     ?`${found.conflicts===1?'Se encontró 1 cruce':`Se encontraron ${found.conflicts} cruces`} con reuniones registradas en ADPHOR QA (margen de 30 minutos). No se consultó Google Calendar.`
      :`No se encontraron cruces en ${found.examined} reuniones registradas en ADPHOR QA. Esto NO confirma disponibilidad en Google Calendar ni reserva el horario.`;
    }catch(error){
     if(request===requestId&&isProjectCurrent()&&qaButton.isConnected){
