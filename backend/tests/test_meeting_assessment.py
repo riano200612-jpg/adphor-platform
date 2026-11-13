@@ -56,11 +56,26 @@ class AssessmentTests(unittest.TestCase):
         with patch.dict('os.environ', {'ADPHOR_QA_CALENDAR_ID':''}):
             self.assertEqual(self.availability().status_code,503)
 
+    def test_corporate_availability_rejects_old_qa_and_root_origins_without_google_call(self):
+        for origin in (
+            'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev',
+            'https://adphor-platform.pages.dev',
+            'https://qa-integral-claude-reviewed.adphor-platform.pages.dev.evil.invalid',
+        ):
+            with self.subTest(origin=origin):
+                self.client = self.make_client(replace(QA,
+                    supabase_url='https://qfctnnnnltghepwujpdm.supabase.co',
+                    staging_project_ref='qfctnnnnltghepwujpdm',
+                    frontend_origin=origin))
+                with patch('backend.src.adphor_ai.meeting_api.httpx.AsyncClient') as transport:
+                    self.assertEqual(self.availability().status_code, 503)
+                    transport.assert_not_called()
+
     def test_corporate_availability_refresh_and_google_error(self):
         self.client = self.make_client(replace(QA,
             supabase_url='https://qfctnnnnltghepwujpdm.supabase.co',
             staging_project_ref='qfctnnnnltghepwujpdm',
-            frontend_origin='https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev'))
+            frontend_origin='https://qa-integral-claude-reviewed.adphor-platform.pages.dev'))
         variables = {
             'ADPHOR_QA_CALENDAR_ID':'synthetic-calendar',
             'ADPHOR_QA_CALENDAR_OAUTH_CLIENT_ID':'synthetic-client',
