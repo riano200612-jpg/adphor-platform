@@ -34,10 +34,12 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
   const roles=write?['admin','coordinator']:['admin','coordinator','technician'];
   if(!Array.isArray(members)||members.length!==1||!roles.includes(members[0]?.role))
    throw Error('Copropiedad o función no autorizada.');
-  const visit=checked(await client.from('qa_visits').select('project_id,request_id')
+  const visit=checked(await client.from('qa_visits').select('project_id,request_id,status')
    .eq('project_id',projectId).eq('request_id',requestId).single());
   if(visit?.project_id!==projectId||visit?.request_id!==requestId)
    throw Error('Visita no autorizada.');
+  if(write && !['programada','en_ejecucion'].includes(visit.status))
+   throw Error('Una visita cerrada no admite nuevos adjuntos.');
   return user.id;
  }
  async function find(projectId,requestId,id){
