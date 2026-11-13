@@ -86,7 +86,7 @@ test('manual verification rejects timezone-free busy data instead of showing ava
 
 test('without a configured QA calendar API the interface offers no false verification',async({page,baseURL})=>{
  await openFixture(page,baseURL,async()=>{throw Error('Unexpected Calendar call');},false);
- await expect(page.getByRole('status')).toContainText('calendario corporativo aún no está conectado');
+ await expect(page.locator('p.notice[role="status"]')).toContainText('calendario corporativo aún no está conectado');
  await expect(page.getByRole('button',{name:'Verificar horario en Google Calendar',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Sugerir otros horarios',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Revisar solicitud de reunión',exact:true})).toHaveCount(0);
