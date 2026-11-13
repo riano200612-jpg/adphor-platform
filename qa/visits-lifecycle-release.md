@@ -34,8 +34,11 @@ No se crea otro proyecto Supabase ni otra QA. La migración no está aplicada.
 
 - Cada evidencia queda unida por FK a `qa_visits(project_id,request_id)` y por ruta exacta
   `project_id/visitas/request_id/uploaded_by/id.ext` a un objeto privado.
-- Lectura: `admin`, `coordinator`, `technician` activos en la copropiedad con AAL2.
-  Escritura: solo `admin`/`coordinator`, también con AAL2 y visita existente.
+- Lectura: `admin`, `coordinator`, `technician` activos en la copropiedad con AAL2,
+  incluso después de finalizar o cancelar la visita.
+  Escritura: solo `admin`/`coordinator`, también con AAL2 y visita en estado
+  `programada` o `en_ejecucion`. Los estados `completada` y `cancelada`
+  son inmutables también para nuevas evidencias, en interfaz, servicio y RLS.
 - Verificación de propiedad del objeto de Storage mediante `owner_id` antes de
   aceptar metadatos; las fechas de creación pertenecen a PostgreSQL.
 - Cinco archivos por solicitud de carga, máximo 20 MiB cada uno, tipos MIME controlados,
