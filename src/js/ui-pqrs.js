@@ -63,9 +63,63 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
     list.replaceChildren();
     for(const row of rows){
       const card=el('article','');card.className='panel';card.append(el('h3',row.subject),el('p',[row.tower&&'Torre '+row.tower,row.apartment&&'Apto '+row.apartment,row.owner&&'Solicitante '+row.owner].filter(Boolean).join(' · ')),el('p',row.description),el('p',`${statusLabels[row.status]||row.status} · ${row.priority} · versión ${row.version}`),el('p',`Radicado: ${row.id}`));
-      const history=el('button','Ver historial');history.onclick=()=>run(async()=>{const events=await repository.history(projectId,row.id);let box=card.querySelector('pre');if(!box){box=el('pre','');card.append(box);}box.textContent=events.map(e=>`${e.occurred_at}: ${e.old_status||'creado'} → ${e.new_status}`).join('\n');});card.append(history);
+      const history=el('button','Ver historial');
+      history.type='button';
+      let loadingTimeline=false;
+      const showTimeline=async()=>{
+        if(loadingTimeline)return;
+        loadingTimeline=true;history.disabled=true;
+        try{
+          const events=await repository.history(projectId,row.id);
+          const responses=typeof repository.responses==='function'
+            ?await repository.responses(projectId,row.id):[];
+          if(!card.isConnected)return;
+          if(!Array.isArray(events)||!Array.isArray(responses)||
+             events.some(e=>e.case_id&&e.case_id!==row.id)||
+             responses.some(r=>r.case_id!==row.id))
+            throw Error('Historial de PQRS no válido.');
+          let timeline=card.querySelector('[data-pqrs-timeline]');
+          if(!timeline){timeline=document.createElement('section');timeline.dataset.pqrsTimeline='';card.append(timeline);}
+          timeline.replaceChildren();
+          const lifecycle=el('h4','Cambios de estado');
+          const lifecycleList=document.createElement('ol');
+          for(const event of events){
+            lifecycleList.append(el('li',`${event.occurred_at||'Sin fecha'} · ${event.old_status||'creado'} → ${event.new_status||'sin estado'}`));
+          }
+          if(!events.length)lifecycleList.append(el('li','No hay cambios de estado visibles.'));
+          const answerTitle=el('h4','Respuestas registradas');
+          const answerList=document.createElement('ol');
+          answerList.dataset.pqrsResponses='';
+          for(const answer of responses){
+            const item=el('li','');
+            const when=el('small',answer.created_at||'Sin fecha');
+            const body=el('p',answer.body);
+            item.append(when,body);answerList.append(item);
+          }
+          if(!responses.length)answerList.append(el('li','Todavía no hay respuestas registradas.'));
+          timeline.append(lifecycle,lifecycleList,answerTitle,answerList);
+        }finally{loadingTimeline=false;if(history.isConnected)history.disabled=false;}
+      };
+      history.onclick=()=>run(async()=>{await showTimeline();return 'Historial y respuestas consultados.';});
+      card.append(history);
       if(row.status!=='closed'){
-        const response=el('textarea','');response.setAttribute('aria-label','Respuesta');const send=el('button','Guardar respuesta');send.onclick=()=>run(async()=>{await repository.respond(projectId,row.id,response.value);response.value='';});card.append(response,send);
+        const response=el('textarea','');response.setAttribute('aria-label','Respuesta');const send=el('button','Guardar respuesta');send.type='button';
+        let sending=false;
+        send.onclick=async()=>{
+          if(sending)return;
+          sending=true;send.disabled=true;
+          try{
+            await run(async()=>{
+              await repository.respond(projectId,row.id,response.value);
+              response.value='';
+              if(card.querySelector('[data-pqrs-timeline]')){
+                try{await showTimeline();}
+                catch{return 'Respuesta registrada. No se pudo actualizar el historial; pulsa «Ver historial».';}
+              }
+              return 'Respuesta registrada en el seguimiento de la PQRS.';
+            });
+          }finally{sending=false;if(send.isConnected)send.disabled=false;}
+        };card.append(response,send);
         const status=el('select','');status.setAttribute('aria-label','Nuevo estado');for(const value of ['open','assigned','in_progress','resolved',...(role==='admin'?['closed']:[])]){const o=el('option',statusLabels[value]||value);o.value=value;o.selected=value===row.status;status.append(o);}
         const assignee=el('select','');assignee.setAttribute('aria-label','Responsable');assignee.append(el('option',''));for(const m of members){const o=el('option',m.name||m.user_id);o.value=m.user_id;o.selected=m.user_id===row.assignee;assignee.append(o);}assignee.disabled=!['admin','coordinator'].includes(role);
         const solution=el('textarea',row.solution||'');solution.setAttribute('aria-label','Solución');const save=el('button','Guardar seguimiento');save.onclick=()=>run(async()=>{const patch={status:status.value,solution:solution.value};if(!assignee.disabled)patch.assignee=assignee.value||null;await repository.update(projectId,row.id,row.version,patch);await load();});card.append(status,assignee,solution,save);
