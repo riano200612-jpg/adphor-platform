@@ -186,6 +186,13 @@ create policy qa_visit_evidence_insert on public.qa_visit_evidence
  for insert to authenticated with check(
    uploaded_by=(select auth.uid())
    and public.project_role(project_id) in ('admin','coordinator')
+   -- A finalised/cancelled Visit is immutable, including new evidence.
+   and exists (
+     select 1 from public.qa_visits v
+     where v.project_id=qa_visit_evidence.project_id
+       and v.request_id=qa_visit_evidence.request_id
+       and v.status in ('programada','en_ejecucion')
+   )
    and exists (
      select 1 from storage.objects o
      where o.bucket_id='qa-visit-evidence' and o.name=storage_path
@@ -210,6 +217,7 @@ create policy qa_visit_object_upload on storage.objects
      select 1 from public.qa_visits v
      where v.project_id=split_part(name,'/',1)
        and v.request_id::text=split_part(name,'/',3)
+       and v.status in ('programada','en_ejecucion')
    )
  );
 create policy qa_visit_object_read on storage.objects
