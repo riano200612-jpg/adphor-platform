@@ -102,6 +102,54 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
       };
       history.onclick=()=>run(async()=>{await showTimeline();return 'Historial y respuestas consultados.';});
       card.append(history);
+      if(typeof repository.listEvidence==='function'&&typeof repository.signedEvidence==='function'){
+        const evidenceButton=el('button','Consultar evidencias privadas');
+        evidenceButton.type='button';
+        const evidencePanel=document.createElement('section');
+        evidencePanel.dataset.pqrsStoredEvidence='';
+        evidencePanel.setAttribute('aria-label','Archivos asociados al radicado');
+        let viewing=false;
+        evidenceButton.onclick=async()=>{
+          if(viewing)return;
+          viewing=true;evidenceButton.disabled=true;
+          evidencePanel.replaceChildren(el('p','Verificando evidencias de la copropiedad…'));
+          try{
+            const entries=await repository.listEvidence(projectId,row.id);
+            if(!card.isConnected)return;
+            evidencePanel.replaceChildren(el('h4','Evidencias privadas registradas'));
+            if(!entries.length)evidencePanel.append(el('p','Este radicado todavía no tiene archivos privados.'));
+            const list=document.createElement('ol');
+            for(const entry of entries){
+              const item=document.createElement('li');
+              item.append(el('span',entry.media_type+' · '+(Number(entry.file_bytes)/1048576).toFixed(2)+' MB · '+(entry.created_at||'sin fecha')));
+              const fetchButton=el('button','Preparar enlace privado (90 segundos)');
+              fetchButton.type='button';
+              let generating=false;
+              fetchButton.onclick=async()=>{
+                if(generating)return;
+                generating=true;fetchButton.disabled=true;
+                try{
+                  const url=await repository.signedEvidence(projectId,row.id,entry.id);
+                  if(!item.isConnected)return;
+                  const old=item.querySelector('a[data-private-url]');
+                  if(old)old.remove();
+                  const anchor=el('a','Abrir archivo privado');
+                  anchor.href=url;anchor.target='_blank';anchor.rel='noopener noreferrer';
+                  anchor.dataset.privateUrl='';
+                  item.append(anchor);
+                }catch{
+                  if(item.isConnected)item.append(el('small','No se pudo generar el enlace. Solicita nuevamente el acceso.'));
+                }finally{generating=false;if(fetchButton.isConnected)fetchButton.disabled=false;}
+              };
+              item.append(fetchButton);list.append(item);
+            }
+            evidencePanel.append(list);
+          }catch{
+            if(card.isConnected)evidencePanel.replaceChildren(el('p','No se pudieron consultar evidencias privadas. Verifica la sesión y el acceso.'));
+          }finally{viewing=false;if(evidenceButton.isConnected)evidenceButton.disabled=false;}
+        };
+        card.append(evidenceButton,evidencePanel);
+      }
       if(row.status!=='closed'){
         const response=el('textarea','');response.setAttribute('aria-label','Respuesta');const send=el('button','Guardar respuesta');send.type='button';
         let sending=false;
