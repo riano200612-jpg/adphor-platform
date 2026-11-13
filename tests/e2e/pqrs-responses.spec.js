@@ -26,6 +26,7 @@ test('PQRS shows persisted replies alongside transitions and never executes repl
  await expect(card.locator('[data-pqrs-responses]')).toContainText('<img src=x onerror=alert(1)>');
  await expect(card.locator('img')).toHaveCount(0);
  await expect(card.locator('[data-pqrs-timeline]')).toContainText('creado → open');
+ await card.getByText('Responder y gestionar caso',{exact:true}).click();
  const reply=card.getByRole('textbox',{name:'Respuesta'});
  await reply.fill('Seguimiento seguro guardado en PostgreSQL QA');
  const send=card.getByRole('button',{name:'Guardar respuesta'});
