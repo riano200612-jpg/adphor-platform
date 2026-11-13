@@ -56,6 +56,43 @@ test('Private Storage and metadata reject AAL1, viewer, inactive and foreign-pro
  await assert.rejects(insertMetadata({visit,id,storagePath:path(otherVisit,id)}),/check constraint|row-level/i);
  await assert.rejects(insertMetadata({visit:otherVisit,id,created_at:'2000-01-01T00:00:00Z'}),/permission denied/i);
 });
+test('finalised or cancelled Visits reject new storage objects and metadata but preserve prior private evidence',async()=>{
+ const completed=randomUUID(),prior=randomUUID(),late=randomUUID(),after=randomUUID();
+ await f.create(completed);
+ await insertObject({visit:completed,id:prior});
+ await insertMetadata({visit:completed,id:prior});
+ // An unlinked Storage object created before closure cannot be linked afterwards.
+ await insertObject({visit:completed,id:late});
+ await f.transition({requestId:completed,operationId:randomUUID(),version:1,action:'start'});
+ await f.transition({requestId:completed,operationId:randomUUID(),version:2,action:'finish',
+  values:{observations:'Verificada',activities:'Inspección',conclusions:'Finalizada',commitments:''}});
+ await assert.rejects(insertObject({visit:completed,id:after}),/row-level|permission denied/i);
+ await assert.rejects(insertMetadata({visit:completed,id:late}),/row-level|permission denied/i);
+ const earlier=await f.as(actor,'aal2','select id from qa_visit_evidence where request_id=$1',[completed]);
+ assert.deepEqual(earlier.rows.map(row=>row.id),[prior],'prior evidence remains readable');
+ const cancelled=randomUUID();await f.create(cancelled);
+ await f.transition({requestId:cancelled,operationId:randomUUID(),version:1,action:'cancel',values:{reason:'Sin acceso'}});
+ await assert.rejects(insertObject({visit:cancelled,id:randomUUID()}),/row-level|permission denied/i);
+});
+test('client refuses upload to a closed Visit without touching private Storage',async()=>{
+ for(const status of ['completada','cancelada']){
+  const requestId=randomUUID();let uploaded=false;
+  const user=actor;
+  const client={
+   auth:{mfa:{getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal2'},error:null})},
+     getUser:async()=>({data:{user:{id:user}},error:null})},
+   from(table){
+    if(table==='memberships')return {select(){return this},eq(){return this},limit(){return {data:[{role:'admin'}],error:null}}};
+    if(table==='qa_visits')return {select(){return this},eq(){return this},single(){return {data:{project_id:projectId,request_id:requestId,status},error:null}}};
+    throw Error('Closed Visit must not read evidence table: '+table);
+   },
+   storage:{from(){uploaded=true;throw Error('Storage reached for closed Visit');}}
+  };
+  const repository=createQaVisitEvidenceRepository(client);
+  await assert.rejects(repository.uploadEvidence({projectId,requestId,files:[file]}),/cerrada/);
+  assert.equal(uploaded,false);
+ }
+});
 test('Private evidence UI repository scopes retries and signed read without service credentials',async()=>{
  const visit=randomUUID(),saved=[],uploads=[];
  const client={
@@ -63,7 +100,7 @@ test('Private evidence UI repository scopes retries and signed read without serv
     getUser:async()=>({data:{user:{id:actor}},error:null})},
   from(table){
    if(table==='memberships')return {select(){return this},eq(){return this},limit(){return {data:[{role:'admin'}],error:null}}};
-   if(table==='qa_visits')return {select(){return this},eq(){return this},single(){return {data:{project_id:projectId,request_id:visit},error:null}}};
+   if(table==='qa_visits')return {select(){return this},eq(){return this},single(){return {data:{project_id:projectId,request_id:visit,status:'programada'},error:null}}};
    assert.equal(table,'qa_visit_evidence');
    const q={criteria:{},select(){return this},eq(k,v){this.criteria[k]=v;return this},order(){return this},
     limit(){return {data:saved.filter(x=>Object.entries(this.criteria).every(([key,value])=>x[key]===value)),error:null}},
