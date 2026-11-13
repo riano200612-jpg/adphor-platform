@@ -1,4 +1,6 @@
 import {mountProjectSelector} from './ui-project-selector.js';
+import {mountVisitLifecycle} from './ui-visit-lifecycle.js';
+import {visitSchedule} from './services/visit-lifecycle.js';
 
 // Content identity is scoped to this mounted form, not a global deduplication rule.
 export function visitContentKey({projectId, kind, start, responsibleId}) {
@@ -46,7 +48,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     <div class="visit-columns">
       <section class="panel visit-editor" aria-labelledby="visit-editor-title">
         <h2 id="visit-editor-title">Preparar visita</h2>
-        <p class="muted">Programada no significa realizada ni cerrada. La ejecución y el cierre requieren un contrato de seguimiento aprobado.</p>
+        <p class="muted">${repository?.lifecycleEnabled?'Programa la visita y registra su ingreso, seguimiento y salida desde la lista.':'Programada no significa realizada ni cerrada. La ejecución y el cierre requieren un contrato de seguimiento aprobado.'}</p>
         <p class="muted">Completa los datos y revisa el borrador. Si cambias de copropiedad, se descarta la preparación actual.</p>
         <div data-visit-project></div>
         <fieldset><legend>1. Datos de la visita</legend><div class="visit-fields">
@@ -54,7 +56,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
           <label>Fecha y hora (Colombia)<input name="start" type="datetime-local" required></label>
           <label>Responsable<select name="responsible" required><option value="">Seleccionar</option></select></label>
         </div></fieldset>
-        <details><summary>Observaciones, seguimiento y resultado</summary><p class="muted">Estos datos corresponden al ciclo posterior de la visita. Se habilitarán cuando se apruebe el contrato de registro e historial.</p></details>
+        <details><summary>Observaciones, seguimiento y resultado</summary><p class="muted">${repository?.lifecycleEnabled?'Abre Seguimiento en la visita registrada para consultar su estado y documentar los resultados.':'Estos datos corresponden al ciclo posterior de la visita. Se habilitarán cuando se apruebe el contrato de registro e historial.'}</p></details>
         <div class="visit-actions"><button class="btn primary" type="button" data-review disabled>${shared?'Revisar visita':'Revisar borrador'}</button></div>
         <p data-summary role="status"></p>
         <details data-visit-guide><summary>Miss ADPHOR · Guía de Visitas</summary><p aria-live="polite"></p></details>
@@ -112,6 +114,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       const details=document.createElement('small');
       details.textContent=[localDate(row),responsibleNames.get(row.responsible_id) || 'Responsable no disponible',row.request_id].join(' · ');
       item.append(title,details);
+      if(repository?.lifecycleEnabled)mountVisitLifecycle(item,{row,repository,canWrite:canCreate,responsibleNames,reload:loadList});
       results.append(item);
     }
     listStatus.textContent=visible.length ? visible.length+(shared?' visitas visibles.':' borradores visibles.') :
@@ -149,8 +152,10 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       start: fields.querySelector('[name=start]').value,
       responsibleId: select.value, allowedResponsibleIds
   });
-  const ready = data => Boolean(data.projectId && data.kind.trim() && data.start &&
-    allowedResponsibleIds.includes(data.responsibleId));
+  const ready = data => {
+    try{visitSchedule(data.start);}catch{return false;}
+    return Boolean(data.projectId && data.kind.trim() && data.kind.trim().length<=200 && allowedResponsibleIds.includes(data.responsibleId));
+  };
   const update = () => {
     const data = draft();
     review.disabled = !ready(data)||(shared&&!canCreate);

@@ -51,7 +51,7 @@ export function createCloudRepository(url, key) {
   }
   return {
     porto,
-    visits:createSharedVisitRepository(client,{url,writesEnabled:import.meta.env.VITE_VISITS_SQL_ENABLED==='true'}),
+    visits:createSharedVisitRepository(client,{url,writesEnabled:import.meta.env.VITE_VISITS_SQL_ENABLED==='true',lifecycleEnabled:import.meta.env.VITE_QA_VISITS_LIFECYCLE_ENABLED==='true'}),
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.

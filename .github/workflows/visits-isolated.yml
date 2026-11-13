@@ -1,0 +1,46 @@
+name: Visitas PostgreSQL concurrency
+on:
+  pull_request:
+    paths:
+      - 'src/js/**visit**'
+      - 'qa/**visit**'
+      - 'tests/**visit**'
+      - 'supabase/migrations/**visits**'
+      - '.github/workflows/visits-isolated.yml'
+permissions:
+  contents: read
+jobs:
+  postgres-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: adphor_visits_isolated
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: synthetic-ci-only
+      PGDATABASE: adphor_visits_isolated
+      ADPHOR_ISOLATED_VISIT_TEST: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Load reviewed migrations into disposable PostgreSQL
+        run: node qa/visit-postgres-bootstrap.mjs | psql -X -v ON_ERROR_STOP=1
+      - name: Race independent database connections
+        run: python3 qa/test-visit-postgres-concurrency.py
