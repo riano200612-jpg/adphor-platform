@@ -71,7 +71,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   readiness.textContent='El calendario corporativo aún no está conectado en esta QA. No se pueden verificar horarios ni sugerir alternativas reales. Ninguna reunión se reserva desde este formulario.';
   form.append(readiness);
  }
- if(!demo && !canCheck && ['admin','coordinator'].includes(role) && typeof repo.listVerifiedQaMeetings==='function'){
+ if(!demo && !canCheck && repo.verifiedCalendarEnabled===true && ['admin','coordinator'].includes(role) && typeof repo.listVerifiedQaMeetings==='function'){
   const qaButton=document.createElement('button');
   qaButton.type='button';
   qaButton.className='btn secondary';
