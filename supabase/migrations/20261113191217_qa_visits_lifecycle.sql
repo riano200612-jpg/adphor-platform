@@ -205,7 +205,28 @@ create policy qa_visit_object_upload on storage.objects
    and split_part(name,'/',4)=(select auth.uid())::text
    and array_length(string_to_array(name,'/'),1)=5
    and split_part(name,'/',3) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-   and split_part(name,'/',5) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp|mp4|webm|pdf)$'
+   and split_part(name,'/',5) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[.](jpg|png|webp|mp4|webm|pdf)
+   and exists(
+     select 1 from public.qa_visits v
+     where v.project_id=split_part(name,'/',1)
+       and v.request_id::text=split_part(name,'/',3)
+   )
+ );
+create policy qa_visit_object_read on storage.objects
+ for select to authenticated using(
+   bucket_id='qa-visit-evidence'
+   and qa_identity_private.current_principal() is not null
+   and (select auth.jwt()->>'aal')='aal2'
+   and public.project_role(split_part(name,'/',1)) in ('admin','coordinator','technician')
+   and split_part(name,'/',2)='visitas'
+   and exists(
+     select 1 from public.qa_visits v
+     where v.project_id=split_part(name,'/',1)
+       and v.request_id::text=split_part(name,'/',3)
+   )
+ );
+commit;
+
    and exists(
      select 1 from public.qa_visits v
      where v.project_id=split_part(name,'/',1)
