@@ -2,11 +2,12 @@
 // Does not certify Supabase AAL2, OAuth, or corporate Calendar availability.
 import {test,expect} from '../../qa/isolated-browser-test.js';
 import {bogotaInput} from '../../src/js/ui-meeting-experience.js';
-async function openFixture(page,baseURL,provider,calendarConfigured=true){
+async function openFixture(page,baseURL,provider,calendarConfigured=true,registeredProvider=async()=>[]){
  await page.exposeFunction('readFixtureAvailability',provider);
+ await page.exposeFunction('readFixtureMeetings',registeredProvider);
  const fixture=new URL('meeting-suggestions-fixture',baseURL).href;
  const moduleUrl=new URL('src/js/ui-meeting-assessment.js',baseURL).href;
- await page.route('**/meeting-suggestions-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><main id="meetings"></main><script type="module">import {mountMeetingAssessment} from '${moduleUrl}';mountMeetingAssessment(document.querySelector('#meetings'),{projectId:'p1',projectName:'Copropiedad sintética aislada',role:'admin',members:[],repo:{mode:'cloud',calendarAvailabilityConfigured:${calendarConfigured},meetingAvailability:window.readFixtureAvailability,listVerifiedQaMeetings:async()=>[]}});</script></html>`}));
+ await page.route('**/meeting-suggestions-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><main id="meetings"></main><script type="module">import {mountMeetingAssessment} from '${moduleUrl}';mountMeetingAssessment(document.querySelector('#meetings'),{projectId:'p1',projectName:'Copropiedad sintética aislada',role:'admin',members:[],repo:{mode:'cloud',verifiedCalendarEnabled:true,calendarAvailabilityConfigured:${calendarConfigured},meetingAvailability:window.readFixtureAvailability,listVerifiedQaMeetings:window.readFixtureMeetings}});</script></html>`}));
  await page.goto(fixture);
  await page.locator('[data-schedule]').click();
  await page.getByLabel('Asunto',{exact:true}).fill('Consulta sintética sin reserva');
@@ -90,4 +91,25 @@ test('without a configured QA calendar API the interface offers no false verific
  await expect(page.getByRole('button',{name:'Verificar horario en Google Calendar',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Sugerir otros horarios',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Revisar solicitud de reunión',exact:true})).toHaveCount(0);
+});
+
+test('registered QA conflicts can be checked without falsely enabling corporate Google availability',async({page,baseURL})=>{
+ let selected;
+ const start=await openFixture(page,baseURL,async()=>{throw Error('Google provider must not be called');},false,async()=>selected?[{
+  id:'qa-registered-meeting',project_id:'p1',source_status:'Confirmada',is_calendar_verified:true,
+  start_at:new Date(+selected+15*60000).toISOString(),end_at:new Date(+selected+75*60000).toISOString()
+ }]:[]);
+ selected=start;
+ const check=page.getByRole('button',{name:'Comprobar cruces en agenda ADPHOR QA',exact:true});
+ await expect(check).toBeVisible();
+ await check.click();
+ await expect(page.locator('[data-qa-register-result]')).toContainText('Se encontró 1 cruce');
+ await expect(page.locator('[data-qa-register-result]')).toContainText('No se consultó Google Calendar');
+ await expect(page.getByRole('button',{name:'Verificar horario en Google Calendar'})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Revisar solicitud de reunión'})).toHaveCount(0);
+ await page.getByLabel('Inicio',{exact:true}).fill(bogotaInput(new Date(+start+2*3600000)));
+ await page.getByLabel('Fin',{exact:true}).fill(bogotaInput(new Date(+start+3*3600000)));
+ await expect(page.locator('[data-qa-register-result]')).toBeEmpty();
+ await check.click();
+ await expect(page.locator('[data-qa-register-result]')).toContainText('NO confirma disponibilidad en Google Calendar');
 });

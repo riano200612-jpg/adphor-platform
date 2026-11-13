@@ -1,5 +1,6 @@
 import {createMeetingRequestGate} from './services/meeting-request-gate.js';
 import {calendarHasConflict} from './services/calendar-availability.js';
+import {inspectQaRegisteredConflicts} from './services/qa-register-conflicts.js';
 import {loadMeetingSlotSuggestions} from './services/meeting-slot-suggestions.js';
 import { drawCompanionOptions } from './ui-companion-options.js';
 import {enhanceMeetings,bogotaInput,bogotaInstant} from './ui-meeting-experience.js';
@@ -69,6 +70,47 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   readiness.setAttribute('role','status');
   readiness.textContent='El calendario corporativo aún no está conectado en esta QA. No se pueden verificar horarios ni sugerir alternativas reales. Ninguna reunión se reserva desde este formulario.';
   form.append(readiness);
+ }
+ if(!demo && !canCheck && repo.verifiedCalendarEnabled===true && ['admin','coordinator'].includes(role) && typeof repo.listVerifiedQaMeetings==='function'){
+  const qaButton=document.createElement('button');
+  qaButton.type='button';
+  qaButton.className='btn secondary';
+  qaButton.textContent='Comprobar cruces en agenda ADPHOR QA';
+  qaButton.setAttribute('data-qa-register-check','');
+  const qaResult=document.createElement('p');
+  qaResult.setAttribute('role','status');
+  qaResult.setAttribute('data-qa-register-result','');
+  form.append(qaButton,qaResult);
+  let requestId=0;
+  const snapshot=()=>JSON.stringify([...new FormData(form)]);
+  const invalidate=()=>{requestId++;qaResult.textContent='';qaButton.disabled=false;};
+  for(const eventName of ['input','change','reset'])form.addEventListener(eventName,invalidate);
+  qaButton.onclick=async()=>{
+   const request=++requestId,formSnapshot=snapshot();
+   qaButton.disabled=true;
+   qaResult.textContent='Revisando únicamente reuniones registradas en ADPHOR QA…';
+   try{
+    const start=bogotaInstant(form.elements.start.value);
+    const hours=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
+    const end=form.elements.end.value?bogotaInstant(form.elements.end.value):new Date(+start+hours*3600000);
+    const minutes=(+end-+start)/60000;
+    if(!Number.isInteger(minutes)||minutes<15||minutes>720)throw Error('Indica un horario válido de 15 minutos a 12 horas.');
+    if(+start-Date.now()<86400000)throw Error('El inicio debe tener al menos 24 horas de anticipación.');
+    const rows=await repo.listVerifiedQaMeetings(projectId);
+    if(request!==requestId||!isProjectCurrent()||!qaButton.isConnected||snapshot()!==formSnapshot)return;
+    const found=inspectQaRegisteredConflicts(rows,{projectId,start:start.toISOString(),end:end.toISOString()});
+    qaResult.textContent=found.conflicts
+     ?`${found.conflicts===1?'Se encontró 1 cruce':`Se encontraron ${found.conflicts} cruces`} con reuniones registradas en ADPHOR QA (margen de 30 minutos). No se consultó Google Calendar.`
+     :`No se encontraron cruces en ${found.examined} reuniones registradas en ADPHOR QA. Esto NO confirma disponibilidad en Google Calendar ni reserva el horario.`;
+   }catch(error){
+    if(request===requestId&&isProjectCurrent()&&qaButton.isConnected){
+     qaResult.textContent=error.message.startsWith('Indica un horario')||error.message.startsWith('El inicio debe')
+      ?error.message:'No se pudo completar la revisión de agenda QA. No se confirmó disponibilidad.';
+    }
+   }finally{
+    if(request===requestId&&isProjectCurrent()&&qaButton.isConnected)qaButton.disabled=false;
+   }
+  };
  }
  const guide=document.createElement('details');
  guide.innerHTML='<summary>Miss ADPHOR · Guía de la solicitud</summary><p aria-live="polite"></p>';
