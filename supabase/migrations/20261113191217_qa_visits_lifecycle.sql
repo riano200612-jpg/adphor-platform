@@ -136,4 +136,93 @@ begin
 end;$$;
 revoke all on function public.qa_transition_visit(text,uuid,uuid,integer,text,jsonb) from public,anon,authenticated;
 grant execute on function public.qa_transition_visit(text,uuid,uuid,integer,text,jsonb) to authenticated;
+-- ADPHOR QA: private Visit evidence is separate from PQRS/recorridos.
+-- No production storage, no public URLs, no new Supabase project.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('qa-visit-evidence','qa-visit-evidence',false,20971520,
+ array['image/jpeg','image/png','image/webp','video/mp4','video/webm','application/pdf']);
+
+create table public.qa_visit_evidence(
+ id uuid primary key,
+ project_id text not null,
+ request_id uuid not null,
+ storage_bucket text not null default 'qa-visit-evidence'
+  check(storage_bucket='qa-visit-evidence'),
+ storage_path text not null unique,
+ media_type text not null check(media_type in
+  ('image/jpeg','image/png','image/webp','video/mp4','video/webm','application/pdf')),
+ file_bytes bigint not null check(file_bytes between 1 and 20971520),
+ uploaded_by uuid not null references auth.users(id),
+ created_at timestamptz not null default now(),
+ foreign key(project_id,request_id) references public.qa_visits(project_id,request_id),
+ constraint qa_visit_evidence_exact_path check(
+  storage_path=project_id||'/visitas/'||request_id::text||'/'||uploaded_by::text||'/'||id::text||'.'||
+  (case media_type
+    when 'image/jpeg' then 'jpg' when 'image/png' then 'png'
+    when 'image/webp' then 'webp' when 'video/mp4' then 'mp4'
+    when 'video/webm' then 'webm' when 'application/pdf' then 'pdf'
+   end)
+ )
+);
+create index qa_visit_evidence_scoped on public.qa_visit_evidence(project_id,request_id,created_at,id);
+alter table public.qa_visit_evidence enable row level security;
+revoke all on public.qa_visit_evidence from public,anon,authenticated;
+grant select on public.qa_visit_evidence to authenticated;
+-- Metadata timestamps are always database-owned, not user-controlled.
+grant insert(id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by)
+ on public.qa_visit_evidence to authenticated;
+
+create policy qa_visit_evidence_aal2 on public.qa_visit_evidence as restrictive
+ for all to authenticated
+ using (qa_identity_private.current_principal() is not null
+    and (select auth.jwt()->>'aal')='aal2')
+ with check (qa_identity_private.current_principal() is not null
+    and (select auth.jwt()->>'aal')='aal2');
+create policy qa_visit_evidence_read on public.qa_visit_evidence
+ for select to authenticated using(
+  public.project_role(project_id) in ('admin','coordinator','technician')
+ );
+create policy qa_visit_evidence_insert on public.qa_visit_evidence
+ for insert to authenticated with check(
+   uploaded_by=(select auth.uid())
+   and public.project_role(project_id) in ('admin','coordinator')
+   and exists (
+     select 1 from storage.objects o
+     where o.bucket_id='qa-visit-evidence' and o.name=storage_path
+       and o.owner_id=(select auth.uid())::text
+   )
+ );
+
+-- RLS for the dedicated private Storage bucket: no anonymous reads or writes,
+-- no cross-property records, no other visit path, no updates/deletions.
+create policy qa_visit_object_upload on storage.objects
+ for insert to authenticated with check(
+   bucket_id='qa-visit-evidence'
+   and qa_identity_private.current_principal() is not null
+   and (select auth.jwt()->>'aal')='aal2'
+   and public.project_role(split_part(name,'/',1)) in ('admin','coordinator')
+   and split_part(name,'/',2)='visitas'
+   and split_part(name,'/',4)=(select auth.uid())::text
+   and array_length(string_to_array(name,'/'),1)=5
+   and split_part(name,'/',3) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+   and split_part(name,'/',5) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp|mp4|webm|pdf)$'
+   and exists(
+     select 1 from public.qa_visits v
+     where v.project_id=split_part(name,'/',1)
+       and v.request_id::text=split_part(name,'/',3)
+   )
+ );
+create policy qa_visit_object_read on storage.objects
+ for select to authenticated using(
+   bucket_id='qa-visit-evidence'
+   and qa_identity_private.current_principal() is not null
+   and (select auth.jwt()->>'aal')='aal2'
+   and public.project_role(split_part(name,'/',1)) in ('admin','coordinator','technician')
+   and split_part(name,'/',2)='visitas'
+   and exists(
+     select 1 from public.qa_visits v
+     where v.project_id=split_part(name,'/',1)
+       and v.request_id::text=split_part(name,'/',3)
+   )
+ );
 commit;
