@@ -1,3 +1,4 @@
+import {mountVisitEvidence} from './ui-visit-evidence.js';
 import {visitActions,visitLocalDate,visitStates,visitTransitionPayload} from './services/visit-lifecycle.js';
 
 // Every value from SQL is assigned with textContent/value, never interpolated HTML.
@@ -70,7 +71,13 @@ export function mountVisitLifecycle(item,{row,repository,canWrite,responsibleNam
   }catch{history.textContent='No se pudo consultar el historial. Reintenta.';}
   finally{historyButton.disabled=false;}
  });
- const attachments=document.createElement('p');attachments.className='muted';
- attachments.textContent='Los adjuntos privados de Visitas están pendientes de habilitación; no se cargarán archivos desde esta pantalla.';
- section.append(historyButton,history,attachments);item.append(section);
+ section.append(historyButton,history);
+ if(repository.evidence){
+  mountVisitEvidence(section,{row,evidence:repository.evidence,canWrite});
+ }else{
+  const attachments=document.createElement('p');attachments.className='muted';
+  attachments.textContent='Los adjuntos privados de Visitas están pendientes de habilitación; no se cargarán archivos desde esta pantalla.';
+  section.append(attachments);
+ }
+ item.append(section);
 }
