@@ -1,4 +1,4 @@
-import {loadVerifiedAgenda,filterVerifiedAgenda} from './services/verified-agenda.js';
+import {loadVerifiedAgenda,filterVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
 export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
  root.innerHTML=`<section class="visit-workspace" aria-label="Agenda de reuniones verificadas">
  <header class="page-heading"><div><p class="eyebrow">OPERACIONES · CALENDARIO CORPORATIVO</p><h1>Agenda</h1><p data-agenda-property></p></div></header>
@@ -41,8 +41,8 @@ export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
    rows=result;loaded=true;state.replaceChildren(new Option('Todos',''));
    for(const value of new Set(rows.map(row=>row.source_status).filter(Boolean)))state.add(new Option(value,value));
    render();
-  }catch{
-   if(id===request&&active())message.textContent='No se pudo consultar la agenda. Verifica tu sesión y la habilitación del calendario; puedes volver a intentarlo.';
+  }catch(error){
+   if(id===request&&active())message.textContent=verifiedAgendaUiError(error);
   }finally{if(id===request&&active())refresh.disabled=false;}
  };
  for(const field of [search,date,state])field.addEventListener('input',render);
