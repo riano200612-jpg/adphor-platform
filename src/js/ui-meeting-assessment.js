@@ -62,7 +62,14 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'VISTA DE REVISIÓN: consulta de reuniones verificadas según tu autorización y preparación de solicitudes. La creación de eventos y el envío de invitaciones requieren un backend transaccional autorizado.';
  if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La creación de eventos requiere un servicio transaccional autorizado y certificado.';}}
  if(demo){const load=document.createElement('button');load.type='button';load.className='btn secondary';load.textContent='Cargar 3 reuniones de simulación';load.setAttribute('data-demo-scenarios','');notice.after(load);load.onclick=()=>{try{const n=seedDemoMeetingScenarios(projectId);status.textContent=n?n+' reuniones FICTICIAS añadidas únicamente a este navegador.':'Los escenarios de simulación ya estaban cargados.';render();}catch(error){status.textContent=error.message;}};}
- const canCheck=!demo && typeof repo.meetingAvailability === 'function' && ['admin','coordinator'].includes(role);
+ const canCheck=!demo && typeof repo.meetingAvailability === 'function' && ['admin','coordinator'].includes(role) && repo.calendarAvailabilityConfigured !== false;
+ if(!demo && ['admin','coordinator'].includes(role) && repo.calendarAvailabilityConfigured === false){
+  const readiness=document.createElement('p');
+  readiness.className='notice';
+  readiness.setAttribute('role','status');
+  readiness.textContent='El calendario corporativo aún no está conectado en esta QA. No se pueden verificar horarios ni sugerir alternativas reales. Ninguna reunión se reserva desde este formulario.';
+  form.append(readiness);
+ }
  const guide=document.createElement('details');
  guide.innerHTML='<summary>Miss ADPHOR · Guía de la solicitud</summary><p aria-live="polite"></p>';
  form.before(guide);
