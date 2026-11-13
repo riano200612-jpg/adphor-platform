@@ -4,6 +4,7 @@ import {readVerifiedAgendaQuery} from './verified-agenda.js';
 import {createSharedVisitRepository} from './shared-visits.js';
 import { createEvidenceApiRepository } from './evidence-api.js';
 import {createQaCaseEvidenceRepository} from './qa-case-evidence.js';
+import {createQaVisitEvidenceRepository} from './qa-visit-evidence.js';
 import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
 import { createCloudAuthentication } from './cloud-authentication.js';
@@ -15,6 +16,9 @@ import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
 import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
+const authPolicyForVisitEvidence=url=>
+  url==='https://qfctnnnnltghepwujpdm.supabase.co';
+
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
@@ -34,6 +38,13 @@ export function createCloudRepository(url, key) {
     if(evidence.listEvidence)porto.listEvidence=evidence.listEvidence;
     if(evidence.signedEvidence)porto.signedEvidence=evidence.signedEvidence;
   }
+  const visits=createSharedVisitRepository(client,{url,
+    writesEnabled:import.meta.env.VITE_VISITS_SQL_ENABLED==='true',
+    lifecycleEnabled:import.meta.env.VITE_QA_VISITS_LIFECYCLE_ENABLED==='true'});
+  if(visits?.lifecycleEnabled && authPolicyForVisitEvidence(url) &&
+     import.meta.env.VITE_QA_VISIT_EVIDENCE_ENABLED==='true'){
+    visits.evidence=createQaVisitEvidenceRepository(client,{url});
+  }
   const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
   const authentication=createCloudAuthentication(client,{required:authPolicy.required,
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
@@ -51,7 +62,7 @@ export function createCloudRepository(url, key) {
   }
   return {
     porto,
-    visits:createSharedVisitRepository(client,{url,writesEnabled:import.meta.env.VITE_VISITS_SQL_ENABLED==='true',lifecycleEnabled:import.meta.env.VITE_QA_VISITS_LIFECYCLE_ENABLED==='true'}),
+    visits,
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.
