@@ -39,10 +39,15 @@ export function createDemoPortoRepository() {
       save(rows);return rows[i];
     },
     async history(projectId,id) {const row=read().find(x=>x.id===id&&x.project_id===projectId);if(!row)throw Error('PQRS no encontrada.');return row.history;},
+    async responses(projectId,id) {
+      const row=read().find(x=>x.id===id&&x.project_id===projectId);
+      if(!row)throw Error('PQRS no encontrada.');
+      return row.responses.map(r=>({id:r.id||'',case_id:id,body:r.body,created_at:r.created_at||r.at}));
+    },
     async respond(projectId,id,body) {if(!String(body).trim())throw Error('Escribe una respuesta.');
       const rows=read(),i=rows.findIndex(x=>x.id===id&&x.project_id===projectId);
       if(i<0)throw Error('PQRS no encontrada.');
-      rows[i].responses.push({at:new Date().toISOString(),body:String(body).trim()});save(rows);
+      rows[i].responses.push({id:crypto.randomUUID(),case_id:id,created_at:new Date().toISOString(),body:String(body).trim()});save(rows);
       return {ok:true};
     }
   };

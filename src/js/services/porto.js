@@ -57,6 +57,18 @@ export function createPortoRepository(client, config) {
       await assertProject(project);checked(await client.from('pilot_pqrs').select('id').eq('project_id',project).eq('id',id).single());
       return checked(await client.from('pilot_pqrs_history').select('*').eq('case_id',id).order('version'));
     },
+    async responses(project,id) {
+      await assertProject(project);
+      // Verify the case belongs to the selected QA property before reading its replies.
+      checked(await client.from('pilot_pqrs').select('id').eq('project_id',project).eq('id',id).single());
+      // One extra row detects truncation instead of pretending to show complete history.
+      const rows=checked(await client.from('pilot_pqrs_responses')
+        .select('id,case_id,body,created_at').eq('case_id',id)
+        .order('created_at',{ascending:true}).order('id',{ascending:true}).limit(201));
+      if(!Array.isArray(rows)||rows.length>200||rows.some(row=>row.case_id!==id))
+        throw Error('El historial de respuestas es incompleto o inválido. Solicita una revisión.');
+      return rows;
+    },
     async respond(project,id,body) {
       await assertProject(project);checked(await client.from('pilot_pqrs').select('id').eq('project_id',project).eq('id',id).single());
       return checked(await client.from('pilot_pqrs_responses').insert({case_id:id,body}).select().single());
