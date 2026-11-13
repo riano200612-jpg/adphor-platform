@@ -56,4 +56,19 @@ test('Visitas: private files persist across page reload and signed URL is user-i
  expect(saves).toBe(1);
  expect(reads).toBeGreaterThanOrEqual(3);
  expect(signatures).toBe(1);
+ // Final states are read-only even when canWrite is true.
+ for(const status of ['completada','cancelada']){
+  await page.evaluate(async({url,projectId,requestId,status})=>{
+   const {mountVisitEvidence}=await import(url);
+   const root=document.createElement('div');root.id='closed-visit-'+status;
+   document.body.append(root);
+   mountVisitEvidence(root,{
+    row:{project_id:projectId,request_id:requestId,status},
+    evidence:{listEvidence:()=>window.qaVisitRead(),signedEvidence:()=>window.qaVisitSign()},
+    canWrite:true
+   });
+  },{url:moduleUrl,projectId,requestId,status});
+  await expect(page.locator('#closed-visit-'+status+' input[type=file]')).toHaveCount(0);
+  await expect(page.locator('#closed-visit-'+status).getByRole('button',{name:'Consultar evidencias de la visita'})).toBeVisible();
+ }
 });
