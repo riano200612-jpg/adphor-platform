@@ -1,4 +1,5 @@
 import {validateCalendarAvailabilityResponse} from './calendar-availability.js';
+import {readVerifiedAgendaQuery} from './verified-agenda.js';
 import {createSharedVisitRepository} from './shared-visits.js';
 import { createEvidenceApiRepository } from './evidence-api.js';
 import { createPrivateMediaRepository } from './private-media.js';
@@ -52,7 +53,7 @@ export function createCloudRepository(url, key) {
         .select('id,project_id,title,kind,source_status,start_at,end_at,is_calendar_verified')
         .eq('project_id',projectId).eq('is_calendar_verified',true)
         .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(500);
-      return check(result);
+      return readVerifiedAgendaQuery(result);
     },
     async listQaPqrsHistory(projectId) {
       if(!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) return [];
