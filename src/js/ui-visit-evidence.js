@@ -59,7 +59,9 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
  }
  readButton.addEventListener('click',refresh);
  section.append(title,guidance,readButton,message,list);
- if(canWrite && row.status!=='cancelada' && typeof evidence.uploadEvidence==='function'){
+ // Final states are immutable: existing private evidence remains readable,
+ // but neither the UI nor the SQL policies permit new files after closure.
+ if(canWrite && ['programada','en_ejecucion'].includes(row.status) && typeof evidence.uploadEvidence==='function'){
   const label=document.createElement('label');
   label.textContent='Adjuntar fotos, videos o PDF (máximo cinco, 20 MB cada uno)';
   const fileInput=document.createElement('input');fileInput.type='file';fileInput.multiple=true;
