@@ -7,7 +7,7 @@ async function openFixture(page,baseURL,provider,calendarConfigured=true,registe
  await page.exposeFunction('readFixtureMeetings',registeredProvider);
  const fixture=new URL('meeting-suggestions-fixture',baseURL).href;
  const moduleUrl=new URL('src/js/ui-meeting-assessment.js',baseURL).href;
- await page.route('**/meeting-suggestions-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><main id="meetings"></main><script type="module">import {mountMeetingAssessment} from '${moduleUrl}';mountMeetingAssessment(document.querySelector('#meetings'),{projectId:'p1',projectName:'Copropiedad sintética aislada',role:'admin',members:[],repo:{mode:'cloud',calendarAvailabilityConfigured:${calendarConfigured},meetingAvailability:window.readFixtureAvailability,listVerifiedQaMeetings:window.readFixtureMeetings}});</script></html>`}));
+ await page.route('**/meeting-suggestions-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><main id="meetings"></main><script type="module">import {mountMeetingAssessment} from '${moduleUrl}';mountMeetingAssessment(document.querySelector('#meetings'),{projectId:'p1',projectName:'Copropiedad sintética aislada',role:'admin',members:[],repo:{mode:'cloud',verifiedCalendarEnabled:true,calendarAvailabilityConfigured:${calendarConfigured},meetingAvailability:window.readFixtureAvailability,listVerifiedQaMeetings:window.readFixtureMeetings}});</script></html>`}));
  await page.goto(fixture);
  await page.locator('[data-schedule]').click();
  await page.getByLabel('Asunto',{exact:true}).fill('Consulta sintética sin reserva');
