@@ -3,6 +3,7 @@ import {invokeQaCalendarAvailability} from './qa-calendar-edge.js';
 import {readVerifiedAgendaQuery} from './verified-agenda.js';
 import {createSharedVisitRepository} from './shared-visits.js';
 import { createEvidenceApiRepository } from './evidence-api.js';
+import {createQaCaseEvidenceRepository} from './qa-case-evidence.js';
 import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
 import { createCloudAuthentication } from './cloud-authentication.js';
@@ -21,9 +22,18 @@ export function createCloudRepository(url, key) {
   const media=privateMediaEnabled?createPrivateMediaRepository(client):null;
   const propertyMedia=media ?? (url==='https://qfctnnnnltghepwujpdm.supabase.co'
     ? createPrivateMediaRepository(client) : null);
-  const evidence=createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
+  const isEvidenceQa=url==='https://qfctnnnnltghepwujpdm.supabase.co' &&
+    portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
+  const evidenceEnabled=import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED==='true';
+  const evidence=isEvidenceQa&&evidenceEnabled
+    ?createQaCaseEvidenceRepository(client,{url})
+    :createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
   const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
-  if(evidence)porto.uploadEvidence=evidence.uploadEvidence;
+  if(evidence){
+    porto.uploadEvidence=evidence.uploadEvidence;
+    if(evidence.listEvidence)porto.listEvidence=evidence.listEvidence;
+    if(evidence.signedEvidence)porto.signedEvidence=evidence.signedEvidence;
+  }
   const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
   const authentication=createCloudAuthentication(client,{required:authPolicy.required,
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
