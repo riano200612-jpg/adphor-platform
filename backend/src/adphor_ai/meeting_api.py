@@ -8,6 +8,10 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from .mfa_guard import require_enrolled_mfa
 from .meeting_triage import assess_meeting
 
+# Only the currently approved branch alias may request corporate availability.
+# This does not enable Google OAuth or deploy the API.
+QA_CALENDAR_FRONTEND_ORIGIN = 'https://qa-integral-claude-reviewed.adphor-platform.pages.dev'
+
 class Assessment(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     project_id: str = Field(min_length=1,max_length=100,pattern=r'^[a-z0-9][a-z0-9-]*$')
@@ -41,7 +45,7 @@ def build_meeting_router(*, identity_dependency, membership_checker, settings):
         if not timedelta(0) < body.end - body.start <= timedelta(days=7):
             raise HTTPException(422, 'La consulta debe abarcar hasta siete días.')
         if (settings.supabase_url.rstrip('/') != 'https://qfctnnnnltghepwujpdm.supabase.co'
-                or settings.frontend_origin != 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev'):
+                or settings.frontend_origin != QA_CALENDAR_FRONTEND_ORIGIN):
             raise HTTPException(503, 'La disponibilidad corporativa solo está habilitada en ADPHOR QA.')
         calendar = os.getenv('ADPHOR_QA_CALENDAR_ID')
         oauth = {
@@ -52,7 +56,7 @@ def build_meeting_router(*, identity_dependency, membership_checker, settings):
         if not calendar or not all(oauth.values()):
             raise HTTPException(503, 'La disponibilidad corporativa no está configurada en QA.')
         try:
-            async with httpx.AsyncClient(timeout=8, follow_redirects=False) as client:
+            async with httpx.AsyncClient(timeout=8, follow_redirects=False, trust_env=False) as client:
                 grant = await client.post('https://oauth2.googleapis.com/token',
                     data={**oauth, 'grant_type': 'refresh_token'})
                 grant.raise_for_status()

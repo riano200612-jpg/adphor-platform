@@ -41,6 +41,9 @@ export function createCloudRepository(url, key) {
     porto,
     visits:createSharedVisitRepository(client,{url,writesEnabled:import.meta.env.VITE_VISITS_SQL_ENABLED==='true'}),
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
+    // This only reports whether an API origin was configured at build time.
+    // It is not evidence that OAuth, Access or the corporate calendar is live.
+    calendarAvailabilityConfigured:Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
     staffDirectoryEnabled:Boolean(staff),
     async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
     async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},
