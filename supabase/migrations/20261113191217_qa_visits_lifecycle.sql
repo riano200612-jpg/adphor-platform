@@ -46,10 +46,13 @@ insert into public.qa_visit_history(project_id,request_id,version,operation_id,a
  select project_id,request_id,version,request_id,'baseline','{}',to_jsonb(v),created_by,created_at
  from public.qa_visits v;
 
--- Narrow trigger privilege: authenticated callers cannot forge history or initialize
--- lifecycle columns through the pre-existing INSERT permission.
+-- Narrow insert privilege: caller-supplied creation timestamps/actor IDs and
+-- lifecycle columns are prohibited. Both created_at and created_by are set
+-- exclusively by PostgreSQL defaults (now() and auth.uid()).
+-- The existing security-invoker qa_create_visit RPC inserts only these five
+-- caller-supplied fields, so it remains compatible with this grant.
 revoke insert on public.qa_visits from authenticated;
-grant insert(project_id,request_id,responsible_id,motive,scheduled_at,created_by,created_at)
+grant insert(project_id,request_id,responsible_id,motive,scheduled_at)
  on public.qa_visits to authenticated;
 create function qa_identity_private.audit_visit_creation() returns trigger
  language plpgsql security definer set search_path='' as $$
