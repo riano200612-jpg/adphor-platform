@@ -1,3 +1,15 @@
+export const AGENDA_SOURCE_UNAVAILABLE = 'La fuente de reuniones verificadas todavía no está habilitada en QA.';
+export const AGENDA_GENERIC_LOAD_ERROR = 'No se pudo consultar la agenda. Verifica tu sesión y la habilitación del calendario; puedes volver a intentarlo.';
+// PGRST205 means PostgREST cannot find the verified meeting source in its schema cache.
+// Never turn a missing source into an empty calendar or expose raw backend errors in the UI.
+export function readVerifiedAgendaQuery(result) {
+ if(result?.error?.code==='PGRST205')throw Error(AGENDA_SOURCE_UNAVAILABLE);
+ if(result?.error)throw Error(result.error.message||'No se pudo consultar la agenda.');
+ return result?.data;
+}
+export function verifiedAgendaUiError(error) {
+ return error?.message===AGENDA_SOURCE_UNAVAILABLE?AGENDA_SOURCE_UNAVAILABLE:AGENDA_GENERIC_LOAD_ERROR;
+}
 const normalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 export function bogotaAgendaDate(value){
  const date=new Date(value);
