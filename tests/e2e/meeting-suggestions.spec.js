@@ -108,6 +108,7 @@ test('registered QA conflicts can be checked without falsely enabling corporate 
  await expect(page.getByRole('button',{name:'Verificar horario en Google Calendar'})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Revisar solicitud de reunión'})).toHaveCount(0);
  await page.getByLabel('Inicio',{exact:true}).fill(bogotaInput(new Date(+start+2*3600000)));
+ await page.getByLabel('Fin',{exact:true}).fill(bogotaInput(new Date(+start+3*3600000)));
  await expect(page.locator('[data-qa-register-result]')).toBeEmpty();
  await check.click();
  await expect(page.locator('[data-qa-register-result]')).toContainText('NO confirma disponibilidad en Google Calendar');
