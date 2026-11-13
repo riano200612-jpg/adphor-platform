@@ -1,4 +1,5 @@
 import {validateCalendarAvailabilityResponse} from './calendar-availability.js';
+import {invokeQaCalendarAvailability} from './qa-calendar-edge.js';
 import {readVerifiedAgendaQuery} from './verified-agenda.js';
 import {createSharedVisitRepository} from './shared-visits.js';
 import { createEvidenceApiRepository } from './evidence-api.js';
@@ -28,6 +29,7 @@ export function createCloudRepository(url, key) {
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
     allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
   const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
+  const qaCalendarEdgeEnabled=authPolicy.isolatedQa && import.meta.env.VITE_QA_CALENDAR_EDGE_ENABLED==='true';
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -43,7 +45,7 @@ export function createCloudRepository(url, key) {
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.
-    calendarAvailabilityConfigured:Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
+    calendarAvailabilityConfigured:qaCalendarEdgeEnabled || Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
     staffDirectoryEnabled:Boolean(staff),
     async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
     async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},
@@ -67,6 +69,11 @@ export function createCloudRepository(url, key) {
     },
     async meetingAvailability(projectId, start, end) {
       if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Disponibilidad solo habilitada en QA.');
+      if(qaCalendarEdgeEnabled){
+        const {session}=check(await client.auth.getSession());
+        if(!session?.access_token)throw Error('Sesión requerida.');
+        return invokeQaCalendarAvailability(client.functions,projectId,start,end);
+      }
       const origin=agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL,import.meta.env.DEV);
       if (!origin) throw Error('Servicio de disponibilidad sin conexión.');
       const {session}=check(await client.auth.getSession());
