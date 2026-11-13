@@ -1,0 +1,59 @@
+import {test,expect} from '../../qa/isolated-browser-test.js';
+
+// Isolated fixture: verifies actual browser UI, not hosted Supabase or an AAL2 session.
+test('Visitas: private files persist across page reload and signed URL is user-initiated',async({page,baseURL})=>{
+ const projectId='p1',requestId='a330278f-54b4-41e6-89a1-805086ec3df4';
+ const stored=[];let saves=0,reads=0,signatures=0;
+ await page.exposeFunction('qaVisitRead',async()=>{reads++;return stored.map(x=>({...x}));});
+ await page.exposeFunction('qaVisitSave',async(files)=>{
+  saves++;
+  const out=[];
+  for(const f of files){
+   let row=stored.find(x=>x.name===f.name&&x.file_bytes===f.size);
+   if(!row){
+    row={id:'c8709acb-9e96-8dfa-b3d1-53f42528315b',project_id:projectId,request_id:requestId,
+     media_type:f.type,file_bytes:f.size,created_at:'2026-11-13T12:00:00Z',name:f.name};
+    stored.push(row);
+   }
+   out.push({id:row.id,project_id:projectId,request_id:requestId,storage_written:true,metadata_linked:true});
+  }
+  return out;
+ });
+ await page.exposeFunction('qaVisitSign',async()=>{signatures++;
+  return 'https://qfctnnnnltghepwujpdm.supabase.co/storage/v1/object/sign/qa-visit-evidence/p1/visitas/test?token=synthetic';
+ });
+ const moduleUrl=new URL('src/js/ui-visit-evidence.js',baseURL).href;
+ const html=`<!doctype html><html lang="es"><meta charset="utf-8"><div id="test-visit"></div>
+ <script type="module">
+ import {mountVisitEvidence} from '${moduleUrl}';
+ const projectId='p1',requestId='a330278f-54b4-41e6-89a1-805086ec3df4';
+ const evidence={
+  listEvidence:async(p,r)=>{if(p!==projectId||r!==requestId)throw Error('scope');return window.qaVisitRead();},
+  signedEvidence:async(p,r,id)=>{if(p!==projectId||r!==requestId)throw Error('scope');return window.qaVisitSign(id);},
+  uploadEvidence:async({projectId:p,requestId:r,files})=>{if(p!==projectId||r!==requestId)throw Error('scope');
+   return window.qaVisitSave(Array.from(files).map(f=>({name:f.name,size:f.size,type:f.type})));
+  }
+ };
+ mountVisitEvidence(document.getElementById('test-visit'),{
+  row:{project_id:projectId,request_id:requestId,status:'en_ejecucion'},evidence,canWrite:true});
+ </script></html>`;
+ await page.route('**/visit-private-evidence-fixture',route=>route.fulfill({contentType:'text/html',body:html}));
+ await page.goto('./visit-private-evidence-fixture');
+ await page.getByRole('button',{name:'Consultar evidencias de la visita'}).click();
+ await expect(page.locator('[data-visit-evidence-list]')).toContainText('aún no tiene evidencias');
+ await page.locator('input[type=file]').setInputFiles({name:'acta.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7')});
+ await page.getByRole('button',{name:'Guardar evidencias privadas'}).click();
+ await expect(page.locator('[data-visit-evidence-list]')).toContainText('application/pdf');
+ await expect(page.locator('a[data-visit-signed]')).toHaveCount(0);
+ await page.reload();
+ await expect(page.locator('a[data-visit-signed]')).toHaveCount(0);
+ await page.getByRole('button',{name:'Consultar evidencias de la visita'}).click();
+ await expect(page.locator('[data-visit-evidence-list] li')).toHaveCount(1);
+ await page.getByRole('button',{name:'Preparar enlace privado'}).click();
+ const link=page.getByRole('link',{name:'Abrir archivo (90 segundos)'});
+ await expect(link).toHaveAttribute('href',/^https:\/\/qfctnnnnltghepwujpdm.supabase.co\/storage\/v1\/object\/sign\/qa-visit-evidence/);
+ await expect(link).toHaveAttribute('rel','noopener noreferrer');
+ expect(saves).toBe(1);
+ expect(reads).toBeGreaterThanOrEqual(3);
+ expect(signatures).toBe(1);
+});
