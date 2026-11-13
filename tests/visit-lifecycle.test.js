@@ -19,6 +19,28 @@ test('fechas Colombia, datos obligatorios y estados cerrados',()=>{
  assert.throws(()=>visitTransitionPayload('progress',{...result,activities:'x'.repeat(4001)}));
  assert.throws(()=>visitTransitionPayload('inventada'));
 });
+test('creation audit fields are owned by PostgreSQL; AAL2 cannot forge dates, actor or lifecycle',async()=>{
+ const rejectInsert=async(extraColumn,extraValue)=>{
+  const fields='project_id,request_id,responsible_id,motive,scheduled_at,'+extraColumn;
+  const params=['p1',randomUUID(),U.admin,'Inspección de control','2026-11-14T10:00:00-05:00',extraValue];
+  await assert.rejects(
+   f.as(U.admin,'aal2',`insert into qa_visits(${fields}) values($1,$2,$3,$4,$5,$6)`,params),
+   /permission denied/i
+  );
+ };
+ await rejectInsert('created_at','2000-01-01T00:00:00Z');
+ await rejectInsert('created_by',U.coord);
+ await rejectInsert('status','completada');
+ await rejectInsert('version',100);
+ const id=randomUUID();
+ const saved=(await f.create(id)).rows[0];
+ assert.equal(saved.created_by,U.admin,'the RPC must use the authenticated actor');
+ assert.ok(Number.isFinite(Date.parse(saved.created_at)),'PostgreSQL must provide a creation timestamp');
+ const history=await f.as(U.admin,'aal2','select occurred_at,actor_id,action from qa_visit_history where project_id=$1 and request_id=$2',['p1',id]);
+ assert.equal(history.rows.length,1);
+ assert.equal(history.rows[0].action,'create');
+ assert.equal(history.rows[0].actor_id,U.admin);
+});
 test('crear, editar, ingreso, seguimiento, salida e historial inmutable',async()=>{
  const id=randomUUID();await f.create(id);
  const edited=(await f.transition(op(id,'edit',1,{responsible_id:U.coord,motive:'Revisada',scheduled_at:'2026-11-15T09:00:00-05:00'}))).rows[0];
