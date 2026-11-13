@@ -26,8 +26,10 @@ export async function initializeVisitFixture(db){
  create function auth.jwt() returns jsonb language sql stable as $$select jsonb_build_object('aal',current_setting('test.aal',true))$$;
  grant usage on schema auth to anon,authenticated;
  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
- create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner uuid);
- alter table storage.objects enable row level security;`);
+ create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner uuid,owner_id text);
+ alter table storage.objects enable row level security;
+ grant usage on schema storage to authenticated;
+ grant select,insert on storage.objects to authenticated;`);
  await db.exec(readFileSync('supabase/migrations/202610190001_workflow.sql','utf8'));
  await db.exec(readFileSync('qa/database/supabase/migrations/20261105144315_qa_authorized_principals.sql','utf8'));
  await db.exec(readFileSync('supabase/migrations/20261111133108_qa_shared_visits_scheduled_contract.sql','utf8'));
