@@ -27,8 +27,8 @@ test('Visitas SQL aislado: programación, reintentos, edición, ingreso, resulta
   await expect(page.getByRole('heading',{name:'Visitas',exact:true})).toBeVisible();
   await page.getByLabel('Tipo o motivo').fill('Inspección sintética');
   await page.getByLabel('Fecha y hora (Colombia)',{exact:true}).fill('2026-11-14T10:00');
-  await page.getByLabel('Responsable',{exact:true}).selectOption(visitUsers.admin);
-  await expect(page.getByLabel('Responsable',{exact:true}).locator('option')).toHaveCount(3);
+  await page.locator('select[name=responsible]').selectOption(visitUsers.admin);
+  await expect(page.locator('select[name=responsible] option')).toHaveCount(3);
   await page.getByRole('button',{name:'Revisar visita',exact:true}).click();
   const save=page.getByRole('button',{name:'Confirmar y registrar visita'});
   await save.click();await expect(page.getByText('No se pudo confirmar el guardado. Reintenta con el mismo borrador.')).toBeVisible();
