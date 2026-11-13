@@ -36,7 +36,11 @@ Deno.serve(async req => {
 
   // No service-role key is ever used for authorization or RLS queries.
   const projectUrl=Deno.env.get('SUPABASE_URL')?.replace(/\/$/,'');
-  const apiKey=Deno.env.get('SUPABASE_ANON_KEY');
+  // Supabase's current default publishable key; the legacy anon key is fallback only.
+  // Never read SUPABASE_SECRET_KEYS or other privileged credentials here.
+  let publishable: Record<string,string> = {};
+  try { publishable=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}'); } catch { /* fail closed below */ }
+  const apiKey=Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||publishable.default||Deno.env.get('SUPABASE_ANON_KEY');
   if(projectUrl!==QA_PROJECT_URL||!apiKey)return reply(503,{error:'Servicio QA no configurado.'},true);
   const authHeaders={'apikey':apiKey,'Authorization':bearer,'Accept':'application/json'};
   let userId: string;
