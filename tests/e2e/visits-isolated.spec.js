@@ -84,7 +84,7 @@ test('shared scheduled-visit contract: review, confirmation and SQL lookup after
   await expect(save).toBeHidden();
   await review.click();
   await save.click();
-  await expect(page.getByText('Programación de visita guardada en SQL. No registra ejecución, ingreso ni salida.')).toBeVisible();
+  await expect(page.getByText('Programación guardada en SQL. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.')).toBeVisible();
   const [saved]=await repository.list('p1');
   expect(saved.motive).toBe('Inspección revisada');
   const retry=await repository.save({projectId:'p1',requestId:saved.request_id,responsibleId:saved.responsible_id,kind:saved.motive,start:'2026-11-14T10:00'});

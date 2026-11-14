@@ -32,9 +32,18 @@ test('Visitas SQL aislado: programación, reintentos, edición, ingreso, resulta
   await page.getByRole('button',{name:'Revisar visita',exact:true}).click();
   const save=page.getByRole('button',{name:'Confirmar y registrar visita'});
   await save.click();await expect(page.getByText('No se pudo confirmar el guardado. Reintenta con el mismo borrador.')).toBeVisible();
+  // A pre-existing filter must not prevent opening a newly registered visit.
+  await page.locator('[data-visit-search]').fill('no coincide con ninguna visita');
   // Two synchronous clicks simulate an accidental repeat while a request is pending.
   await save.evaluate(button=>{button.click();button.click();});
+  await expect(page.locator('[data-visit-results] > li')).toHaveCount(0);
+  const openSaved=page.getByRole('button',{name:'Abrir seguimiento de la visita registrada'});
+  await expect(openSaved).toBeVisible();
+  await openSaved.click();
+  await expect(page.locator('[data-visit-search]')).toHaveValue('');
   await expect(page.locator('[data-visit-results] > li')).toHaveCount(1);
+  await expect(page.locator('[data-visit-results] > li details').first()).toHaveAttribute('open','');
+  await expect(page.getByText('Seguimiento · Programada',{exact:true})).toBeFocused();
   expect(createCalls).toBe(2);
   await page.reload();
   await page.getByText('Seguimiento · Programada',{exact:true}).click();
