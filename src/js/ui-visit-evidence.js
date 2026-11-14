@@ -67,8 +67,10 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
    moreButton.hidden=!page.hasMore;
    message.textContent=loadedCount+' archivo(s) privado(s) consultado(s) para esta visita.'+
     (page.hasMore?' Puedes consultar más evidencias.':'');
+   return true;
   }catch{
    if(section.isConnected)message.textContent='No se pudieron verificar las evidencias privadas; inténtalo nuevamente.';
+   return false;
   }finally{
    reading=false;
    if(readButton.isConnected)readButton.disabled=false;
@@ -122,17 +124,28 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
    try{files=validateQaVisitEvidence(fileInput.files);if(!files.length)throw Error('Selecciona algún archivo.');}
    catch(error){message.textContent=error.message;return;}
    sending=true;uploadButton.disabled=true;fileInput.disabled=true;
+   let progress=0;
    message.textContent='Guardando archivos en almacenamiento privado…';
    try{
-    const confirmed=await evidence.uploadEvidence({projectId,requestId,files});
+    const confirmed=await evidence.uploadEvidence({projectId,requestId,files,onProgress:({completed,total})=>{
+     if(Number.isInteger(completed)&&completed>progress&&completed<=total&&total===files.length){
+      progress=completed;
+      if(section.isConnected)message.textContent=completed+' de '+total+' archivo(s) confirmado(s) en almacenamiento privado y Visitas.';
+     }
+    }});
     if(!section.isConnected)return;
     if(!Array.isArray(confirmed)||confirmed.length!==files.length||confirmed.some(x=>x.project_id!==projectId||x.request_id!==requestId||!x.storage_written||!x.metadata_linked))
      throw Error('La evidencia no quedó confirmada.');
     fileInput.value='';
     showSelectedFiles();
-    await refresh();
+    const refreshed=await refresh();
+    if(section.isConnected)message.textContent=refreshed
+     ? confirmed.length+' archivo(s) guardado(s) y asociado(s) a esta visita.'
+     : confirmed.length+' archivo(s) guardado(s) correctamente. No se pudo actualizar el listado; pulsa «Consultar evidencias de la visita».';
    }catch{
-    if(section.isConnected)message.textContent='No se confirmó la asociación de todos los archivos. Reintenta con los mismos archivos; no se duplicará la visita.';
+    if(section.isConnected)message.textContent=progress>0&&progress<files.length
+     ? 'Se confirmaron '+progress+' de '+files.length+' archivo(s). Reintenta los mismos archivos para completar la carga; los confirmados no se duplicarán.'
+     : 'No se confirmó la asociación de todos los archivos. Reintenta con los mismos archivos; no se duplicará la visita.';
    }finally{sending=false;if(fileInput.isConnected)fileInput.disabled=false;if(uploadButton.isConnected)showSelectedFiles();}
   });
  }
