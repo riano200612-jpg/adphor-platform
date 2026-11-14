@@ -18,6 +18,10 @@ export function mountAgentHistory(container, {repo, projectId, role}) {
   if (!repo.agentRuns) {
     container.innerHTML = '<p class="notice">El historial requiere una sesión conectada a Supabase.</p>'; return;
   }
+  if (repo.agentApiConfigured === false) {
+    container.innerHTML = '<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>Los agentes Operaciones, Análisis e Informes cuentan con componentes y pruebas, pero no hay una API de ejecución y auditoría configurada en esta QA.</p><p>Miss ADPHOR sí permite un panorama integral de solo lectura, basado en registros autorizados de la copropiedad. No ejecuta modelos ni aprueba, modifica o envía informes.</p><p class="notice">El historial y la ejecución persistente del enjambre permanecerán deshabilitados hasta certificar un backend con sesión MFA AAL2, RLS y trazabilidad.</p></section>';
+    return;
+  }
   let currentDraft = null;
   const canReview = role === 'admin' && typeof repo.reviewAgentRun === 'function';
   const renderDraft = item => {
