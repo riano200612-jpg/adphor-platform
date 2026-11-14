@@ -114,10 +114,17 @@ test('Private evidence UI repository scopes retries and signed read without serv
   }}}
  };
  const e=createQaVisitEvidenceRepository(client);
- const first=await e.uploadEvidence({projectId,requestId:visit,files:[file]});
+ const progress=[];
+ const first=await e.uploadEvidence({projectId,requestId:visit,files:[file],onProgress:event=>progress.push(event)});
+ assert.deepEqual(progress,[{completed:1,total:1}]);
  assert.equal(first.length,1);assert.equal(saved.length,1);assert.equal(uploads.length,1);
  assert.equal(uploads[0].opts.upsert,false);
- await e.uploadEvidence({projectId,requestId:visit,files:[file]});
+ const retryProgress=[];
+ await e.uploadEvidence({projectId,requestId:visit,files:[file],onProgress:event=>{
+  retryProgress.push(event);
+  throw Error('A failed presentation callback cannot roll back private evidence');
+ }});
+ assert.deepEqual(retryProgress,[{completed:1,total:1}]);
  assert.equal(uploads.length,1,'retry must reuse metadata and object');
  assert.equal((await e.listEvidence(projectId,visit)).length,1);
  assert.match(await e.signedEvidence(projectId,visit,first[0].id),/^https:\/\/qfctnnnnltghepwujpdm.supabase.co\/storage\/v1\/object\/sign\/qa-visit-evidence\//);

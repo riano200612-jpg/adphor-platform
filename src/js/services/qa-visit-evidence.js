@@ -69,12 +69,15 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
   return rows.length?checkRow(rows[0],projectId,requestId):null;
  }
  return {
-  async uploadEvidence({projectId,requestId,files}){
+  async uploadEvidence({projectId,requestId,files,onProgress}){
    scope(projectId,requestId);
    const selected=validateQaVisitEvidence(files);
    if(!selected.length)throw Error('Selecciona al menos un archivo autorizado.');
    const actor=await authorize(projectId,requestId,true);
    const confirmed=[];
+   // A progress event means the Storage object AND its immutable metadata are confirmed.
+   // UI callbacks cannot roll back a committed file.
+   const notify=()=>{if(typeof onProgress==='function')try{onProgress({completed:confirmed.length,total:selected.length});}catch{}};
    for(const file of selected){
     const fileName=normalizeQaVisitFileName(file);
     const id=QA_VISIT_OFFICE_EXT[file.type]?await officeEvidenceObjectId(file,projectId,requestId,actor):await evidenceObjectId(file,projectId,requestId,actor);
@@ -84,6 +87,7 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
      if(previous.uploaded_by!==actor||previous.storage_path!==path||previous.media_type!==file.type||Number(previous.file_bytes)!==file.size)
       throw Error('El archivo existente no coincide; no se reemplazó.');
      confirmed.push({id,project_id:projectId,request_id:requestId,storage_written:true,metadata_linked:true});
+     notify();
      continue;
     }
     const upload=await client.storage.from(BUCKET).upload(path,file,{upsert:false,contentType:file.type,cacheControl:'0'});
@@ -101,6 +105,7 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
     if(!row||row.uploaded_by!==actor||row.storage_path!==path||row.media_type!==file.type||Number(row.file_bytes)!==file.size)
       throw Error('No se confirmó la asociación privada de la evidencia.');
     confirmed.push({id,project_id:projectId,request_id:requestId,storage_written:true,metadata_linked:true});
+    notify();
    }
    return confirmed;
   },
