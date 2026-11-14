@@ -1,4 +1,4 @@
-import {validateQaEvidence} from './services/qa-evidence-policy.js';
+import {validateQaVisitEvidence} from './services/qa-visit-evidence-policy.js';
 
 // All content from Supabase is text-only. Signed links are requested explicitly,
 // expire after 90 seconds and are never persisted in the browser.
@@ -63,9 +63,9 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
  // but neither the UI nor the SQL policies permit new files after closure.
  if(canWrite && ['programada','en_ejecucion'].includes(row.status) && typeof evidence.uploadEvidence==='function'){
   const label=document.createElement('label');
-  label.textContent='Adjuntar fotos, videos o PDF (máximo cinco, 20 MB cada uno)';
+  label.textContent='Adjuntar fotos, videos, PDF, Word (.docx) o Excel (.xlsx) · máximo cinco, 20 MB cada uno';
   const fileInput=document.createElement('input');fileInput.type='file';fileInput.multiple=true;
-  fileInput.accept='image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf';
+  fileInput.accept='image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf,.docx,.xlsx';
   const uploadButton=document.createElement('button');uploadButton.type='button';
   uploadButton.textContent='Guardar evidencias privadas';
   const selectionStatus=document.createElement('p');
@@ -79,10 +79,10 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
    selectedList.replaceChildren();
    uploadButton.disabled=true;
    let files;
-   try{files=validateQaEvidence(fileInput.files);}
+   try{files=validateQaVisitEvidence(fileInput.files);}
    catch(error){selectionStatus.textContent=error.message;return;}
    if(!files.length){
-    selectionStatus.textContent='Selecciona imágenes, videos o PDF antes de guardar.';
+    selectionStatus.textContent='Selecciona imágenes o documentos permitidos antes de guardar.';
     return;
    }
    for(const file of files){
@@ -100,7 +100,7 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
   uploadButton.addEventListener('click',async()=>{
    if(sending)return;
    let files;
-   try{files=validateQaEvidence(fileInput.files);if(!files.length)throw Error('Selecciona algún archivo.');}
+   try{files=validateQaVisitEvidence(fileInput.files);if(!files.length)throw Error('Selecciona algún archivo.');}
    catch(error){message.textContent=error.message;return;}
    sending=true;uploadButton.disabled=true;fileInput.disabled=true;
    message.textContent='Guardando archivos en almacenamiento privado…';

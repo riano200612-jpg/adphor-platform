@@ -1,12 +1,30 @@
-import {validateQaEvidence} from './qa-evidence-policy.js';
+import {validateQaVisitEvidence,QA_VISIT_OFFICE_EXT} from './qa-visit-evidence-policy.js';
 import {evidenceObjectId} from './qa-case-evidence.js';
 
 const QA_URL='https://qfctnnnnltghepwujpdm.supabase.co';
 const BUCKET='qa-visit-evidence';
-const EXT={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','video/mp4':'mp4','video/webm':'webm','application/pdf':'pdf'};
+const EXT={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','video/mp4':'mp4','video/webm':'webm','application/pdf':'pdf',...QA_VISIT_OFFICE_EXT};
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const projectKey=/^[a-z0-9][a-z0-9-]{0,99}$/;
 const checked=result=>{if(result?.error)throw Error('No se pudo confirmar la evidencia privada de Visitas.');return result?.data;};
+
+export async function officeEvidenceObjectId(file,projectId,requestId,actor){
+ const ext=QA_VISIT_OFFICE_EXT[file?.type];
+ if(!ext||typeof file.name!=='string'||!file.name.toLowerCase().endsWith('.'+ext))
+  throw Error('Documento Office no autorizado.');
+ const bytes=new Uint8Array(await file.arrayBuffer());
+ if(bytes.length!==file.size||bytes.length<4||bytes.length>20971520||
+    bytes[0]!==0x50||bytes[1]!==0x4b||bytes[2]!==0x03||bytes[3]!==0x04)
+  throw Error('El documento Office no tiene una cabecera ZIP válida.');
+ const prefix=new TextEncoder().encode(['ADPHOR-QA-VISIT-OFFICE-V1',projectId,requestId,actor,file.type].join('|')+'|');
+ const data=new Uint8Array(prefix.length+bytes.length);
+ data.set(prefix);data.set(bytes,prefix.length);
+ const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',data));
+ const part=hash.slice(0,16);part[6]=(part[6]&15)|128;part[8]=(part[8]&63)|128;
+ const hex=Array.from(part,b=>b.toString(16).padStart(2,'0')).join('');
+ return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20,32)].join('-');
+}
+
 function scope(projectId,requestId){
  if(!projectKey.test(projectId??'')||!uuid.test(requestId??''))throw Error('Visita o copropiedad no válida.');
 }
@@ -52,12 +70,12 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
  return {
   async uploadEvidence({projectId,requestId,files}){
    scope(projectId,requestId);
-   const selected=validateQaEvidence(files);
+   const selected=validateQaVisitEvidence(files);
    if(!selected.length)throw Error('Selecciona al menos un archivo autorizado.');
    const actor=await authorize(projectId,requestId,true);
    const confirmed=[];
    for(const file of selected){
-    const id=await evidenceObjectId(file,projectId,requestId,actor);
+    const id=QA_VISIT_OFFICE_EXT[file.type]?await officeEvidenceObjectId(file,projectId,requestId,actor):await evidenceObjectId(file,projectId,requestId,actor);
     const path=[projectId,'visitas',requestId,actor,id+'.'+EXT[file.type]].join('/');
     const previous=await find(projectId,requestId,id);
     if(previous){
