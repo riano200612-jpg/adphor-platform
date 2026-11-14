@@ -1,4 +1,4 @@
-import {validateQaVisitEvidence,QA_VISIT_OFFICE_EXT} from './qa-visit-evidence-policy.js';
+import {validateQaVisitEvidence,normalizeQaVisitFileName,QA_VISIT_OFFICE_EXT} from './qa-visit-evidence-policy.js';
 import {evidenceObjectId} from './qa-case-evidence.js';
 
 const QA_URL='https://qfctnnnnltghepwujpdm.supabase.co';
@@ -32,7 +32,8 @@ function checkRow(row,projectId,requestId){
  if(row?.project_id!==projectId||row?.request_id!==requestId||row?.storage_bucket!==BUCKET
   ||!uuid.test(row.id??'')||!uuid.test(row.uploaded_by??'')||!EXT[row.media_type]
   ||row.storage_path!==[projectId,'visitas',requestId,row.uploaded_by,row.id+'.'+EXT[row.media_type]].join('/')
-  ||!Number.isSafeInteger(Number(row.file_bytes))||Number(row.file_bytes)<1||Number(row.file_bytes)>20971520)
+  ||!Number.isSafeInteger(Number(row.file_bytes))||Number(row.file_bytes)<1||Number(row.file_bytes)>20971520
+  ||(row.file_name!=null && (typeof row.file_name!=='string'||row.file_name.length>180||!row.file_name.trim()||row.file_name!==row.file_name.normalize('NFC').trim()||/[\\/<>\u0000-\u001F\u007F]/u.test(row.file_name))))
   throw Error('La evidencia no corresponde a la visita autorizada.');
  return row;
 }
@@ -62,7 +63,7 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
  }
  async function find(projectId,requestId,id){
   const rows=checked(await client.from('qa_visit_evidence')
-   .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,created_at')
+   .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,file_name,created_at')
    .eq('project_id',projectId).eq('request_id',requestId).eq('id',id).limit(1));
   if(!Array.isArray(rows)||rows.length>1)throw Error('Evidencia ambigua.');
   return rows.length?checkRow(rows[0],projectId,requestId):null;
@@ -75,6 +76,7 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
    const actor=await authorize(projectId,requestId,true);
    const confirmed=[];
    for(const file of selected){
+    const fileName=normalizeQaVisitFileName(file);
     const id=QA_VISIT_OFFICE_EXT[file.type]?await officeEvidenceObjectId(file,projectId,requestId,actor):await evidenceObjectId(file,projectId,requestId,actor);
     const path=[projectId,'visitas',requestId,actor,id+'.'+EXT[file.type]].join('/');
     const previous=await find(projectId,requestId,id);
@@ -90,9 +92,9 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
     if(!upload.error && upload.data?.path!==path)
       throw Error('No se pudo verificar la ruta del archivo cargado.');
     const meta={id,project_id:projectId,request_id:requestId,storage_bucket:BUCKET,
-      storage_path:path,media_type:file.type,file_bytes:file.size,uploaded_by:actor};
+      storage_path:path,media_type:file.type,file_bytes:file.size,uploaded_by:actor,file_name:fileName};
     const linked=await client.from('qa_visit_evidence').insert(meta)
-      .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,created_at').single();
+      .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,file_name,created_at').single();
     if(linked.error && linked.error.code!=='23505')
       throw Error('Archivo cargado, pero sin enlace a la visita. Reintenta el mismo archivo.');
     const row=linked.error?await find(projectId,requestId,id):checkRow(linked.data,projectId,requestId);
@@ -105,7 +107,7 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
   async listEvidence(projectId,requestId){
    await authorize(projectId,requestId);
    const rows=checked(await client.from('qa_visit_evidence')
-    .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,created_at')
+    .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,file_name,created_at')
     .eq('project_id',projectId).eq('request_id',requestId)
     .order('created_at',{ascending:true}).order('id',{ascending:true}).limit(51));
    if(!Array.isArray(rows)||rows.length>50)throw Error('El historial de evidencias es incompleto.');

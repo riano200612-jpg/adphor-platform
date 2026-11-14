@@ -28,7 +28,7 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
    for(const record of rows){
     const item=document.createElement('li');
     const info=document.createElement('span');
-    info.textContent=(record.media_type||'Archivo')+' · '+(Number(record.file_bytes)/1048576).toFixed(2)+' MB · '+(record.created_at||'Sin fecha');
+    info.textContent=(record.file_name||'Archivo sin nombre registrado')+' · '+(record.media_type||'Archivo')+' · '+(Number(record.file_bytes)/1048576).toFixed(2)+' MB · '+(record.created_at||'Sin fecha');
     item.append(info);
     const linkButton=document.createElement('button');linkButton.type='button';
     linkButton.textContent='Preparar enlace privado';
