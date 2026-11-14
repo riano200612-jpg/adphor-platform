@@ -1,7 +1,7 @@
 // Isolated PostgreSQL engine + synthetic identities. Never a Supabase certification.
 import {PGlite} from '@electric-sql/pglite';
 import {readFileSync} from 'node:fs';
-export const visitMigration='supabase/migrations/20261113191217_qa_visits_lifecycle.sql';
+export const visitMigration='supabase/migrations/20261114145929_qa_visits_lifecycle.sql';
 export const visitUsers={admin:'00000000-0000-0000-0000-000000000001',coord:'00000000-0000-0000-0000-000000000002',viewer:'00000000-0000-0000-0000-000000000003',other:'00000000-0000-0000-0000-000000000004',inactive:'00000000-0000-0000-0000-000000000005'};
 export async function createVisitFixture(){
  const db=new PGlite();await db.waitReady;

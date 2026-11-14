@@ -1,4 +1,12 @@
 import {mountVisitEvidence} from './ui-visit-evidence.js';
+
+export function canAttachVisitEvidence(row,repository,canWrite){
+ return canWrite===true &&
+  ['programada','en_ejecucion'].includes(row?.status) &&
+  typeof repository?.evidence?.uploadEvidence==='function' &&
+  typeof repository?.evidence?.listEvidence==='function' &&
+  typeof repository?.evidence?.signedEvidence==='function';
+}
 import {visitActions,visitLocalDate,visitStates,visitTransitionPayload} from './services/visit-lifecycle.js';
 
 // Every value from SQL is assigned with textContent/value, never interpolated HTML.
@@ -74,6 +82,19 @@ export function mountVisitLifecycle(item,{row,repository,canWrite,responsibleNam
  section.append(historyButton,history);
  if(repository.evidence){
   mountVisitEvidence(section,{row,evidence:repository.evidence,canWrite});
+  // Make uploads discoverable without bypassing the existing AAL2, role,
+  // per-property, visit-state and private Storage checks.
+  if(canAttachVisitEvidence(row,repository,canWrite)){
+   const attachButton=document.createElement('button');attachButton.type='button';
+   attachButton.className='btn secondary visit-attach-shortcut';
+   attachButton.dataset.visitAttachShortcut='';
+   attachButton.textContent='Adjuntar imágenes o documentos';
+   attachButton.addEventListener('click',()=>{
+    section.open=true;
+    section.querySelector('.visit-evidence input[type="file"]')?.focus();
+   });
+   item.append(attachButton);
+  }
  }else{
   const attachments=document.createElement('p');attachments.className='muted';
   attachments.textContent='Los adjuntos privados de Visitas están pendientes de habilitación; no se cargarán archivos desde esta pantalla.';
