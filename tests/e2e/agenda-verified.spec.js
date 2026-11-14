@@ -1,10 +1,10 @@
 import {test,expect} from '../../qa/isolated-browser-test.js';
 test('agenda reader scopes real UI, filters Bogotá dates and keeps query errors distinct',async({page,baseURL},testInfo)=>{
- let failed=false;
+ let failed=false,foreign=false;
  await page.exposeFunction('loadAgendaFixture',async()=>{
   if(failed)throw Error('Fixture query failed');
   const row={id:'synthetic-meeting',project_id:'p1',title:'Consejo QA aislado',kind:'Consejo',source_status:'Confirmada',start_at:'2026-11-12T02:00:00Z',end_at:'2026-11-12T03:00:00Z',is_calendar_verified:true};
-  return [row,{...row,id:'foreign',project_id:'p2',title:'No autorizada'}];
+  return foreign?[row,{...row,id:'foreign',project_id:'p2',title:'No autorizada'}]:[row];
  });
  const fixture=new URL('agenda-reader-fixture',baseURL).href;
  const moduleUrl=new URL('src/js/ui-verified-agenda.js',baseURL).href;
@@ -17,7 +17,12 @@ test('agenda reader scopes real UI, filters Bogotá dates and keeps query errors
  await page.getByLabel('Fecha en Colombia').fill('2026-11-11');
  await expect(page.getByText('Consejo QA aislado',{exact:true})).toBeVisible();
  await page.screenshot({path:testInfo.outputPath('agenda-desktop.png'),fullPage:true});
- failed=true;
+ foreign=true;
+ await page.getByRole('button',{name:'Actualizar consulta'}).click();
+ await expect(page.getByRole('status')).toContainText('No se pudo consultar');
+ await expect(page.getByText('No autorizada',{exact:true})).toHaveCount(0);
+ await expect(page.getByText('Consejo QA aislado',{exact:true})).toHaveCount(0);
+ foreign=false;failed=true;
  await page.getByRole('button',{name:'Actualizar consulta'}).click();
  await expect(page.getByRole('status')).toContainText('No se pudo consultar');
  await page.getByLabel('Buscar en agenda').fill('Consejo');
