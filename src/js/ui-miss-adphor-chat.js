@@ -2,6 +2,7 @@ import {bogotaAgendaDate} from './services/verified-agenda.js';
 import {validateCalendarBusyIntervals,calendarInstant} from './services/calendar-availability.js';
 import {isMissOperationalQuestion,summarizeMissOperations,describeMissOperations} from './services/miss-operations-summary.js';
 import {isMissPqrsStatusQuestion,summarizeMissPqrsStatus,describeMissPqrsStatus} from './services/miss-pqrs-status.js';
+import {missVisitsScheduleIntent,summarizeMissVisitsSchedule,describeMissVisitsSchedule} from './services/miss-visits-schedule.js';
 // Miss ADPHOR — grounded, read-only assistant for the authenticated project.
 // No network calls, model claims, background learning or cross-project access.
 const normalized = s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -145,7 +146,7 @@ export function summarizePqrsAttention(rows,projectId,now=Date.now()){
 }
 export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings,loadVisits,loadCalendarBusy}){
  const img='/assets/branding/miss-adphor.webp';
- host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="PQRS pendientes">PQRS en gestión</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Próximas reuniones">Próximas reuniones</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
+ host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="PQRS pendientes">PQRS en gestión</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Visitas de hoy">Visitas hoy</button><button type="button" data-miss-question="Próximas visitas">Próximas visitas</button><button type="button" data-miss-question="Próximas reuniones">Próximas reuniones</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
  let latestQuestion=0;
  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)input.focus();});
@@ -210,6 +211,21 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetin
       page:'agenda'};
     }catch{
      result={text:'No pude verificar las próximas reuniones de esta copropiedad. No asumiré que no hay compromisos.',page:null};
+    }
+   }
+  }
+  const visitsScheduleMode=missVisitsScheduleIntent(question);
+  if(visitsScheduleMode && current.project?.id===current.projectId && current.projectId){
+   result={text:'El calendario de Visitas necesita una sesión autorizada con MFA AAL2.',page:null};
+   if(current.mode==='cloud' && loadVisits){
+    try{
+     const summary=summarizeMissVisitsSchedule(
+      await loadVisits(current.projectId),current.projectId,visitsScheduleMode,
+      Number.isFinite(current.now)?current.now:Date.now()
+     );
+     result={text:describeMissVisitsSchedule(summary),page:'visits'};
+    }catch{
+     result={text:'No pude verificar el calendario de Visitas de esta copropiedad. Revisa tu sesión y MFA AAL2; no asumiré que no hay visitas.',page:null};
     }
    }
   }
