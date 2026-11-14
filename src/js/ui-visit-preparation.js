@@ -128,6 +128,8 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       : 'Todavía no hay borradores guardados.';
     for(const row of visible){
       const item=document.createElement('li');
+      // Stable identity for a new visit, independent of search and date filters.
+      item.dataset.visitRequestId=row.request_id;
       const title=document.createElement('strong');
       title.textContent=row.motive;
       const details=document.createElement('small');
@@ -201,6 +203,27 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     summary.before(save);
     const reviewState = createVisitReviewState();
     let saving = false;
+    let savedRequestId;
+    const openSavedVisit=document.createElement('button');
+    openSavedVisit.type='button';
+    openSavedVisit.className='btn secondary';
+    openSavedVisit.textContent='Abrir seguimiento de la visita registrada';
+    openSavedVisit.hidden=true;
+    summary.after(openSavedVisit);
+    openSavedVisit.addEventListener('click',()=>{
+      if(!savedRequestId||!listLoaded)return;
+      // Existing filters must not hide a visit the user has just registered.
+      search.value='';date.value='';responsibleFilter.value='';
+      drawList();
+      const item=Array.from(results.children).find(el=>el.dataset.visitRequestId===savedRequestId);
+      const details=item?.querySelector('details');
+      if(!details){
+        summary.textContent='Visita registrada. Actualiza la lista para abrir su seguimiento.';
+        return;
+      }
+      details.open=true;
+      details.querySelector('summary')?.focus();
+    });
     review.addEventListener('click', () => {
       const data = draft();
       if (saving || !ready(data)) return;
@@ -214,12 +237,14 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     fields.addEventListener('input', () => {
       reviewState.invalidate();
       save.hidden = true;
+      openSavedVisit.hidden=true;
     });
     save.addEventListener('click', async () => {
       if (!reviewState.current() || saving) return;
       const request = reviewState.current();
       saving = true;
       save.disabled = true;
+      openSavedVisit.hidden=true;
       fields.disabled = true;
       summary.textContent = shared?'Registrando visita…':'Guardando borrador de prueba…';
       try {
@@ -228,9 +253,13 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
           throw new Error('Invalid persistence confirmation');
         }
         reviewState.confirmed(request);
-        if (summary.isConnected) summary.textContent = shared?'Programación de visita guardada en SQL. No registra ejecución, ingreso ni salida.':'Borrador de prueba guardado y confirmado.';
+        savedRequestId=request.requestId;
+        if (summary.isConnected) summary.textContent = shared
+          ? 'Programación guardada en SQL. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.'
+          : 'Borrador de prueba guardado y confirmado.';
         save.hidden = true;
         if(canList) await loadList();
+        openSavedVisit.hidden=!(shared&&canList&&repository.lifecycleEnabled&&rows.some(x=>x.request_id===savedRequestId)&&listLoaded);
       } catch {
         if (summary.isConnected) summary.textContent = 'No se pudo confirmar el guardado. Reintenta con el mismo borrador.';
       } finally {

@@ -54,4 +54,5 @@ test('Visitas: empty read-only state does not advertise scheduling permissions',
  await expect(page.locator('[data-visit-empty-message]')).toContainText('Administración o Coordinación');
  await expect(page.getByRole('button',{name:'Preparar primera visita'})).toBeHidden();
  await expect(page.getByRole('button',{name:'Revisar visita'})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'Abrir seguimiento de la visita registrada'})).toHaveCount(0);
 });
