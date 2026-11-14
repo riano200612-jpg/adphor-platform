@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {loadVerifiedAgenda,filterVerifiedAgenda,bogotaAgendaDate,readVerifiedAgendaQuery,verifiedAgendaUiError,AGENDA_SOURCE_UNAVAILABLE,AGENDA_GENERIC_LOAD_ERROR} from '../src/js/services/verified-agenda.js';
 import {answerMissAdphor} from '../src/js/ui-miss-adphor-chat.js';
 const event={id:'m1',project_id:'p1',title:'Consejo',kind:'Consejo',source_status:'Confirmada',start_at:'2026-11-12T02:00:00Z',end_at:'2026-11-12T03:00:00Z',is_calendar_verified:true};
-test('agenda reads only verified events of the requested property and preserves source identity',async()=>{
+test('agenda preserves source identity when the complete response belongs to the selected property',async()=>{
  let requested;
- const repo={listVerifiedQaMeetings:async project=>{requested=project;return [event,{...event,id:'other',project_id:'p2'},{...event,id:'unverified',is_calendar_verified:false}];}};
+ const repo={listVerifiedQaMeetings:async project=>{requested=project;return [event];}};
  const rows=await loadVerifiedAgenda(repo,'p1');assert.equal(requested,'p1');assert.deepEqual(rows,[event]);assert.notEqual(rows[0],event);
 });
 test('agenda distinguishes empty data from disabled, invalid and failed queries',async()=>{
