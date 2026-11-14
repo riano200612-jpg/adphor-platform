@@ -44,7 +44,7 @@ test('Miss reads existing project-scoped Visits and the authorized freeBusy adap
  const nodes={
   '.miss-chat-toggle':{addEventListener(){}},
   '.miss-chat-panel':{},
-  '.miss-chat-messages':{append(node){messages.push(node.textContent||'');}},
+  '.miss-chat-messages':{append(node){if(String(node.className||'').includes('miss-chat-msg'))messages.push(node.textContent||'');}},
   form:{querySelector:()=>input,addEventListener(_,handler){submit=handler;}}
  };
  const host={isConnected:true,querySelector:key=>nodes[key],querySelectorAll:()=>[]};
