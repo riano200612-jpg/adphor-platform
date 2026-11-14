@@ -63,12 +63,18 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       </section>
       <section class="panel" aria-labelledby="visit-list-title">
         <h2 id="visit-list-title">${shared?'Visitas registradas':'Borradores de visitas'}</h2>
+        <div class="visit-actions"><button type="button" class="btn secondary" data-refresh-visits hidden>Actualizar visitas</button></div>
         <div class="visit-fields" data-list-filters hidden>
           <label>Buscar visitas<input type="search" data-visit-search placeholder="Motivo o radicado"></label>
           <label>Filtrar por fecha<input type="date" data-visit-date></label>
           <label>Filtrar por responsable<select data-visit-responsible><option value="">Todos</option></select></label>
         </div>
-        <p data-list-status role="status"></p><ul class="visit-results" data-visit-results></ul>
+        <p data-list-status role="status"></p>
+        <div data-visit-empty-guide hidden>
+          <p data-visit-empty-message class="muted"></p>
+          <button type="button" class="btn secondary" data-visit-create-first hidden>Preparar primera visita</button>
+        </div>
+        <ul class="visit-results" data-visit-results></ul>
       </section>
     </div></section>`;
   root.querySelector('[data-property]').textContent = projectName || 'Selecciona una copropiedad asignada';
@@ -90,6 +96,11 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   root.querySelector('[data-staff-count]').textContent = allowedResponsibleIds.length;
   const guide = root.querySelector('[data-visit-guide]');
   const listStatus=root.querySelector('[data-list-status]');
+  const refreshButton=root.querySelector('[data-refresh-visits]');
+  const emptyGuide=root.querySelector('[data-visit-empty-guide]');
+  const emptyMessage=root.querySelector('[data-visit-empty-message]');
+  const firstVisitButton=root.querySelector('[data-visit-create-first]');
+  firstVisitButton.addEventListener('click',()=>fields.querySelector('[name=kind]').focus());
   const results=root.querySelector('[data-visit-results]');
   const search=root.querySelector('[data-visit-search]');
   const date=root.querySelector('[data-visit-date]');
@@ -107,6 +118,14 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       (!responsibleFilter.value || row.responsible_id===responsibleFilter.value) &&
       (row.motive+' '+row.request_id).toLocaleLowerCase('es').includes(term));
     results.replaceChildren();
+    const noVisits=rows.length===0;
+    emptyGuide.hidden=!noVisits;
+    firstVisitButton.hidden=!(shared&&canCreate&&noVisits);
+    if(noVisits)emptyMessage.textContent=shared
+      ? (canCreate
+        ? 'No hay visitas registradas en esta copropiedad. Programa la primera en el formulario y, después de guardarla, podrás adjuntar imágenes y documentos desde su seguimiento.'
+        : 'Aún no hay visitas registradas. Para programar una visita se requiere Administración o Coordinación y MFA AAL2.')
+      : 'Todavía no hay borradores guardados.';
     for(const row of visible){
       const item=document.createElement('li');
       const title=document.createElement('strong');
@@ -122,6 +141,8 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   };
   async function loadList(){
     const revision=++listRevision;listLoaded=false;
+    refreshButton.disabled=true;
+    emptyGuide.hidden=true;
     listStatus.textContent=shared?'Consultando visitas…':'Consultando borradores…';
     try {
       const result=await repository.list(projectId);
@@ -133,10 +154,14 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       drawList();
     } catch {
       if(revision!==listRevision||!listStatus.isConnected)return;
-      listStatus.textContent=shared?'No se pudieron consultar las visitas. Vuelve a abrir Visitas para reintentar.':'No se pudieron consultar los borradores. Vuelve a abrir Visitas para reintentar.';
+      listStatus.textContent=shared?'No se pudieron consultar las visitas. Usa «Actualizar visitas» para reintentar.':'No se pudieron consultar los borradores. Usa «Actualizar visitas» para reintentar.';
+    } finally {
+      if(revision===listRevision&&refreshButton.isConnected)refreshButton.disabled=false;
     }
   }
   if(canList){
+    refreshButton.hidden=false;
+    refreshButton.addEventListener('click',loadList);
     root.querySelector('[data-list-filters]').hidden=false;
     search.addEventListener('input',drawList);
     date.addEventListener('input',drawList);
