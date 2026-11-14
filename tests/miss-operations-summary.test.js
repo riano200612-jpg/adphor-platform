@@ -4,6 +4,7 @@ import {
  isMissOperationalQuestion,summarizeMissOperations,describeMissOperations
 } from '../src/js/services/miss-operations-summary.js';
 import {mountMissAdphorChat} from '../src/js/ui-miss-adphor-chat.js';
+import {mountAgentHistory} from '../src/js/ui-agent-history.js';
 
 const now=Date.parse('2026-11-14T17:00:00Z');
 const payload={
@@ -106,4 +107,12 @@ test('Miss only reads operational panorama for managers; errors and stale replie
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(messages.length,size);
  }finally{globalThis.document=oldDocument;}
+});
+
+test('Agent history does not offer phantom rule execution when no API is configured',()=>{
+ const container={innerHTML:'',addEventListener(){throw Error('No click controls must be registered');}};
+ mountAgentHistory(container,{repo:{agentApiConfigured:false,agentRuns(){}},projectId:'p1',role:'admin'});
+ assert.match(container.innerHTML,/no hay una API de ejecución y auditoría configurada/);
+ assert.match(container.innerHTML,/panorama integral de solo lectura/);
+ assert.doesNotMatch(container.innerHTML,/data-history="run"/);
 });
