@@ -16,15 +16,26 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
  readButton.textContent='Consultar evidencias de la visita';
  const list=document.createElement('ol');list.dataset.visitEvidenceList='';
  let reading=false;
- async function refresh(){
+ const moreButton=document.createElement('button');
+ moreButton.type='button';moreButton.textContent='Mostrar más evidencias privadas';
+ moreButton.dataset.visitEvidenceMore='';moreButton.hidden=true;
+ let loadedCount=0;
+ async function refresh(append=false){
   if(reading)return;
-  reading=true;readButton.disabled=true;message.textContent='Consultando archivos autorizados…';
+  reading=true;readButton.disabled=true;moreButton.disabled=true;
+  message.textContent='Consultando archivos autorizados…';
   try{
-   const rows=await evidence.listEvidence(projectId,requestId);
+   const paginated=typeof evidence.listEvidencePage==='function';
+   const page=paginated
+    ? await evidence.listEvidencePage(projectId,requestId,append?loadedCount:0)
+    : {rows:await evidence.listEvidence(projectId,requestId),hasMore:false};
    if(!section.isConnected)return;
-   if(!Array.isArray(rows)||rows.length>50||rows.some(x=>x.project_id!==projectId||x.request_id!==requestId))
+   const rows=page?.rows;
+   if(!Array.isArray(rows)||rows.length>50||typeof page.hasMore!=='boolean'
+    ||(page.hasMore&&rows.length!==50)
+    ||rows.some(x=>x.project_id!==projectId||x.request_id!==requestId))
     throw Error('No se pudo verificar el historial de archivos.');
-   list.replaceChildren();
+   if(!append){list.replaceChildren();loadedCount=0;}
    for(const record of rows){
     const item=document.createElement('li');
     const info=document.createElement('span');
@@ -51,14 +62,22 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
     });
     item.append(linkButton);list.append(item);
    }
-   if(!rows.length){const empty=document.createElement('li');empty.textContent='Esta visita aún no tiene evidencias.';list.append(empty);}
-   message.textContent=rows.length+' archivo(s) privado(s) asociado(s) a esta visita.';
+   loadedCount+=rows.length;
+   if(!loadedCount){const empty=document.createElement('li');empty.textContent='Esta visita aún no tiene evidencias.';list.append(empty);}
+   moreButton.hidden=!page.hasMore;
+   message.textContent=loadedCount+' archivo(s) privado(s) consultado(s) para esta visita.'+
+    (page.hasMore?' Puedes consultar más evidencias.':'');
   }catch{
    if(section.isConnected)message.textContent='No se pudieron verificar las evidencias privadas; inténtalo nuevamente.';
-  }finally{reading=false;if(readButton.isConnected)readButton.disabled=false;}
+  }finally{
+   reading=false;
+   if(readButton.isConnected)readButton.disabled=false;
+   if(moreButton.isConnected)moreButton.disabled=false;
+  }
  }
- readButton.addEventListener('click',refresh);
- section.append(title,guidance,readButton,message,list);
+ readButton.addEventListener('click',()=>refresh(false));
+ moreButton.addEventListener('click',()=>refresh(true));
+ section.append(title,guidance,readButton,message,list,moreButton);
  // Final states are immutable: existing private evidence remains readable,
  // but neither the UI nor the SQL policies permit new files after closure.
  if(canWrite && ['programada','en_ejecucion'].includes(row.status) && typeof evidence.uploadEvidence==='function'){

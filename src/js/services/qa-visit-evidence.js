@@ -113,6 +113,22 @@ export function createQaVisitEvidenceRepository(client,{url=QA_URL}={}){
    if(!Array.isArray(rows)||rows.length>50)throw Error('El historial de evidencias es incompleto.');
    return rows.map(row=>checkRow(row,projectId,requestId));
   },
+  // Newest-first key-scoped pages avoid a permanent read failure at 51 files.
+  // The extra row is a bounded lookahead; each request rechecks MFA and membership.
+  async listEvidencePage(projectId,requestId,offset=0){
+   if(!Number.isSafeInteger(offset)||offset<0||offset>100000)
+    throw Error('Paginación de evidencias no válida.');
+   await authorize(projectId,requestId);
+   const rows=checked(await client.from('qa_visit_evidence')
+    .select('id,project_id,request_id,storage_bucket,storage_path,media_type,file_bytes,uploaded_by,file_name,created_at')
+    .eq('project_id',projectId).eq('request_id',requestId)
+    .order('created_at',{ascending:false}).order('id',{ascending:false})
+    .range(offset,offset+50));
+   if(!Array.isArray(rows)||rows.length>51)
+    throw Error('Página de evidencias no válida.');
+   const validated=rows.map(row=>checkRow(row,projectId,requestId));
+   return {rows:validated.slice(0,50),hasMore:validated.length>50};
+  },
   async signedEvidence(projectId,requestId,id){
    await authorize(projectId,requestId);
    if(!uuid.test(id??''))throw Error('Identificador de evidencia no válido.');
