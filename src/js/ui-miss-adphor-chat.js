@@ -1,4 +1,5 @@
 import {bogotaAgendaDate} from './services/verified-agenda.js';
+import {validateCalendarBusyIntervals} from './services/calendar-availability.js';
 // Miss ADPHOR — grounded, read-only assistant for the authenticated project.
 // No network calls, model claims, background learning or cross-project access.
 const normalized = s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -55,7 +56,7 @@ export function answerMissAdphor(question, context={}) {
  if(/pqrs|peticion|reclamo|queja|sugerencia/.test(q))return go('pqrs','Abre PQRS para registrar o consultar solicitudes. La carga real de archivos sigue pendiente de habilitar Storage privado; no confirmaré adjuntos que no se hayan guardado.');
  if(/\bagenda\b/.test(q)&&availablePages.includes('agenda'))return go('agenda','Abre Agenda para consultar las reuniones verificadas de tu copropiedad. La importación es puntual; no confirma cambios recientes del calendario.');
  if(/reunion|calendario|agenda|meet/.test(q))return go('meetings','Abre Reuniones para ver la agenda disponible. La sincronización con el calendario original de José todavía no está certificada.');
- if(/\bvisitas?\b/.test(q))return go('visits','En Visitas puedes preparar el motivo, la fecha y el responsable para la copropiedad seleccionada. El registro aún no está habilitado.');
+ if(/\bvisitas?\b/.test(q))return go('visits','En Visitas puedes revisar operaciones y evidencias según tu rol y MFA AAL2. Solo los registros confirmados por Supabase QA se consideran persistidos.');
  if(/recorrido|inspeccion/.test(q))return go('recorridos','En Recorridos puedes registrar una novedad, asignar seguimiento según tu rol y verificar avances. Las evidencias multimedia requieren almacenamiento privado.');
  if(/enjambre|agente|inteligencia|informe ia|modelo|miss adphor/.test(q)){
   if(!['admin','coordinator'].includes(role))return {text:'Soy Miss ADPHOR, la interfaz de asistencia de la plataforma. Puedo orientarte sobre tus solicitudes autorizadas, pero los análisis internos del enjambre son exclusivos de Administración y Coordinación. Mis respuestas actuales son reglas, no un modelo entrenado.',page:null};
@@ -84,6 +85,28 @@ export function verifiedMissMeetings(rows,projectId) {
  if(scoped.some(row=>!row.title||!Number.isFinite(Date.parse(row.start_at))))throw Error('Horario de reunión no válido.');
  return [...scoped].sort((a,b)=>Date.parse(a.start_at)-Date.parse(b.start_at));
 }
+// Exact-intent read-only questions: never infer private data from a generic prompt.
+export function isMissVisitQuestion(question) {
+ const q=normalized(question).replace(/[¿?]/g,'').replace(/\s+/g,' ').trim();
+ return /^(?:miss adphor,? )?(?:cuantas visitas (?:hay|tenemos|tiene esta copropiedad)|estado de las visitas(?: de esta copropiedad)?|mis visitas|visitas pendientes(?: de esta copropiedad)?)$/.test(q);
+}
+export function summarizeMissVisits(rows,projectId){
+ const allowed=['programada','en_ejecucion','completada','cancelada'];
+ if(typeof projectId!=='string'||!projectId||!Array.isArray(rows)||rows.length>5000||
+   rows.some(row=>!row||row.project_id!==projectId||!allowed.includes(row.status)))
+  throw Error('Consulta de Visitas no verificable.');
+ return {
+  total:rows.length,
+  scheduled:rows.filter(row=>row.status==='programada').length,
+  active:rows.filter(row=>row.status==='en_ejecucion').length,
+  completed:rows.filter(row=>row.status==='completada').length,
+  cancelled:rows.filter(row=>row.status==='cancelada').length
+ };
+}
+export function isMissCorporateAvailabilityQuestion(question){
+ const q=normalized(question).replace(/[¿?]/g,'').replace(/\s+/g,' ').trim();
+ return /^(?:miss adphor,? )?(?:disponibilidad corporativa|disponibilidad del calendario corporativo|horarios ocupados del calendario corporativo|como esta la disponibilidad corporativa)$/.test(q);
+}
 export function isPqrsAttentionQuestion(question) {
  return /^(?:miss adphor,? *)?que asuntos(?: importantes)? requieren mi atencion hoy$/.test(
   normalized(question).replace(/[¿?]/g,'').trim()
@@ -95,9 +118,9 @@ export function summarizePqrsAttention(rows,projectId,now=Date.now()){
  const opened=open.filter(row=>row.status==='open').length;
  return {open:opened,inProgress:open.length-opened,overdue:overdue.length,overdueIds:overdue.map(row=>row.id)};
 }
-export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings}){
+export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings,loadVisits,loadCalendarBusy}){
  const img='/assets/branding/miss-adphor.webp';
- host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
+ host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)input.focus();});
  function append(text,who){const p=document.createElement('p');p.className='miss-chat-msg '+who;p.textContent=text;log.append(p);log.scrollTop=log.scrollHeight;}
@@ -133,7 +156,40 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetin
     }
    }
   }
-  if(!host.isConnected||context().projectId!==current.projectId)return;
+  if(isMissVisitQuestion(question) && current.project?.id===current.projectId && current.projectId){
+   result={text:'No hay una consulta de Visitas autorizada disponible para esta sesión.',page:null};
+   if(current.mode==='cloud' && loadVisits){
+    try{
+     const summary=summarizeMissVisits(await loadVisits(current.projectId),current.projectId);
+     result={text:'Visitas registradas en Supabase QA para esta copropiedad: '+summary.total+
+      ' · Programadas: '+summary.scheduled+' · En ejecución: '+summary.active+
+      ' · Completadas: '+summary.completed+' · Canceladas: '+summary.cancelled+
+      '. Consulta puntual bajo la sesión y permisos vigentes; no es una simulación.',page:'visits'};
+    }catch{
+     result={text:'No pude verificar las Visitas de esta copropiedad. Revisa tu sesión y MFA AAL2.',page:null};
+    }
+   }
+  }
+  if(isMissCorporateAvailabilityQuestion(question) && current.project?.id===current.projectId && current.projectId){
+   result={text:'La disponibilidad corporativa requiere una sesión administrativa autorizada y MFA AAL2.',page:null};
+   if(current.mode==='cloud' && ['admin','coordinator'].includes(current.role)){
+    if(!loadCalendarBusy)result={text:'La consulta de Google Calendar todavía no está habilitada en ADPHOR QA. La conexión de ChatGPT es independiente.',page:null};
+    else{
+     try{
+      const now=Number.isFinite(current.now)?current.now:Date.now();
+      const start=new Date(now).toISOString();
+      const end=new Date(now+7*86400000).toISOString();
+      const busy=validateCalendarBusyIntervals(await loadCalendarBusy(current.projectId,start,end));
+      if(busy.length>1000)throw Error('Respuesta demasiado amplia.');
+      result={text:'Google Calendar corporativo configurado en ADPHOR: '+busy.length+
+        ' intervalos ocupados en los próximos 7 días. Fuente: consulta freeBusy en vivo; no revela asuntos ni participantes, no confirma reservas y no atribuye eventos a esta copropiedad.',page:'meetings'};
+     }catch{
+      result={text:'No pude comprobar la disponibilidad corporativa en vivo. No se confirman horarios libres ni reservas.',page:null};
+     }
+    }
+   }
+  }
+  if(!host.isConnected||context().projectId!==current.projectId||context().userId!==current.userId)return;
   append(result.text,'assistant');
   if(result.page && current.availablePages.includes(result.page)){
    const button=document.createElement('button');button.type='button';button.textContent='Abrir '+result.page;button.className='miss-chat-jump';button.onclick=()=>onNavigate(result.page);log.append(button);
