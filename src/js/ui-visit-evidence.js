@@ -68,8 +68,35 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
   fileInput.accept='image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf';
   const uploadButton=document.createElement('button');uploadButton.type='button';
   uploadButton.textContent='Guardar evidencias privadas';
-  label.append(fileInput);section.append(label,uploadButton);
+  const selectionStatus=document.createElement('p');
+  selectionStatus.dataset.visitSelectionStatus='';
+  selectionStatus.setAttribute('role','status');
+  const selectedList=document.createElement('ul');
+  selectedList.dataset.visitSelectedFiles='';
+  selectedList.setAttribute('aria-label','Archivos seleccionados para esta visita');
   let sending=false;
+  function showSelectedFiles(){
+   selectedList.replaceChildren();
+   uploadButton.disabled=true;
+   let files;
+   try{files=validateQaEvidence(fileInput.files);}
+   catch(error){selectionStatus.textContent=error.message;return;}
+   if(!files.length){
+    selectionStatus.textContent='Selecciona imágenes, videos o PDF antes de guardar.';
+    return;
+   }
+   for(const file of files){
+    const item=document.createElement('li');
+    item.textContent=(file.name||'Archivo')+' · '+(file.size/1048576).toFixed(2)+' MB';
+    selectedList.append(item);
+   }
+   selectionStatus.textContent=files.length+' archivo(s) listos para subir de forma privada.';
+   uploadButton.disabled=sending;
+  }
+  label.append(fileInput);
+  section.append(label,selectionStatus,selectedList,uploadButton);
+  fileInput.addEventListener('change',showSelectedFiles);
+  showSelectedFiles();
   uploadButton.addEventListener('click',async()=>{
    if(sending)return;
    let files;
@@ -83,10 +110,11 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
     if(!Array.isArray(confirmed)||confirmed.length!==files.length||confirmed.some(x=>x.project_id!==projectId||x.request_id!==requestId||!x.storage_written||!x.metadata_linked))
      throw Error('La evidencia no quedó confirmada.');
     fileInput.value='';
+    showSelectedFiles();
     await refresh();
    }catch{
     if(section.isConnected)message.textContent='No se confirmó la asociación de todos los archivos. Reintenta con los mismos archivos; no se duplicará la visita.';
-   }finally{sending=false;if(uploadButton.isConnected)uploadButton.disabled=false;if(fileInput.isConnected)fileInput.disabled=false;}
+   }finally{sending=false;if(fileInput.isConnected)fileInput.disabled=false;if(uploadButton.isConnected)showSelectedFiles();}
   });
  }
  root.append(section);
