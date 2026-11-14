@@ -1,6 +1,7 @@
 import {bogotaAgendaDate} from './services/verified-agenda.js';
 import {validateCalendarBusyIntervals,calendarInstant} from './services/calendar-availability.js';
 import {isMissOperationalQuestion,summarizeMissOperations,describeMissOperations} from './services/miss-operations-summary.js';
+import {isMissPqrsStatusQuestion,summarizeMissPqrsStatus,describeMissPqrsStatus} from './services/miss-pqrs-status.js';
 // Miss ADPHOR — grounded, read-only assistant for the authenticated project.
 // No network calls, model claims, background learning or cross-project access.
 const normalized = s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -144,16 +145,29 @@ export function summarizePqrsAttention(rows,projectId,now=Date.now()){
 }
 export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings,loadVisits,loadCalendarBusy}){
  const img='/assets/branding/miss-adphor.webp';
- host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Próximas reuniones">Próximas reuniones</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
+ host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="PQRS pendientes">PQRS en gestión</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Próximas reuniones">Próximas reuniones</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
+ let latestQuestion=0;
  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)input.focus();});
  function append(text,who){const p=document.createElement('p');p.className='miss-chat-msg '+who;p.textContent=text;log.append(p);log.scrollTop=log.scrollHeight;}
  async function ask(value){
   const question=String(value||'').trim();
   if(!question)return;
+  const questionNumber=++latestQuestion;
   append(question,'user');input.value='';
   const current=context();
   let result=answerMissAdphor(question,current);
+  if(isMissPqrsStatusQuestion(question) && current.project?.id===current.projectId && current.projectId){
+   result={text:'El estado de PQRS requiere una sesión autorizada para la copropiedad seleccionada.',page:null};
+   if(current.mode==='cloud' && loadPqrs){
+    try{
+     const summary=summarizeMissPqrsStatus(await loadPqrs(current.projectId),current.projectId,current.now??Date.now());
+     result={text:describeMissPqrsStatus(summary),page:'pqrs'};
+    }catch{
+     result={text:'No pude verificar las PQRS pendientes de esta copropiedad. Revisa tu sesión, MFA y permisos.',page:null};
+    }
+   }
+  }
   if(isPqrsAttentionQuestion(question) && current.project?.id===current.projectId && current.projectId){
    result={text:'La consulta de atención requiere PQRS habilitado en QA.',page:null};
    if(loadPqrs){
@@ -252,7 +266,12 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetin
     }
    }
   }
-  if(!host.isConnected||context().projectId!==current.projectId||context().userId!==current.userId)return;
+  // Discard outdated replies, even if a different question resolved first.
+  // Never reveal privileged answers after a role/mode/user/project switch.
+  const latest=context();
+  if(!host.isConnected||questionNumber!==latestQuestion||latest.projectId!==current.projectId||
+     latest.project?.id!==current.project?.id||latest.userId!==current.userId||
+     latest.role!==current.role||latest.mode!==current.mode)return;
   append(result.text,'assistant');
   if(result.page && current.availablePages.includes(result.page)){
    const button=document.createElement('button');button.type='button';button.textContent='Abrir '+result.page;button.className='miss-chat-jump';button.onclick=()=>onNavigate(result.page);log.append(button);
