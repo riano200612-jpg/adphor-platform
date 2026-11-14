@@ -9,10 +9,10 @@ test('Visitas: private files persist across page reload and signed URL is user-i
   saves++;
   const out=[];
   for(const f of files){
-   let row=stored.find(x=>x.name===f.name&&x.file_bytes===f.size);
+   let row=stored.find(x=>x.file_name===f.name&&x.file_bytes===f.size);
    if(!row){
     row={id:'c8709acb-9e96-8dfa-b3d1-53f42528315b',project_id:projectId,request_id:requestId,
-     media_type:f.type,file_bytes:f.size,created_at:'2026-11-13T12:00:00Z',name:f.name};
+     media_type:f.type,file_bytes:f.size,file_name:f.name,created_at:'2026-11-13T12:00:00Z'};
     stored.push(row);
    }
    out.push({id:row.id,project_id:projectId,request_id:requestId,storage_written:true,metadata_linked:true});
@@ -61,11 +61,13 @@ test('Visitas: private files persist across page reload and signed URL is user-i
  await expect(saveButton).toBeDisabled();
  await expect(page.locator('[data-visit-selected-files] li')).toHaveCount(0);
  await expect(page.locator('[data-visit-evidence-list]')).toContainText('application/pdf');
+ await expect(page.locator('[data-visit-evidence-list]')).toContainText('acta.pdf');
  await expect(page.locator('a[data-visit-signed]')).toHaveCount(0);
  await page.reload();
  await expect(page.locator('a[data-visit-signed]')).toHaveCount(0);
  await page.getByRole('button',{name:'Consultar evidencias de la visita'}).click();
  await expect(page.locator('[data-visit-evidence-list] li')).toHaveCount(1);
+ await expect(page.locator('[data-visit-evidence-list]')).toContainText('acta.pdf');
  await page.getByRole('button',{name:'Preparar enlace privado'}).click();
  const link=page.getByRole('link',{name:'Abrir archivo (90 segundos)'});
  await expect(link).toHaveAttribute('href',/^https:\/\/qfctnnnnltghepwujpdm.supabase.co\/storage\/v1\/object\/sign\/qa-visit-evidence/);
