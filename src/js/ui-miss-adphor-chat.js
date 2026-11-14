@@ -1,5 +1,6 @@
 import {bogotaAgendaDate} from './services/verified-agenda.js';
 import {validateCalendarBusyIntervals} from './services/calendar-availability.js';
+import {isMissOperationalQuestion,summarizeMissOperations,describeMissOperations} from './services/miss-operations-summary.js';
 // Miss ADPHOR — grounded, read-only assistant for the authenticated project.
 // No network calls, model claims, background learning or cross-project access.
 const normalized = s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -120,7 +121,7 @@ export function summarizePqrsAttention(rows,projectId,now=Date.now()){
 }
 export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings,loadVisits,loadCalendarBusy}){
  const img='/assets/branding/miss-adphor.webp';
- host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
+ host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)input.focus();});
  function append(text,who){const p=document.createElement('p');p.className='miss-chat-msg '+who;p.textContent=text;log.append(p);log.scrollTop=log.scrollHeight;}
@@ -185,6 +186,26 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetin
         ' intervalos ocupados en los próximos 7 días. Fuente: consulta freeBusy en vivo; no revela asuntos ni participantes, no confirma reservas y no atribuye eventos a esta copropiedad.',page:'meetings'};
      }catch{
       result={text:'No pude comprobar la disponibilidad corporativa en vivo. No se confirman horarios libres ni reservas.',page:null};
+     }
+    }
+   }
+  }
+  if(isMissOperationalQuestion(question) && current.project?.id===current.projectId && current.projectId){
+   result={text:'El panorama integral requiere una sesión de Administración o Coordinación en ADPHOR.',page:null};
+   if(current.mode==='cloud' && ['admin','coordinator'].includes(current.role)){
+    if(!loadPqrs||!loadVisits||!loadMeetings){
+     result={text:'Faltan fuentes autorizadas para generar el panorama. No presentaré datos incompletos como un informe verificado.',page:null};
+    }else{
+     try{
+      const [pqrs,visits,meetings]=await Promise.all([
+       loadPqrs(current.projectId),loadVisits(current.projectId),loadMeetings(current.projectId)
+      ]);
+      const summary=summarizeMissOperations({
+       projectId:current.projectId,tickets:current.tickets,pqrs,visits,meetings,now:current.now??Date.now()
+      });
+      result={text:describeMissOperations(summary),page:null};
+     }catch{
+      result={text:'No pude verificar todas las fuentes para esta copropiedad. No se generó un panorama incompleto; revisa sesión, MFA AAL2 y permisos.',page:null};
      }
     }
    }
