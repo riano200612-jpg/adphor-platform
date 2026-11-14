@@ -1,5 +1,6 @@
 import {createMeetingRequestGate} from './services/meeting-request-gate.js';
 import {calendarHasConflict} from './services/calendar-availability.js';
+import {loadVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
 import {inspectQaRegisteredConflicts} from './services/qa-register-conflicts.js';
 import {loadMeetingSlotSuggestions} from './services/meeting-slot-suggestions.js';
 import { drawCompanionOptions } from './ui-companion-options.js';
@@ -336,7 +337,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
  render();
  if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
-   repo.listVerifiedQaMeetings(projectId).then(rows=>{
+   loadVerifiedAgenda(repo,projectId).then(rows=>{
      if(!root.isConnected)return;
      verifiedCloudRows=(Array.isArray(rows)?rows:[]).map(r=>({
        id:r.id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
@@ -344,7 +345,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
      render();
    }).catch(error=>{
      if(!root.isConnected)return;
-     status.textContent='No se pudo consultar la agenda QA autorizada: '+error.message;
+     status.textContent='No se pudo consultar la agenda QA autorizada: '+verifiedAgendaUiError(error);
    });
  }
 }
