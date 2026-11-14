@@ -34,7 +34,7 @@ export async function initializeVisitFixture(db){
  await db.exec(readFileSync('qa/database/supabase/migrations/20261105144315_qa_authorized_principals.sql','utf8'));
  await db.exec(readFileSync('supabase/migrations/20261111133108_qa_shared_visits_scheduled_contract.sql','utf8'));
  await db.exec(readFileSync(visitMigration,'utf8'));
- await db.exec(readFileSync('qa/sql/visits-office-openxml.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20261114164358_qa_visits_office_openxml.sql','utf8'));
  await db.exec("insert into projects(id,name,areas) values('p1','Fixture 1',array['Zona']),('p2','Fixture 2',array['Zona']);");
  for(const [key,id] of Object.entries(visitUsers)){
   await db.query('insert into auth.users values($1,$2,now())',[id,key+'@fixture.invalid']);
