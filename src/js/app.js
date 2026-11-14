@@ -2,6 +2,7 @@ import {mountVerifiedAgenda} from './ui-verified-agenda.js';
 import {mountVisitPreparation} from './ui-visit-preparation.js';
 import {renderMfaScreen} from './ui-mfa.js';
 import {mountStaffDirectory} from './ui-staff-directory.js';
+import {mountCorporateStaff} from './ui-corporate-staff.js';
 import {mountQaPasswordRecovery} from './ui-password-recovery.js';
 import {loginAvatarMarkup} from './services/branding.js';
 import {ADPHOR_DEPLOY_LABEL} from './services/deployment-version.js';
@@ -24,6 +25,7 @@ import '../css/styles.css';
 import '../css/client-source-review.css';
 import '../css/premium.css';
 import '../css/visits.css';
+import '../css/corporate-staff.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -119,7 +121,7 @@ function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['unified','grip','Centro integrado'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
   nav.splice(1,0,['meetings','calendar','Reuniones'],['agenda','calendar-days','Agenda'],['visits','route','Visitas'],['pqrs','inbox','PQRS']);
-  if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo']);
+  if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo'],['corporate-staff','people-group','Equipo corporativo']);
   if (repo.mode === 'cloud' && role()==='admin') nav.push(['qa-source','users','Equipo, fotos y datos reales']);
   if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' || project()?.id === 'demo-01' ? 'Entorno de prueba · origen histórico disponible' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : (project()?.is_demo || project()?.id === 'demo-01') ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div><div id="miss-adphor-chat-root"></div>`;
@@ -188,6 +190,7 @@ function reportPage() {
 }
 function renderPage() {
   if(state.page==='staff' && repo.staffDirectoryEnabled){mountStaffDirectory($('page-content'),{repo,projectId:state.projectId,projectName:project()?.name});return;}
+  if(state.page==='corporate-staff' && repo.staffDirectoryEnabled){mountCorporateStaff($('page-content'),{repo});return;}
   if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin') { mountClientSourceReview($('page-content'));return; }
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}

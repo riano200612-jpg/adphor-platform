@@ -10,6 +10,7 @@ import { signedPropertyPhoto } from './property-photos.js';
 import { createCloudAuthentication } from './cloud-authentication.js';
 import { qaAuthPolicy } from './qa-auth-policy.js';
 import { createStaffDirectory } from './staff-directory.js';
+import {createCorporateStaff} from './corporate-staff.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
@@ -50,6 +51,7 @@ export function createCloudRepository(url, key) {
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
     allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
   const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
+  const corporateStaff=authPolicy.isolatedQa?createCorporateStaff(client):null;
   const qaCalendarEdgeEnabled=authPolicy.isolatedQa && import.meta.env.VITE_QA_CALENDAR_EDGE_ENABLED==='true';
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
@@ -70,6 +72,11 @@ export function createCloudRepository(url, key) {
     // A configured URL does not prove the agent API is deployed or ready.
     agentApiConfigured:Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
     staffDirectoryEnabled:Boolean(staff),
+    async corporateStaffDirectory(){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.list();},
+    async corporateStaffCanManage(){if(!corporateStaff||!user)return false;return corporateStaff.canManage();},
+    async corporateStaffSetVisible(id,visible){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.setVisible(id,visible);},
+    async corporateStaffPhoto(path){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.photo(path);},
+    async corporateStaffHistory(){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.history();},
     async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
     async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},
     // Historical data is readable only when an isolated QA project is explicitly enabled.
