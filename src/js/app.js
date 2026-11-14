@@ -130,12 +130,17 @@ function shell() {
   mountMissAdphorChat($('miss-adphor-chat-root'),{
     context:()=>({
       project:project(),projectId:state.projectId,tickets:state.tickets,
-      role:role(),mode:repo.mode,
+      userId:state.user?.id,role:role(),mode:repo.mode,
       page:state.page,availablePages:nav.map(([id])=>id)
     }),
     loadMeetings:repo.mode==='cloud' && typeof repo.listVerifiedQaMeetings==='function'
       ? id=>repo.listVerifiedQaMeetings(id) : undefined,
     loadPqrs:repo.mode==='cloud' && repo.porto ? id=>repo.porto.listAttention(id) : undefined,
+    loadVisits:repo.mode==='cloud' && typeof repo.visits?.list==='function'
+      ? id=>repo.visits.list(id) : undefined,
+    loadCalendarBusy:repo.mode==='cloud' && repo.calendarAvailabilityConfigured &&
+      typeof repo.meetingAvailability==='function'
+      ? (id,start,end)=>repo.meetingAvailability(id,start,end) : undefined,
     onNavigate(page){if(!nav.some(([id])=>id===page))return;state.page=page;state.filters={};shell();$('main')?.focus();}
   });
 }
