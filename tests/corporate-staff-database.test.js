@@ -21,7 +21,7 @@ test('corporate staff RPC enforces AAL2, role, audit and cross-property photo sc
       'grant usage on schema auth,storage to authenticated;grant select on storage.objects to authenticated;'
     );
     await db.exec(await readFile(new URL('../supabase/migrations/20261106210345_qa_staff_directory.sql',import.meta.url),'utf8'));
-    await db.exec(await readFile(new URL('../supabase/migrations/20261114182000_qa_corporate_carousel.sql',import.meta.url),'utf8'));
+    await db.exec(await readFile(new URL('../supabase/migrations/20261114174718_qa_corporate_carousel_visibility.sql',import.meta.url),'utf8'));
     await run(
       "insert into auth.users(id) values('00000000-0000-4000-8000-000000000001');",
       "insert into projects(id) values('a');",
