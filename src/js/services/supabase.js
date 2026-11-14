@@ -87,7 +87,7 @@ export function createCloudRepository(url, key) {
       const result=await client.from('qa_meeting_events')
         .select('id,project_id,title,kind,source_status,start_at,end_at,is_calendar_verified')
         .eq('project_id',projectId).eq('is_calendar_verified',true)
-        .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(500);
+        .eq('source_status','Confirmada').order('start_at',{ascending:true}).limit(501);
       return readVerifiedAgendaQuery(result);
     },
     async listQaPqrsHistory(projectId) {
