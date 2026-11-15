@@ -1,4 +1,5 @@
 import {validateQaVisitEvidence} from './services/qa-visit-evidence-policy.js';
+import {canPrepareSyntheticVisitPdf,createSyntheticVisitPdfFile} from './services/qa-visit-synthetic-pdf.js';
 
 // All content from Supabase is text-only. Signed links are requested explicitly,
 // expire after 90 seconds and are never persisted in the browser.
@@ -116,6 +117,27 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
   }
   label.append(fileInput);
   section.append(label,selectionStatus,selectedList,uploadButton);
+  if(canPrepareSyntheticVisitPdf({hostname:globalThis.location?.hostname,row,canWrite})){
+   const prepareSynthetic=document.createElement('button');
+   prepareSynthetic.type='button';prepareSynthetic.className='btn secondary';
+   prepareSynthetic.dataset.visitSyntheticPdf='';
+   prepareSynthetic.textContent='Preparar PDF sintético de prueba (solo QA)';
+   const note=document.createElement('p');note.className='muted';
+   note.textContent='No representa una visita real. Revisa el nombre y pulsa «Guardar evidencias privadas» para confirmar la subida.';
+   prepareSynthetic.addEventListener('click',()=>{
+    if(sending)return;
+    try{
+     const transfer=new DataTransfer();
+     transfer.items.add(createSyntheticVisitPdfFile());
+     fileInput.files=transfer.files;
+     showSelectedFiles();
+     message.textContent='PDF sintético preparado. Revisa el archivo y confirma si deseas guardarlo en QA.';
+    }catch{
+     message.textContent='Este navegador no permite preparar el archivo sintético; utiliza el selector habitual.';
+    }
+   });
+   section.append(prepareSynthetic,note);
+  }
   fileInput.addEventListener('change',showSelectedFiles);
   showSelectedFiles();
   uploadButton.addEventListener('click',async()=>{
