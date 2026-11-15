@@ -1,4 +1,5 @@
 import {mountVisitEvidence} from './ui-visit-evidence.js';
+import {canPrepareSyntheticVisitFollowUp,QA_SYNTHETIC_VISIT_FOLLOWUP} from './services/qa-visit-synthetic-pdf.js';
 
 export function canAttachVisitEvidence(row,repository,canWrite){
  return canWrite===true &&
@@ -43,6 +44,23 @@ export function mountVisitLifecycle(item,{row,repository,canWrite,responsibleNam
  const buttons=document.createElement('div');buttons.className='visit-actions';
  let busy=false;
  const requests=new Map();
+ if(canPrepareSyntheticVisitFollowUp({hostname:globalThis.location?.hostname,row,canWrite})){
+  const sampleButton=document.createElement('button');
+  sampleButton.type='button';sampleButton.className='btn secondary';
+  sampleButton.dataset.visitSyntheticFollowup='';
+  sampleButton.textContent='Preparar seguimiento sintético de prueba (solo QA)';
+  sampleButton.addEventListener('click',()=>{
+   if(busy)return;
+   for(const [key,value] of Object.entries(QA_SYNTHETIC_VISIT_FOLLOWUP)){
+    const field=inputs[key];
+    if(!field||field.readOnly||field.disabled)return;
+    field.value=value;
+    field.dispatchEvent(new Event('input',{bubbles:true}));
+   }
+   message.textContent='Datos sintéticos preparados. Revisa las cuatro respuestas antes de confirmar el cierre de la visita de prueba.';
+  });
+  buttons.append(sampleButton);
+ }
  const names={edit:'Guardar cambios',start:'Registrar ingreso',progress:'Guardar seguimiento',finish:'Registrar salida y completar',cancel:'Cancelar visita'};
  for(const action of actions){
   const button=document.createElement('button');button.type='button';button.textContent=names[action];buttons.append(button);
