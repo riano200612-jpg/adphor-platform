@@ -69,6 +69,8 @@ export function createCloudRepository(url, key) {
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.
     calendarAvailabilityConfigured:qaCalendarEdgeEnabled || Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
+    // Distinguish an enabled Supabase QA Edge freeBusy adapter from an unverified agents API.
+    qaCalendarEdgeEnabled,
     // A configured URL does not prove the agent API is deployed or ready.
     agentApiConfigured:Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
     staffDirectoryEnabled:Boolean(staff),
