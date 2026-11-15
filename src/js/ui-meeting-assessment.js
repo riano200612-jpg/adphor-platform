@@ -1,6 +1,7 @@
 import {createMeetingRequestGate} from './services/meeting-request-gate.js';
 import {calendarHasConflict} from './services/calendar-availability.js';
 import {loadVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
+import {mountQaCalendarProbe} from './ui-qa-calendar-probe.js';
 import {inspectQaRegisteredConflicts} from './services/qa-register-conflicts.js';
 import {loadMeetingSlotSuggestions} from './services/meeting-slot-suggestions.js';
 import { drawCompanionOptions } from './ui-companion-options.js';
@@ -335,6 +336,12 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
  };
  experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
+ if(!demo){
+  const diagnostics=document.createElement('div');
+  diagnostics.dataset.qaCalendarDiagnostics='';
+  root.querySelector('[data-notice]').after(diagnostics);
+  mountQaCalendarProbe(diagnostics,{repo,projectId,role,isProjectCurrent});
+ }
  render();
  if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
    loadVerifiedAgenda(repo,projectId).then(rows=>{
