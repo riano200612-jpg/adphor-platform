@@ -410,5 +410,21 @@ dialog.addEventListener('close', () => { modalReturnFocus?.focus(); });
 window.addEventListener('offline', () => toast('Sin conexión. Conserva el formulario; podrás volver a intentar el guardado.'));
 window.addEventListener('storage', event => { if(event.key === 'adphor.workflow.demo.v3' && state.user) toast('La bitácora cambió en otra pestaña. Pulsa Actualizar para consultar los cambios.'); });
 mountQaPasswordRecovery(root, {url, key, onLogin: loginScreen})
-  .then(handled => { if (!handled) loginScreen(); })
+  .then(async handled => {
+    if (handled) return;
+    // Never render private UI before the backend verifies the saved identity and AAL2.
+    const restored = typeof repo.restoreSession === 'function'
+      ? await repo.restoreSession() : null;
+    if (!restored) { loginScreen(); return; }
+    try {
+      state.user = restored;
+      await refresh();
+      state.page = 'dashboard';
+      state.filters = {};
+      shell();
+    } catch {
+      state.user = null;
+      loginScreen();
+    }
+  })
   .catch(() => { loginScreen(); $('login-error').textContent = 'No se pudo abrir la recuperación. Solicita un enlace nuevo.'; });
