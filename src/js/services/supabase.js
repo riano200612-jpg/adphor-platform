@@ -21,8 +21,8 @@ const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
 
 export function createCloudRepository(url, key) {
-  // Persistence is strictly isolated to QA Integral. Demo, old QA and production
-  // keep their existing non-persistent behavior.
+  // Only the known, Cloudflare-Access-protected QA Integral origin can keep
+  // a session across browser restarts; production and historic QA do not.
   const allowSessionResume=qaSessionResumePolicy({url,hostname:globalThis.location?.hostname});
   const authOptions={persistSession:allowSessionResume,autoRefreshToken:true,detectSessionInUrl:false};
   if(allowSessionResume)authOptions.storageKey=QA_SESSION_STORAGE_KEY;
@@ -75,6 +75,8 @@ export function createCloudRepository(url, key) {
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.
     calendarAvailabilityConfigured:qaCalendarEdgeEnabled || Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
+    // Distinguish an enabled Supabase QA Edge freeBusy adapter from an unverified agents API.
+    qaCalendarEdgeEnabled,
     // A configured URL does not prove the agent API is deployed or ready.
     agentApiConfigured:Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
     staffDirectoryEnabled:Boolean(staff),
