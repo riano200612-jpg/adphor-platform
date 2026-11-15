@@ -30,6 +30,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  frame.referrerPolicy='strict-origin-when-cross-origin';frame.allow='microphone; camera';
  frame.loading='lazy';frame.style.width='100%';frame.style.minHeight='780px';frame.style.border='1px solid #cbd5d1';frame.style.borderRadius='12px';
  const fallback=el('p','El original permite un archivo por radicación (máximo 10 MB). Para varios adjuntos el cliente indicó combinarlos en PDF. Si la cámara, el micrófono o el inicio de sesión no funcionan en el marco, abre el formulario en su propia pestaña.');fallback.className='muted';
+ const copyTracking=el('button','Copiar enlace de consulta');copyTracking.type='button';copyTracking.className='btn secondary';copyTracking.hidden=true;
  const launch=el('button','Abrir formulario de radicación');launch.type='button';launch.className='btn primary';launch.setAttribute('data-pqrs-action','');
  let selected='owners',currentUrl='';
  let saved='';
@@ -50,13 +51,13 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  }
  function draw(){
    launch.textContent=selected==='owners'?'Abrir formulario de radicación y evidencias':selected==='tracking'?'Abrir consulta de radicado':'Abrir portal autorizado de empleados';
-   const base=resolveBase();currentUrl='';
+   const base=resolveBase();currentUrl='';copyTracking.hidden=selected!=='tracking';copyTracking.disabled=true;
    if(!base){
      notice.textContent='Falta vincular el enlace /exec del Portal original del cliente. Los envíos y adjuntos no se habilitarán hasta configurarlo.';
      preview.replaceChildren(el('p','Formulario original pendiente de conexión. No se perderán ni crearán radicados desde esta vista.'));launch.disabled=true;
      return;
    }
-   try{currentUrl=pqrsPortalRoute(base,selected);frame.src=currentUrl;preview.replaceChildren(frame,fallback);launch.disabled=false;
+   try{currentUrl=pqrsPortalRoute(base,selected);frame.src=currentUrl;preview.replaceChildren(frame,fallback);launch.disabled=false;copyTracking.disabled=false;
        notice.textContent='Enlace del Portal original configurado. Verifica su inicio de sesión y que el radicado y los adjuntos se confirmen dentro del formulario antes de cerrar la página. Este acceso no prueba por sí solo que el servidor respondió correctamente.';}
    catch(err){notice.textContent=err.message;launch.disabled=true;}
  }
@@ -71,6 +72,14 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
    choices.append(button);
  }
  launch.onclick=()=>{if(currentUrl)open(currentUrl);};
+ copyTracking.onclick=async()=>{
+   if(selected!=='tracking'||!currentUrl)return;
+   try{
+     if(!globalThis.navigator?.clipboard?.writeText)throw Error('Portapapeles no disponible');
+     await globalThis.navigator.clipboard.writeText(currentUrl);
+     notice.textContent='Enlace de consulta copiado. El número de radicado se obtiene exclusivamente del portal original; no se ha creado ni modificado ninguna solicitud.';
+   }catch{notice.textContent='No se pudo copiar el enlace. Usa «Abrir consulta de radicado» y copia la dirección desde el navegador.';}
+ };
  submitUrl.onclick=()=>{
    try{const normalized=normalizeAppsScriptExecUrl(input.value);let v={};
      try{v=JSON.parse(storage.getItem(CONFIG_KEY)||'{}');if(!v||typeof v!=='object')v={};}catch{}
@@ -78,7 +87,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
    catch(err){notice.textContent=err.message;}
  };
  page.append(eyebrow,heading,intro,choices,notice,config,panel);
- panel.append(preview,launch);
+ panel.append(preview,launch,copyTracking);
  root.append(page);
  const historic=el('section');historic.className='panel';
  historic.append(el('h2','29 PQRS identificadas en el archivo histórico'),
