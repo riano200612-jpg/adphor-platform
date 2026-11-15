@@ -40,11 +40,12 @@ export function describeQaCorporateCalendarProbe(result){
 }
 export function qaCorporateCalendarProbeError(error){
  const message=typeof error?.message==='string'?error.message:'';
+ const status=error?.context?.status??error?.status;
  if(message==='QA_CALENDAR_PROBE_NOT_AUTHORIZED')
   return 'La comprobación requiere un administrador o coordinador con sesión Cloud QA y el servicio Edge habilitado.';
- if(message==='El calendario corporativo aún no está configurado en QA.')
+ if(status===503||message.includes('El calendario corporativo aún no está configurado en QA.'))
   return 'El servicio de Calendar respondió 503: faltan configuraciones o credenciales corporativas en Supabase QA. Ningún horario quedó certificado.';
- if(message==='La consulta requiere autorización y MFA AAL2.')
+ if(status===401||status===403||message.includes('La consulta requiere autorización y MFA AAL2.'))
   return 'La consulta requiere sesión autorizada, membresía de esta copropiedad y MFA AAL2. Comprueba tu acceso antes de reintentar.';
  return 'No se pudo confirmar una respuesta real de Google Calendar en QA. Revisa la configuración y los registros del servicio con acceso administrativo; no se considera disponibilidad libre.';
 }
