@@ -38,3 +38,13 @@ export function createSyntheticVisitPdfFile(FileClass=globalThis.File){
  if(typeof FileClass!=='function')throw Error('El navegador no puede crear archivos PDF locales.');
  return new FileClass([syntheticVisitPdfBytes()],QA_SYNTHETIC_VISIT_PDF_NAME,{type:'application/pdf'});
 }
+
+export const QA_SYNTHETIC_VISIT_FOLLOWUP=Object.freeze({
+ observations:'PRUEBA QA SIN VISITA REAL. Registro sintético de ingreso.',
+ activities:'PRUEBA QA: verificación de adjunto PDF y seguimiento.',
+ conclusions:'PRUEBA QA completada: flujo sintético verificado, sin visita física.',
+ commitments:'Sin compromisos reales; solo certificación QA.'
+});
+export function canPrepareSyntheticVisitFollowUp({hostname,row,canWrite}={}){
+ return row?.status==='en_ejecucion' && canPrepareSyntheticVisitPdf({hostname,row,canWrite});
+}
