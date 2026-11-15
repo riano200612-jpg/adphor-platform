@@ -24,7 +24,7 @@ test('Read-only QA connection probe queries one exact future hour under tenant c
   checkedAt:'2026-11-15T13:00:00.000Z',busyCount:1,readonly:true});
  const info=describeQaCorporateCalendarProbe(result);
  assert.match(info,/respuesta de Google Calendar freeBusy/);
- assert.match(info,/no creó ni cambió ningún evento/i);
+ assert.match(info,/no se creó ni cambió ningún evento/i);
  assert.match(info,/no certifica todavía la cuenta organizadora/);
  assert.doesNotMatch(info,/private|2026-11-16T14|invitados:|reservó/);
 });
