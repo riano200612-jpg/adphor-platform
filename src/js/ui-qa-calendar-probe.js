@@ -21,7 +21,7 @@ export function mountQaCalendarProbe(host,{repo,projectId,role,isProjectCurrent=
  button.dataset.qaCalendarProbe='';
  button.textContent='Comprobar conexión Google Calendar';
  const status=document.createElement('p');
- status.setAttribute('role','status');
+ // Keep an independent live region without creating a second role=status in Reuniones.
  status.setAttribute('aria-live','polite');
  status.dataset.qaCalendarProbeResult='';
  const enabled=canProbeQaCorporateCalendar({repo,projectId,role});
