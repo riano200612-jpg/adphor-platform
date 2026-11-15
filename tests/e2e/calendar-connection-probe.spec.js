@@ -34,7 +34,7 @@ test('Admin may probe true Edge contract without creating a calendar event or le
  await expect(page.getByRole('status')).toContainText('No se ha ejecutado');
  await check.click();
  await expect(page.getByRole('status')).toContainText('respuesta de Google Calendar freeBusy');
- await expect(page.getByRole('status')).toContainText('no creó ni cambió ningún evento');
+ await expect(page.getByRole('status')).toContainText('no se creó ni cambió ningún evento');
  await expect(page.getByRole('status')).toContainText('no certifica todavía la cuenta organizadora');
  await expect(page.getByText('Other customer PRIVATE')).toHaveCount(0);
  const calls=await page.evaluate(()=>window.qaCalls);
