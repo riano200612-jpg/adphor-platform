@@ -152,3 +152,38 @@ test('errores de inicio de sesión se traducen y nunca muestran el texto técnic
   assert.doesNotMatch(unknown,/postgres|secret|Database/i);
   assert.equal(loginErrorMessage(undefined),'No se pudo iniciar sesión. Intenta nuevamente o contacta al administrador de QA.');
 });
+
+test('saved QA session restores only with matching identity and AAL2', async () => {
+  let level='aal2', identity='owner', sessionId='owner', reads=0;
+  const client={
+    auth:{
+      getSession:async()=>({data:{session:sessionId?{user:{id:sessionId}}:null}}),
+      getUser:async()=>({data:{user:{id:identity}}}),
+      mfa:{getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:level}})},
+    },
+    from:()=>({select:()=>({eq:()=>({single:async()=>{reads++;return {data:{name:'Owner'}};}})})}),
+  };
+  const flow=createCloudAuthentication(client,{required:true,allowEnrollment:false});
+  assert.deepEqual(await flow.restoreSession(),{id:'owner',name:'Owner'});
+  assert.equal(reads,1);
+  level='aal1';
+  assert.equal(await flow.restoreSession(),null);
+  assert.equal(reads,1);
+  level='aal2';identity='other';
+  assert.equal(await flow.restoreSession(),null);
+  assert.equal(reads,1);
+  identity='owner';sessionId=null;
+  assert.equal(await flow.restoreSession(),null);
+  assert.equal(reads,1);
+});
+test('saved QA session fails closed if profile lookup fails',async()=>{
+  const client={
+    auth:{
+      getSession:async()=>({data:{session:{user:{id:'owner'}}}}),
+      getUser:async()=>({data:{user:{id:'owner'}}}),
+      mfa:{getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal2'}})},
+    },
+    from:()=>({select:()=>({eq:()=>({single:async()=>({error:{message:'denied'}})})})}),
+  };
+  await assert.rejects(createCloudAuthentication(client,{required:true}).restoreSession(),/perfil autorizado/);
+});
