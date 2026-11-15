@@ -10,3 +10,10 @@ test('bitácora retains case creation and follows guided four-step workflow',()=
  for(const x of ['De la novedad a la solución','1. Registra','2. Asigna','3. Haz seguimiento','4. Verifica','function ticketsPage()','function openCase(id)'])assert.ok(app.includes(x),x);
  assert.match(css,/\.qa-guided-workflow ol/);
 });
+
+test('QA portal checks an authenticated session before showing the login form',()=>{
+ assert.match(app,/async function startPortal\(\)/);
+ assert.match(app,/await repo\.restoreSession\(\)/);
+ assert.match(app,/if\(resumed\)[\s\S]*?await refresh\(\)[\s\S]*?shell\(\)/);
+ assert.doesNotMatch(app,/\.then\(handled => \{ if \(!handled\) loginScreen\(\); \}\)/);
+});

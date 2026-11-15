@@ -8,7 +8,7 @@ import {createQaVisitEvidenceRepository} from './qa-visit-evidence.js';
 import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
 import { createCloudAuthentication } from './cloud-authentication.js';
-import { qaAuthPolicy } from './qa-auth-policy.js';
+import { qaAuthPolicy,qaSessionResumePolicy,QA_SESSION_STORAGE_KEY } from './qa-auth-policy.js';
 import { createStaffDirectory } from './staff-directory.js';
 import {createCorporateStaff} from './corporate-staff.js';
 import { assignedProjects, assignedMembers, assignedTickets } from './assigned-projects.js';
@@ -21,7 +21,12 @@ const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
 
 export function createCloudRepository(url, key) {
-  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
+  // Persistence is strictly isolated to QA Integral. Demo, old QA and production
+  // keep their existing non-persistent behavior.
+  const allowSessionResume=qaSessionResumePolicy({url,hostname:globalThis.location?.hostname});
+  const authOptions={persistSession:allowSessionResume,autoRefreshToken:true,detectSessionInUrl:false};
+  if(allowSessionResume)authOptions.storageKey=QA_SESSION_STORAGE_KEY;
+  const client=createClient(url,key,{auth:authOptions});
   let user = null;
   const privateMediaEnabled=import.meta.env.VITE_PRIVATE_MEDIA_QA_ENABLED==='true' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
   const media=privateMediaEnabled?createPrivateMediaRepository(client):null;
@@ -49,6 +54,7 @@ export function createCloudRepository(url, key) {
   const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
   const authentication=createCloudAuthentication(client,{required:authPolicy.required,
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
+    allowSessionResume,
     allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
   const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
   const corporateStaff=authPolicy.isolatedQa?createCorporateStaff(client):null;
@@ -165,6 +171,12 @@ export function createCloudRepository(url, key) {
       return check(await client.rpc(finalize ? 'finalize_monthly_report' : 'monthly_report', { project, report_month: `${month}-01` }));
     },
     mode: 'cloud',
+    async restoreSession() {
+      user=null;
+      const restored=await authentication.restoreSession();
+      if(restored)user=restored;
+      return restored;
+    },
     async login({ email, password }) {
       user=null;
       const result=await authentication.login({email,password});

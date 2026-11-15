@@ -11,7 +11,7 @@ export function loginErrorMessage(error) {
   return 'No se pudo iniciar sesión. Intenta nuevamente o contacta al administrador de QA.';
 }
 
-export function createCloudAuthentication(client, {required, allowEnrollment, allowDemoAlias=false}) {
+export function createCloudAuthentication(client, {required, allowEnrollment, allowDemoAlias=false, allowSessionResume=false}) {
   const auth = client.auth;
   const mfa = createManagedMfa(auth, {required, allowEnrollment});
   const read = result => {if(result.error) throw Error(result.error.message); return result.data;};
@@ -35,6 +35,21 @@ export function createCloudAuthentication(client, {required, allowEnrollment, al
     try {await auth.signOut();} catch { /* Preserve the original verification error. */ }
   }
   return {
+    async restoreSession() {
+      if(!allowSessionResume)return null;
+      try{
+        // Session storage indicates only that a token may exist. Never trust
+        // a cached user: confirm it remotely and re-check MFA and profile RLS.
+        const session=read(await auth.getSession());
+        if(!session?.session?.access_token)return null;
+        const actor=read(await auth.getUser())?.user;
+        if(!actor?.id)return null;
+        return await finish(actor.id);
+      }catch{
+        // Missing, expired, revoked, AAL1 and unauthorized sessions all fail closed.
+        return null;
+      }
+    },
     async login({email,password}) {
       mfa.clear();
       // The demo alias is opt-in and never applies when MFA is mandatory (known QA).

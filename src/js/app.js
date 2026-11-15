@@ -409,6 +409,31 @@ dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); }
 dialog.addEventListener('close', () => { modalReturnFocus?.focus(); });
 window.addEventListener('offline', () => toast('Sin conexión. Conserva el formulario; podrás volver a intentar el guardado.'));
 window.addEventListener('storage', event => { if(event.key === 'adphor.workflow.demo.v3' && state.user) toast('La bitácora cambió en otra pestaña. Pulsa Actualizar para consultar los cambios.'); });
-mountQaPasswordRecovery(root, {url, key, onLogin: loginScreen})
-  .then(handled => { if (!handled) loginScreen(); })
-  .catch(() => { loginScreen(); $('login-error').textContent = 'No se pudo abrir la recuperación. Solicita un enlace nuevo.'; });
+async function startPortal() {
+  let recoveryHandled=false;
+  try {
+    recoveryHandled=await mountQaPasswordRecovery(root,{url,key,onLogin:loginScreen});
+  }catch {
+    loginScreen();
+    $('login-error').textContent='No se pudo abrir la recuperación. Solicita un enlace nuevo.';
+    return;
+  }
+  if(recoveryHandled)return;
+  try {
+    // Do not render a protected page until remote identity, AAL2 and RLS
+    // have all been revalidated by the QA-only repository.
+    const resumed=typeof repo.restoreSession==='function'?await repo.restoreSession():null;
+    if(resumed){
+      state.user=resumed;
+      await refresh();
+      state.page='dashboard';state.filters={};
+      shell();
+      return;
+    }
+  }catch{
+    state.user=null;
+    state.projects=[];state.members=[];state.tickets=[];
+  }
+  loginScreen();
+}
+void startPortal();
