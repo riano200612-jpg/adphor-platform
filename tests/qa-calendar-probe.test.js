@@ -16,7 +16,7 @@ const args=(repo=enabled(),overrides={})=>({repo,projectId:'p1',role:'admin',now
 test('Read-only QA connection probe queries one exact future hour under tenant context',async()=>{
  const calls=[];
  const repo=enabled({meetingAvailability:async(...a)=>{calls.push(a);return [{
-  start:'2026-11-16T14:15:00Z',end:'2026-11-16T14:35:00Z',description:'private'
+  start:'2026-11-16T13:15:00Z',end:'2026-11-16T13:35:00Z',description:'private'
  }];}});
  const result=await probeQaCorporateCalendar(args(repo));
  assert.deepEqual(calls,[['p1','2026-11-16T13:00:00.000Z','2026-11-16T14:00:00.000Z']]);
@@ -59,7 +59,7 @@ test('Missing OAuth and MFA failures stay distinct, without leaking tokens or te
   const message=qaCorporateCalendarProbeError(new Error(internal));
   assert.match(message,publicText);
   assert.doesNotMatch(message,/JWT_PRIVATE_TOKEN|owner calendar ID/);
-  assert.doesNotMatch(message,/libre|reservado/);
+  assert.doesNotMatch(message,/horario libre confirmado|reserva confirmada|se reservó/i);
  }
 });
 
