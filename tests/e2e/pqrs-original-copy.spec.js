@@ -1,9 +1,9 @@
 import {test,expect} from '@playwright/test';
 
 test('PQRS original: consulta copiable sin radicar ni escribir en el sistema de José',async({page})=>{
-  await page.goto('/');
+  await page.goto('/adphor-platform/');
   await page.evaluate(async()=>{
-    const {mountUnifiedPqrs}=await import('/src/js/ui-pqrs-unified.js');
+    const {mountUnifiedPqrs}=await import('/adphor-platform/src/js/ui-pqrs-unified.js');
     const root=document.createElement('div');
     root.id='pqrs-original-test-root';
     document.body.replaceChildren(root);
