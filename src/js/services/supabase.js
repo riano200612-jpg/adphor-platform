@@ -21,7 +21,17 @@ const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
 
 export function createCloudRepository(url, key) {
-  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
+  // QA sessions survive a page reload only within the same browser tab session.
+  // Protected reads still require a fresh AAL2 and user identity check on restore.
+  const qaSession = url === 'https://qfctnnnnltghepwujpdm.supabase.co';
+  const browserSessionStorage = typeof globalThis.sessionStorage !== 'undefined'
+    ? globalThis.sessionStorage : undefined;
+  const client = createClient(url, key, { auth: {
+    persistSession: qaSession && Boolean(browserSessionStorage),
+    storage: qaSession ? browserSessionStorage : undefined,
+    storageKey: qaSession ? 'adphor.qa.integral.auth.v1' : undefined,
+    autoRefreshToken: true, detectSessionInUrl: false,
+  } });
   let user = null;
   const privateMediaEnabled=import.meta.env.VITE_PRIVATE_MEDIA_QA_ENABLED==='true' && portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
   const media=privateMediaEnabled?createPrivateMediaRepository(client):null;
@@ -170,6 +180,17 @@ export function createCloudRepository(url, key) {
       const result=await authentication.login({email,password});
       if(!result.mfaRequired)user=result;
       return result;
+    },
+    async restoreSession() {
+      if (!qaSession) return null;
+      try {
+        const restored = await authentication.restoreSession();
+        user = restored;
+        return restored;
+      } catch {
+        user = null;
+        return null;
+      }
     },
     async enrollMfa() {return authentication.enrollMfa();},
     async completeMfa(code) {user=await authentication.completeMfa(code);return user;},
