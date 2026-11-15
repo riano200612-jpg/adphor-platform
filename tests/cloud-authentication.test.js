@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCloudAuthentication} from '../src/js/services/cloud-authentication.js';
-import {qaAuthPolicy,assertQaBuildAuth,publicQaBuildConfig,applicationRepositoryMode,QA_REF,QA_URL,QA_HOST} from '../src/js/services/qa-auth-policy.js';
+import {qaAuthPolicy,qaSessionResumePolicy,QA_INTEGRAL_HOST,QA_SESSION_STORAGE_KEY,assertQaBuildAuth,publicQaBuildConfig,applicationRepositoryMode,QA_REF,QA_URL,QA_HOST} from '../src/js/services/qa-auth-policy.js';
 
 function fixture({factors=[],challengeLevel='aal2',profileError=false}={}) {
   const calls=[];let level='aal1';
@@ -23,6 +23,51 @@ function fixture({factors=[],challengeLevel='aal2',profileError=false}={}) {
   const policy=qaAuthPolicy({url:QA_URL,requireMfa:'false',hostname:QA_HOST});
   return {calls,auth,flow:createCloudAuthentication(client,{required:policy.required,allowEnrollment:policy.isolatedQa})};
 }
+
+test('Only the official QA Integral hostname may persist a browser session',()=>{
+ assert.equal(qaSessionResumePolicy({url:QA_URL,hostname:QA_INTEGRAL_HOST}),true);
+ for(const [url,hostname] of [
+   [QA_URL,QA_HOST],
+   ['https://other.supabase.co',QA_INTEGRAL_HOST],
+   [QA_URL,'app.adphor.com'],
+   [QA_URL,'localhost'],
+   ['https://example.invalid',QA_INTEGRAL_HOST]
+ ])assert.equal(qaSessionResumePolicy({url,hostname}),false);
+ assert.equal(QA_SESSION_STORAGE_KEY,'adphor-qa-integral-session-v1');
+});
+
+test('restored browser token must pass server identity, AAL2 and RLS before reaching profile',async()=>{
+ let level='aal2',allowProfile=true,sessionPresent=true,remoteError=false;
+ const calls=[];
+ const auth={
+  getSession:async()=>{calls.push('stored-token');return {data:{session:sessionPresent?{access_token:'synthetic'}:null}};},
+  getUser:async()=>{calls.push('getUser-server');return remoteError?{error:{message:'offline'}}:{data:{user:{id:'owner'}}};},
+  mfa:{getAuthenticatorAssuranceLevel:async()=>{calls.push('aal2-check');return {data:{currentLevel:level}};}}
+ };
+ const client={auth,from:()=>({select:()=>({eq:()=>({single:async()=>{
+   calls.push('profile-rls');
+   return allowProfile?{data:{name:'Owner'}}:{error:{message:'RLS denied'}};
+ }})})})};
+ const flow=createCloudAuthentication(client,{required:true,allowEnrollment:false,allowSessionResume:true});
+ assert.deepEqual(await flow.restoreSession(),{id:'owner',name:'Owner'});
+ assert.deepEqual(calls,['stored-token','getUser-server','aal2-check','getUser-server','profile-rls']);
+ calls.length=0;level='aal1';
+ assert.equal(await flow.restoreSession(),null);
+ assert.deepEqual(calls,['stored-token','getUser-server','aal2-check']);
+ calls.length=0;level='aal2';allowProfile=false;
+ assert.equal(await flow.restoreSession(),null);
+ assert.equal(calls.includes('profile-rls'),true);
+ calls.length=0;allowProfile=true;remoteError=true;
+ assert.equal(await flow.restoreSession(),null);
+ assert.deepEqual(calls,['stored-token','getUser-server']);
+ calls.length=0;remoteError=false;sessionPresent=false;
+ assert.equal(await flow.restoreSession(),null);
+ assert.deepEqual(calls,['stored-token']);
+ calls.length=0;
+ const excluded=createCloudAuthentication(client,{required:true,allowEnrollment:false,allowSessionResume:false});
+ assert.equal(await excluded.restoreSession(),null);
+ assert.deepEqual(calls,[]);
+});
 
 test('known QA requires MFA even when its optional flag is absent or false',()=>{
   for(const flag of [undefined,'false',' true ',''])assert.equal(qaAuthPolicy({url:QA_URL,requireMfa:flag}).required,true);

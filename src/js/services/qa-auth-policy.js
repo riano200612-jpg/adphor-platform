@@ -1,10 +1,14 @@
 export const QA_REF = 'qfctnnnnltghepwujpdm';
 export const QA_URL = `https://${QA_REF}.supabase.co`;
 export const QA_HOST = 'qa-pqrs-carrusel-integracion.adphor-platform.pages.dev';
-const QA_HOSTS = Object.freeze([
-  QA_HOST,
-  'qa-integral-claude-reviewed.adphor-platform.pages.dev',
-]);
+export const QA_INTEGRAL_HOST='qa-integral-claude-reviewed.adphor-platform.pages.dev';
+export const QA_SESSION_STORAGE_KEY='adphor-qa-integral-session-v1';
+const QA_HOSTS = Object.freeze([QA_HOST,QA_INTEGRAL_HOST]);
+
+// Only the official, Access-protected QA Integral origin may persist a login.
+export function qaSessionResumePolicy({url,hostname=''}) {
+ return url===QA_URL&&hostname===QA_INTEGRAL_HOST;
+}
 
 // The known QA backend enforces AAL2 in SQL. Optional UI flags cannot downgrade it.
 export function qaAuthPolicy({url, requireMfa, hostname=''}) {
