@@ -12,8 +12,8 @@ const fixture=async(page,baseURL,role='admin')=>{
   const repo={mode:'cloud',qaCalendarEdgeEnabled:true,calendarAvailabilityConfigured:true,
    meetingAvailability:async(project,start,end)=>{
     window.qaCalls.push({project,start,end});
-    if(window.qaProbeMode==='unconfigured')throw Error('El calendario corporativo aún no está configurado en QA.');
-    if(window.qaProbeMode==='denied')throw Error('La consulta requiere autorización y MFA AAL2.');
+    if(window.qaProbeMode==='unconfigured')throw Object.assign(Error('El calendario corporativo aún no está configurado en QA.'),{context:{status:503}});
+    if(window.qaProbeMode==='denied')throw Object.assign(Error('La consulta requiere autorización y MFA AAL2.'),{context:{status:403}});
     if(window.qaProbeMode==='broken')throw Error('jwt-private-document event details');
     if(window.qaProbeMode==='pending')return new Promise(resolve=>window.qaResolve=resolve);
     return [{start:new Date(Date.parse(start)+900000).toISOString(),
@@ -31,11 +31,11 @@ test('Admin may probe true Edge contract without creating a calendar event or le
  await fixture(page,baseURL);
  const check=page.getByRole('button',{name:'Comprobar conexión Google Calendar'});
  await expect(check).toBeEnabled();
- await expect(page.getByRole('status')).toContainText('No se ha ejecutado');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('No se ha ejecutado');
  await check.click();
- await expect(page.getByRole('status')).toContainText('respuesta de Google Calendar freeBusy');
- await expect(page.getByRole('status')).toContainText('no se creó ni cambió ningún evento');
- await expect(page.getByRole('status')).toContainText('no certifica todavía la cuenta organizadora');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('respuesta de Google Calendar freeBusy');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('no se creó ni cambió ningún evento');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('no certifica todavía la cuenta organizadora');
  await expect(page.getByText('Other customer PRIVATE')).toHaveCount(0);
  const calls=await page.evaluate(()=>window.qaCalls);
  expect(calls).toHaveLength(1);
@@ -52,15 +52,15 @@ test('QA-only diagnostic distinguishes missing OAuth, access denial and provider
  const check=page.getByRole('button',{name:'Comprobar conexión Google Calendar'});
  await page.evaluate(()=>window.qaProbeMode='unconfigured');
  await check.click();
- await expect(page.getByRole('status')).toContainText('respondió 503');
- await expect(page.getByRole('status')).not.toContainText('intervalo(s) ocupado(s)');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('respondió 503');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).not.toContainText('intervalo(s) ocupado(s)');
  await page.evaluate(()=>window.qaProbeMode='denied');
  await check.click();
- await expect(page.getByRole('status')).toContainText('MFA AAL2');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('MFA AAL2');
  await page.evaluate(()=>window.qaProbeMode='broken');
  await check.click();
- await expect(page.getByRole('status')).toContainText('No se pudo confirmar');
- await expect(page.getByRole('status')).not.toContainText('jwt-private-document');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('No se pudo confirmar');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).not.toContainText('jwt-private-document');
 });
 
 test('Other roles cannot invoke calendar probe or see diagnostic actions',async({page,baseURL})=>{
@@ -74,7 +74,7 @@ test('Pending response cannot be shown after the current property becomes inacti
  const check=page.getByRole('button',{name:'Comprobar conexión Google Calendar'});
  await page.evaluate(()=>window.qaProbeMode='pending');
  await check.click();
- await expect(page.getByRole('status')).toContainText('Verificando el servicio');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).toContainText('Verificando el servicio');
  await page.evaluate(()=>{window.qaCurrent=false;window.qaResolve([]);});
- await expect(page.getByRole('status')).not.toContainText('respuesta de Google Calendar freeBusy');
+ await expect(page.locator('[data-qa-calendar-probe-result]')).not.toContainText('respuesta de Google Calendar freeBusy');
 });
