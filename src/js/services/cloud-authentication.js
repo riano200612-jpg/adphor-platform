@@ -35,6 +35,19 @@ export function createCloudAuthentication(client, {required, allowEnrollment, al
     try {await auth.signOut();} catch { /* Preserve the original verification error. */ }
   }
   return {
+    async restoreSession() {
+      // A saved token alone is never proof of authorization.
+      // Fail closed on expired sessions, switched identities or AAL1.
+      const session = read(await auth.getSession());
+      if (!session?.session?.user?.id) return null;
+      const identity = read(await auth.getUser());
+      if (identity.user?.id !== session.session.user.id) return null;
+      if (required) {
+        const level = read(await auth.mfa.getAuthenticatorAssuranceLevel());
+        if (level?.currentLevel !== 'aal2') return null;
+      }
+      return finish(identity.user.id);
+    },
     async login({email,password}) {
       mfa.clear();
       // The demo alias is opt-in and never applies when MFA is mandatory (known QA).
