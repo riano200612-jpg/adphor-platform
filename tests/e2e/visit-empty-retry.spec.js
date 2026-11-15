@@ -56,3 +56,36 @@ test('Visitas: empty read-only state does not advertise scheduling permissions',
  await expect(page.getByRole('button',{name:'Revisar visita'})).toBeDisabled();
  await expect(page.getByRole('button',{name:'Abrir seguimiento de la visita registrada'})).toHaveCount(0);
 });
+
+test('Visitas: el campo alternativo de fecha es editable y conserva validación segura',async({page,baseURL})=>{
+ const url=new URL('src/js/ui-visit-preparation.js',baseURL).href;
+ const html=`<!doctype html><html lang="es"><meta charset="utf-8"><div id="fixture"></div>
+ <script type="module">
+ import {mountVisitPreparation} from '${url}';
+ mountVisitPreparation(document.getElementById('fixture'),{
+  projectId:'p1',projectName:'Copropiedad aislada',
+  members:[{project_id:'p1',user_id:'u1',name:'Administrador QA'}],
+  canCreate:true,visitRepository:{lifecycleEnabled:false,list:async()=>[],save:async()=>{throw Error('No escribir datos en esta prueba')}}
+ });
+ </script>`;
+ await page.route('**/qa-visit-typed-datetime',route=>route.fulfill({contentType:'text/html',body:html}));
+ await page.goto('./qa-visit-typed-datetime');
+ const native=page.locator('input[name=start]');
+ const alternate=page.getByRole('textbox',{name:'Escribir fecha y hora (alternativa accesible)'});
+ const review=page.getByRole('button',{name:'Revisar visita'});
+ await page.locator('input[name=kind]').fill('Prueba de accesibilidad QA — SIN VISITA REAL');
+ await page.locator('select[name=responsible]').selectOption('u1');
+ await alternate.fill('2026-11-17 10:00');
+ await expect(native).toHaveValue('2026-11-17T10:00');
+ await expect(review).toBeEnabled();
+ await review.click();
+ await expect(page.locator('[data-summary]')).toContainText('2026-11-17 10:00 (Colombia)');
+ await alternate.fill('2026-99-99 12:00');
+ await expect(native).toHaveValue('');
+ await expect(review).toBeDisabled();
+ await alternate.fill('2026-11-17 10:00');
+ await expect(review).toBeEnabled();
+ await native.fill('2026-11-18T11:15');
+ await expect(alternate).toHaveValue('2026-11-18 11:15');
+ await expect(page.getByRole('button',{name:'Confirmar y registrar visita'})).toBeHidden();
+});

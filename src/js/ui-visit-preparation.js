@@ -54,6 +54,10 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         <fieldset><legend>1. Datos de la visita</legend><div class="visit-fields">
           <label>Tipo o motivo<input name="kind" maxlength="200" required placeholder="Ej. Inspección de zonas comunes"></label>
           <label>Fecha y hora (Colombia)<input name="start" type="datetime-local" required></label>
+          <label>Escribir fecha y hora (alternativa accesible)
+            <input name="startText" type="text" maxlength="16" autocomplete="off" placeholder="AAAA-MM-DD HH:mm" aria-describedby="visit-date-text-help">
+            <small id="visit-date-text-help">Si el calendario no responde, introduce la fecha como AAAA-MM-DD HH:mm. Se reflejará en el campo anterior.</small>
+          </label>
           <label>Responsable<select name="responsible" required><option value="">Seleccionar</option></select></label>
         </div></fieldset>
         <details><summary>Observaciones, seguimiento y resultado</summary><p class="muted">${repository?.lifecycleEnabled?'Abre Seguimiento en la visita registrada para consultar su estado y documentar los resultados.':'Estos datos corresponden al ciclo posterior de la visita. Se habilitarán cuando se apruebe el contrato de registro e historial.'}</p></details>
@@ -85,6 +89,18 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     });
   }
   const fields = root.querySelector('fieldset');
+  const nativeStart=fields.querySelector('[name=start]');
+  const typedStart=fields.querySelector('[name=startText]');
+  // Alternate keyboard-friendly input: same normalized value, same review
+  // contract and server-side validation as the existing native date field.
+  typedStart.addEventListener('input',()=>{
+    const text=typedStart.value.trim();
+    nativeStart.value=/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(text)
+      ? text.replace(' ','T') : '';
+  });
+  nativeStart.addEventListener('input',()=>{
+    typedStart.value=nativeStart.value.replace('T',' ');
+  });
   const select = fields.querySelector('[name=responsible]');
   const allowedResponsibleIds = [];
   for (const member of members) {
