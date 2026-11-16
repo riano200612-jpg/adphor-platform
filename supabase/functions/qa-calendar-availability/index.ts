@@ -17,7 +17,17 @@ async function checkedFetch(url: string, init: RequestInit, timeout=8000): Promi
   return fetch(url,{...init,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(timeout)});
 }
 
+// P0 diagnostic only: fixed labels, never provider details or identities.
+type QaCalendar503Stage = 'supabase_runtime' | 'auth_upstream' |
+  'membership_upstream' | 'oauth_configuration';
 Deno.serve(async req => {
+  const requestId=crypto.randomUUID();
+  const unavailable=(stage:QaCalendar503Stage,message:string)=>{
+    console.warn(JSON.stringify({
+      event:'adphor_qa_calendar_503',request_id:requestId,stage,status:503,
+    }));
+    return reply(503,{error:message},true);
+  };
   const authorizedOrigin = req.headers.get('Origin') === QA_FRONTEND;
   if(!authorizedOrigin)return reply(403,{error:'Origen QA no autorizado.'},false);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{...baseHeaders,...cors}});
@@ -41,7 +51,7 @@ Deno.serve(async req => {
   let publishable: Record<string,string> = {};
   try { publishable=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}'); } catch { /* fail closed below */ }
   const apiKey=Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||publishable.default||Deno.env.get('SUPABASE_ANON_KEY');
-  if(projectUrl!==QA_PROJECT_URL||!apiKey)return reply(503,{error:'Servicio QA no configurado.'},true);
+  if(projectUrl!==QA_PROJECT_URL||!apiKey)return unavailable('supabase_runtime','Servicio QA no configurado.');
   const authHeaders={'apikey':apiKey,'Authorization':bearer,'Accept':'application/json'};
   let userId: string;
   try {
@@ -51,7 +61,7 @@ Deno.serve(async req => {
     const user=await response.json();
     if(typeof user?.id!=='string'||!parseValidatedAal2(match[1],user.id))return reply(403,{error:'Se requiere MFA AAL2.'},true);
     userId=user.id;
-  }catch{return reply(503,{error:'No se pudo verificar la sesión QA.'},true);}
+  }catch{return unavailable('auth_upstream','No se pudo verificar la sesión QA.');}
 
   // Current membership under the end-user JWT and RLS, including QA active
   // principal and AAL2 checks. No bypass via administrator credentials.
@@ -62,7 +72,7 @@ Deno.serve(async req => {
     if(!response.ok)throw Error('membership unavailable');
     const rows=await response.json();
     if(!Array.isArray(rows)||rows.length!==1||!['admin','coordinator'].includes(rows[0]?.role))return reply(403,{error:'Copropiedad no autorizada.'},true);
-  }catch{return reply(503,{error:'No se pudo verificar la membresía QA.'},true);}
+  }catch{return unavailable('membership_upstream','No se pudo verificar la membresía QA.');}
 
   const calendarId=Deno.env.get('ADPHOR_QA_CALENDAR_ID');
   const oauth={
@@ -70,7 +80,7 @@ Deno.serve(async req => {
     client_secret:Deno.env.get('ADPHOR_QA_CALENDAR_OAUTH_CLIENT_SECRET'),
     refresh_token:Deno.env.get('ADPHOR_QA_CALENDAR_OAUTH_REFRESH_TOKEN'),
   };
-  if(!calendarId||!Object.values(oauth).every(Boolean))return reply(503,{error:'Google Calendar corporativo no configurado en QA.'},true);
+  if(!calendarId||!Object.values(oauth).every(Boolean))return unavailable('oauth_configuration','Google Calendar corporativo no configurado en QA.');
   try {
     const grant=await checkedFetch('https://oauth2.googleapis.com/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
