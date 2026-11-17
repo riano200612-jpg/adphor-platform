@@ -23,6 +23,21 @@ Se conserva el contrato HTTP y los mensajes anteriores. Los cuatro errores 503 e
 
 Los 502 siguen representando fallos de intercambio de OAuth o Google freeBusy y no se convierten en disponibilidad válida. JWT, AAL2, RLS, validación de entrada, CORS exacto, origen Google, `Cache-Control:no-store` y ausencia de escrituras permanecen intactos.
 
+## Diagnóstico P0.2 — identificación precisa de las variables ausentes
+
+Después de una solicitud **autenticada y autorizada con AAL2 y membresía admin/coordinator**, la rama `oauth_configuration` emite un segundo log seguro:
+`{"event":"adphor_qa_calendar_missing_config","request_id":"<UUID>","missing_mask":<0–15>}`.
+
+Interpretación binaria de `missing_mask` (solo presencia/ausencia, jamás valores):
+- Bit 1: falta `ADPHOR_QA_CALENDAR_ID`.
+- Bit 2: falta `ADPHOR_QA_CALENDAR_OAUTH_CLIENT_ID`.
+- Bit 4: falta `ADPHOR_QA_CALENDAR_OAUTH_CLIENT_SECRET`.
+- Bit 8: falta `ADPHOR_QA_CALENDAR_OAUTH_REFRESH_TOKEN`.
+
+Se suman los bits cuando faltan varias. Máscara `15` significa que las cuatro variables están ausentes o vacías en el entorno de ejecución. La ausencia de un bit **no prueba que el valor presente sea correcto** ni garantiza autorización de Google: las fases de renovación y `freeBusy` aún requieren respuesta real. La nueva instrumentación no publica esos bits al navegador, no examina valores y no modifica credenciales.
+
+Antes de interpretar el log, comprobar coincidencia de `request_id` y `oauth_configuration`. Evitar inferir que un 503 previo a esta versión ya tenía ese patrón.
+
 ## Consulta de solo lectura de logs
 Supabase Dashboard → Edge Functions → qa-calendar-availability → Logs; filtrar `adphor_qa_calendar_503`.
 Alternativamente, Logs Explorer puede filtrar `source='function_logs'` / `source='function_edge_logs'` y `event_message` por `adphor_qa_calendar_503`. Solo comunicar stage/status y hora; no divulgar otros campos.
