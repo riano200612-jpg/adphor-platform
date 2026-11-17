@@ -234,6 +234,9 @@ function renderPage() {
       const modern=document.createElement('div');
       const original=document.createElement('div');
       original.id='pqrs-original-access';
+      original.style.minWidth='0';
+      original.style.maxWidth='100%';
+      original.style.overflowX='auto';
       root.append(modern,original);
       mountPqrs(modern,{projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});
       mountUnifiedPqrs(original,{repo,projectId:state.projectId,role:role(),environment:import.meta.env.VITE_ADPHOR_PORTAL_EXEC_URL||''});
