@@ -3,7 +3,7 @@
 export function approvedAvatarPath(value) {
  if(typeof value!=='string')return '';
  const path=value.trim();
- if(!/^\/assets\/branding\/[a-zA-Z0-9_-]+\.(?:png|webp|jpg|jpeg)$/.test(path))return '';
+ if(!/^\/assets\/branding\/[a-zA-Z0-9_()\-]+\.(?:png|webp|jpg|jpeg)$/.test(path))return '';
  return path;
 }
 export function loginAvatarMarkup(avatarPath='') {
