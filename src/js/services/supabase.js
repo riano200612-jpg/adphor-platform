@@ -16,6 +16,7 @@ import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
 import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from './agent-api.js';
+import {qaAgentRegistryReadiness,qaAgentRuns,qaAgentRunDetail} from './qa-agent-registry.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
 const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
@@ -79,6 +80,7 @@ export function createCloudRepository(url, key) {
     qaCalendarEdgeEnabled,
     // A configured URL does not prove the agent API is deployed or ready.
     agentApiConfigured:Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
+    agentRegistryReadOnlyEnabled:authPolicy.isolatedQa && !Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
     staffDirectoryEnabled:Boolean(staff),
     async corporateStaffDirectory(){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.list();},
     async corporateStaffCanManage(){if(!corporateStaff||!user)return false;return corporateStaff.canManage();},
@@ -152,7 +154,7 @@ export function createCloudRepository(url, key) {
     async agentReadiness(projectId) {
       if (!authPolicy.isolatedQa) throw new Error('El enjambre solo puede verificarse en QA Integral.');
       const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
-      if (!origin) throw new Error('La API de agentes no está conectada.');
+      if (!origin) return qaAgentRegistryReadiness(client,{qaUrl:url,projectId});
       const { session } = check(await client.auth.getSession());
       return fetchAgentReadiness({origin, token: session?.access_token, projectId});
     },
@@ -167,13 +169,13 @@ export function createCloudRepository(url, key) {
     },
     async agentRunDetail(projectId, runId) {
       const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
-      if (!origin) throw new Error('El servicio de asistentes no está conectado.');
+      if (!origin) return qaAgentRunDetail(client,{qaUrl:url,projectId,runId});
       const { session } = check(await client.auth.getSession());
       return agentRuleRequest({origin, token:session?.access_token, projectId, runId});
     },
     async agentRuns(projectId, offset = 0) {
       const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
-      if (!origin) throw new Error('El servicio de asistentes todavía no está conectado a esta versión de la plataforma.');
+      if (!origin) return qaAgentRuns(client,{qaUrl:url,projectId,offset});
       const { session } = check(await client.auth.getSession());
       return fetchAgentRuns({origin, token: session?.access_token, projectId, offset});
     },
