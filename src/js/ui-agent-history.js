@@ -23,7 +23,7 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
   }
   const readOnly=repo.agentApiConfigured===false;
   if(readOnly && repo.agentRegistryReadOnlyEnabled!==true){
-    container.innerHTML='<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>En esta sesión no hay una API de ejecución y auditoría configurada ni un registro de lectura QA verificado. Consulta y ejecución deshabilitadas.</p></section>';
+    container.innerHTML='<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>En esta sesión no hay una API de ejecución y auditoría configurada ni un registro de lectura QA verificado. Miss ADPHOR mantiene el panorama integral de solo lectura. Consulta y ejecución del enjambre deshabilitadas.</p></section>';
     return;
   }
   if (typeof repo.agentReadiness !== 'function') {
