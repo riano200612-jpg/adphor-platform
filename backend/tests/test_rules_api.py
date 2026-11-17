@@ -164,6 +164,17 @@ class APITests(unittest.TestCase):
             self.assertEqual(self.run_request().status_code,503)
         self.assertEqual(self.inserts,[])
 
+    def test_missing_audit_or_human_review_registry_prevents_any_write(self):
+        self.registry_missing=True
+        self.assertEqual(self.run_request().status_code,502)
+        self.assertEqual(self.inserts,[])
+        self.registry_missing=False
+        self.reviews_missing=True
+        self.assertEqual(self.run_request().status_code,502)
+        self.assertEqual(self.inserts,[])
+        state=self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').json()
+        self.assertFalse(state['rules_ready'])
+
     def test_missing_session_denied(self):
         self.assertEqual(self.run_request(auth=False).status_code,401)
         self.assertEqual(self.inserts,[])

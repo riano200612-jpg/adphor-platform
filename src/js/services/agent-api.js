@@ -29,7 +29,7 @@ export async function fetchAgentReadiness({origin, token, projectId, fetcher = f
   if (!data || data.project_id !== projectId || data.mode !== 'qa_rules_only' ||
       data.models_ready !== false ||
       ['registry_ready','reviews_ready','rules_ready'].some(key => typeof data[key] !== 'boolean') ||
-      (data.rules_ready && !data.registry_ready) ||
+      (data.rules_ready && (!data.registry_ready || !data.reviews_ready)) ||
       (data.reviews_ready && !data.registry_ready)) {
     throw new Error('El servicio devolvió un diagnóstico de preparación no válido.');
   }

@@ -197,7 +197,7 @@ async def agent_readiness(request: Request, actor: Annotated[dict, Depends(agent
             if error.status_code in (401, 403):
                 raise
     writer = os.environ.get("SUPABASE_AGENT_WRITER_KEY", "")
-    rules_ready = (registry_ready and qa_rules_enabled()
+    rules_ready = (registry_ready and reviews_ready and qa_rules_enabled()
                    and writer.startswith(("sb_secret_", "eyJ")))
     return {"mode": "qa_rules_only", "project_id": project_id,
             "registry_ready": registry_ready, "reviews_ready": reviews_ready and role == "admin",
@@ -235,6 +235,14 @@ async def execute_rules(body: RunRequest, request: Request, actor: Annotated[dic
     await require_role(request, actor, body.project_id, ("admin",))
     if not qa_rules_enabled():
         raise HTTPException(503, "La ejecución por reglas no está habilitada en QA certificada.")
+    # The same authorized session must be able to read the immutable audit and
+    # human-review registry before any execution can create a pending draft.
+    runs = await call(request, actor["token"], "/rest/v1/agent_run_status", params={
+        "select": "id", "project_id": f"eq.{body.project_id}", "limit": "0"})
+    reviews = await call(request, actor["token"], "/rest/v1/agent_reviews", params={
+        "select": "run_id", "project_id": f"eq.{body.project_id}", "limit": "0"})
+    if not isinstance(runs, list) or not isinstance(reviews, list):
+        raise HTTPException(503, "El registro o la revisión humana no están disponibles.")
     run_id = str(body.request_id)
     existing = await call(request, actor["token"], "/rest/v1/agent_runs", params={
         "select":"id,project_id,source_snapshot", "id":f"eq.{run_id}", "limit":"1"})
