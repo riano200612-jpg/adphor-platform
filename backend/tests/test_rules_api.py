@@ -81,7 +81,7 @@ class APITests(unittest.TestCase):
             self.reads += 1
             return httpx.Response(200,json=[dict(TICKET,version=2 if self.changed and self.reads>1 else 1)])
         if path == '/rest/v1/agent_runs': return httpx.Response(200,json=self.existing)
-        if path == '/rest/v1/agent_run_status': return httpx.Response(200,json=[])
+        if path == '/rest/v1/agent_run_status': return httpx.Response(200,json=self.existing)
         raise AssertionError(path)
 
     def run_request(self, method='POST', json=None, auth=True, path='/agent-runs'):
