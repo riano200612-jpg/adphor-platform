@@ -76,7 +76,9 @@ class APITests(unittest.TestCase):
         self.assertEqual(req.headers['apikey'],'sb_publishable_test')
         if path == '/auth/v1/user': return httpx.Response(200,json={'id':USER})
         if path == '/rest/v1/memberships':
-            return httpx.Response(200,json=[dict(MEMBER,role=self.role)])
+            # Mock the real tenant filter; never grant demo-01 membership for another project.
+            scoped = req.url.params.get('project_id') == 'eq.demo-01'
+            return httpx.Response(200,json=[dict(MEMBER,role=self.role)] if scoped else [])
         if path == '/rest/v1/tickets':
             self.reads += 1
             return httpx.Response(200,json=[dict(TICKET,version=2 if self.changed and self.reads>1 else 1)])
@@ -136,6 +138,12 @@ class APITests(unittest.TestCase):
         response = self.run_request(method='GET',path='/agent-runs/'+RUN)
         self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(response.json()['draft'],'Private draft')
+
+    def test_detail_from_another_property_is_denied_even_if_visible_upstream(self):
+        self.existing = [{'id':RUN,'project_id':'other-property','draft':'Other tenant secret'}]
+        response = self.run_request(method='GET',path='/agent-runs/'+RUN)
+        self.assertEqual(response.status_code,403,response.text)
+        self.assertNotIn('Other tenant secret',response.text)
 
     def test_hidden_detail_returns_not_found(self):
         self.assertEqual(self.run_request(method='GET',path='/agent-runs/'+RUN).status_code,404)
