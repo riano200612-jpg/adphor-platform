@@ -228,8 +228,16 @@ function renderPage() {
     mountMeetingAssessment($('page-content'),{projectName:project().name,sector:project().sector||project().location||'',role:role(),repo:repo.mode==='demo'?{mode:'demo-calendar',assessMeeting:assessDemoMeeting}:repo,projectId:meetingProjectId,isProjectCurrent:()=>state.projectId===meetingProjectId,members:team()});return;
   }
   if (state.page === 'pqrs') {
-    if(portoVisible()) mountPqrs($('page-content'), {projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});
-    else mountUnifiedPqrs($('page-content'),{repo,projectId:state.projectId,role:role(),environment:import.meta.env.VITE_ADPHOR_PORTAL_EXEC_URL||''});
+    if(portoVisible()) {
+      const root=$('page-content');
+      root.replaceChildren();
+      const modern=document.createElement('div');
+      const original=document.createElement('div');
+      original.id='pqrs-original-access';
+      root.append(modern,original);
+      mountPqrs(modern,{projectName:project().name,repository:repo.mode==='demo'?demoPorto:repo.porto,projectId:state.projectId,members:team(),role:role()});
+      mountUnifiedPqrs(original,{repo,projectId:state.projectId,role:role(),environment:import.meta.env.VITE_ADPHOR_PORTAL_EXEC_URL||''});
+    } else mountUnifiedPqrs($('page-content'),{repo,projectId:state.projectId,role:role(),environment:import.meta.env.VITE_ADPHOR_PORTAL_EXEC_URL||''});
     return;
   }
   if (state.page === 'consultation' && import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') {
