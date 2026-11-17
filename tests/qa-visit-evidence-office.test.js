@@ -29,12 +29,17 @@ test('Office uploads get stable scoped IDs and reject a non-ZIP header',async()=
  assert.match(id,/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
  assert.equal(id,await officeEvidenceObjectId(file,'p1',request,actor));
  assert.notEqual(id,await officeEvidenceObjectId(file,'p2',request,actor));
- await assert.rejects(officeEvidenceObjectId({...file,async arrayBuffer(){return Uint8Array.from([0,0,0,0,1,2,3,4]).buffer;}},'p1',request,actor),/cabecera ZIP/);
+ await assert.rejects(officeEvidenceObjectId({
+  name:file.name,type:file.type,size:file.size,
+  async arrayBuffer(){return Uint8Array.from([0,0,0,0,1,2,3,4]).buffer;}
+ },'p1',request,actor),/cabecera ZIP/);
  const fakeZip=Uint8Array.from([0x50,0x4b,0x03,0x04,1,2,3,4]);
  await assert.rejects(officeEvidenceObjectId({
   name:'fake.docx',type:doc,size:fakeZip.length,async arrayBuffer(){return fakeZip.buffer;}
  },'p1',request,actor),/no válido/);
  const excel=createSyntheticVisitOfficeFile('xlsx',File);
  assert.match(await officeEvidenceObjectId(excel,'p1',request,actor),/^[0-9a-f-]{36}$/);
- await assert.rejects(officeEvidenceObjectId({...file,type:sheet,name:'fake.xlsx'},'p1',request,actor),/no válido/);
+ await assert.rejects(officeEvidenceObjectId({
+  name:'fake.xlsx',type:sheet,size:file.size,arrayBuffer:()=>file.arrayBuffer()
+ },'p1',request,actor),/no válido/);
 });

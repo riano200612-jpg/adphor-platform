@@ -104,6 +104,9 @@ export async function validateQaVisitOfficePackage(bytes,kind){
      !/<(?:\w+:)?workbook\b/.test(body)||!/spreadsheetml/.test(body))bad();
   const relationships=await readXml(bytes,entries.get('xl/_rels/workbook.xml.rels'));
   if(!/relationships\/worksheet/.test(relationships))bad();
+  const sheet=Array.from(entries.keys()).find(name=>/^xl\/worksheets\/[^/]+\.xml$/.test(name));
+  const sheetXml=await readXml(bytes,entries.get(sheet));
+  if(!/<(?:\w+:)?worksheet\b/.test(sheetXml)||!/spreadsheetml/.test(sheetXml))bad();
  }
  return true;
 }
