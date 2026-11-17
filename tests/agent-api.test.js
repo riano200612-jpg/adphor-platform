@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from '../src/js/services/agent-api.js';
-import { historyCards, draftCard } from '../src/js/ui-agent-history.js';
+import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from '../src/js/services/agent-api.js';
+import { historyCards, draftCard, mountAgentHistory } from '../src/js/ui-agent-history.js';
 
 test('HTTP is restricted to development loopback', () => {
   assert.equal(agentApiOrigin('http://localhost:5173', true), 'http://localhost:5173');
@@ -49,4 +49,64 @@ test('agent API rejects invalid tenant and pagination before any network request
   }
   await assert.rejects(agentRuleRequest({origin:'https://api.example.com',token:'test',projectId:'tenant-1',runId:'../other',fetcher}), /identificador del borrador/);
   assert.equal(calls,0);
+});
+
+test('readiness requires a scoped authenticated backend attestation', async () => {
+  const state = await fetchAgentReadiness({origin:'https://api.example.com', token:'token', projectId:'demo-01', fetcher:async (url,options)=>{
+    assert.equal(url.pathname,'/agent-readiness');
+    assert.equal(url.searchParams.get('project_id'),'demo-01');
+    assert.equal(options.headers.Authorization,'Bearer token');
+    assert.equal(options.redirect,'error');
+    return {ok:true,status:200,json:async()=>({mode:'qa_rules_only',project_id:'demo-01',
+      registry_ready:true,reviews_ready:false,rules_ready:false,models_ready:false})};
+  }});
+  assert.equal(state.rules_ready,false);
+  assert.equal(state.reviews_ready,false);
+  assert.equal(Object.isFrozen(state),true);
+});
+
+test('missing, cross-property or inconsistent readiness cannot enable actions', async () => {
+  for (const data of [
+    {mode:'qa_rules_only',project_id:'other',registry_ready:true,reviews_ready:true,rules_ready:true,models_ready:false},
+    {mode:'qa_rules_only',project_id:'demo-01',registry_ready:false,reviews_ready:true,rules_ready:true,models_ready:false},
+    {mode:'qa_rules_only',project_id:'demo-01',registry_ready:true,reviews_ready:true,rules_ready:true,models_ready:true},
+    {mode:'qa_rules_only',project_id:'demo-01',registry_ready:true,reviews_ready:false,rules_ready:true,models_ready:false},
+    {mode:'qa_rules_only',project_id:'demo-01',registry_ready:'yes',reviews_ready:true,rules_ready:true,models_ready:false},
+  ]) {
+    await assert.rejects(fetchAgentReadiness({origin:'https://api.example.com', token:'token',projectId:'demo-01',
+      fetcher:async()=>({ok:true,status:200,json:async()=>data})}),/diagnóstico/);
+  }
+  await assert.rejects(fetchAgentReadiness({origin:'https://api.example.com', token:'token',projectId:'demo-01',
+    fetcher:async()=>({ok:false,status:403})}),/MFA AAL2/);
+  let calls=0;
+  await assert.rejects(fetchAgentReadiness({origin:'https://api.example.com', token:'token',projectId:'../other',
+    fetcher:async()=>{calls++; throw Error('No network expected');}}),/copropiedad válida/);
+  assert.equal(calls,0);
+});
+
+test('the agent UI never offers writes without live QA registry and human review', async () => {
+  const makeContainer=()=>({innerHTML:'',isConnected:true,addEventListener(){}});
+  const baseRepo={agentApiConfigured:true,agentRuns:async()=>[],
+    runAgentRules:async()=>({}),reviewAgentRun:async()=>({})};
+  let container=makeContainer();
+  await mountAgentHistory(container,{repo:{...baseRepo,
+    agentReadiness:async()=>({registry_ready:false,reviews_ready:false,rules_ready:false})},
+    projectId:'demo-01',role:'admin'});
+  assert.doesNotMatch(container.innerHTML,/data-history="(?:run|approve|reject)"/);
+  assert.match(container.innerHTML,/registro de ejecuciones/i);
+
+  container=makeContainer();
+  await mountAgentHistory(container,{repo:{...baseRepo,
+    agentReadiness:async()=>({registry_ready:true,reviews_ready:false,rules_ready:false})},
+    projectId:'demo-01',role:'admin'});
+  assert.match(container.innerHTML,/data-history="load"/);
+  assert.doesNotMatch(container.innerHTML,/data-history="run"/);
+  assert.match(container.innerHTML,/Las aprobaciones todavía no están disponibles/);
+
+  container=makeContainer();
+  await mountAgentHistory(container,{repo:{...baseRepo,
+    agentReadiness:async()=>{throw Error('Backend not connected');}},
+    projectId:'demo-01',role:'admin'});
+  assert.doesNotMatch(container.innerHTML,/data-history="run"/);
+  assert.match(container.innerHTML,/No se verificó la preparación/);
 });

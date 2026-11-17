@@ -13,6 +13,32 @@ export function validateAgentScope(projectId, offset = 0) {
   if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('La página del historial no es válida.');
 }
 
+export async function fetchAgentReadiness({origin, token, projectId, fetcher = fetch}) {
+  validateAgentScope(projectId);
+  if (!token) throw new Error('Tu sesión terminó. Vuelve a ingresar.');
+  const url = new URL('/agent-readiness', origin);
+  url.searchParams.set('project_id', projectId);
+  const response = await fetcher(url, {
+    headers: {Authorization: `Bearer ${token}`},
+    signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error', credentials: 'omit',
+  });
+  if (response.status === 401) throw new Error('Tu sesión terminó. Vuelve a ingresar.');
+  if (response.status === 403) throw new Error('No tienes permiso o falta MFA AAL2.');
+  if (!response.ok) throw new Error('No fue posible certificar la preparación del enjambre.');
+  const data = await response.json();
+  if (!data || data.project_id !== projectId || data.mode !== 'qa_rules_only' ||
+      data.models_ready !== false ||
+      ['registry_ready','reviews_ready','rules_ready'].some(key => typeof data[key] !== 'boolean') ||
+      (data.rules_ready && (!data.registry_ready || !data.reviews_ready)) ||
+      (data.reviews_ready && !data.registry_ready)) {
+    throw new Error('El servicio devolvió un diagnóstico de preparación no válido.');
+  }
+  return Object.freeze({
+    project_id: data.project_id, registry_ready: data.registry_ready,
+    reviews_ready: data.reviews_ready, rules_ready: data.rules_ready, models_ready: false,
+  });
+}
+
 export async function fetchAgentRuns({origin, token, projectId, offset = 0, fetcher = fetch}) {
   validateAgentScope(projectId, offset);
   if (!token) throw new Error('Tu sesión terminó. Vuelve a ingresar.');
