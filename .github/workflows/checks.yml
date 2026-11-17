@@ -52,6 +52,44 @@ jobs:
           CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
         run: uv run --frozen pywrangler deploy --config wrangler.qa.jsonc --dry-run --outdir=/tmp/adphor-ai-qa-worker
 
+  bootstrap-private-qa-worker:
+    name: Bootstrap disabled private QA Worker (one-time)
+    needs: [test, python-tests, qa-python-worker-package]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/qa/integral-claude-reviewed-20261111' &&
+      contains(github.event.head_commit.message, '[ADPHOR_PRIVATE_QA_BOOTSTRAP_20261117]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    environment: adphor-qa
+    concurrency:
+      group: adphor-private-qa-worker-bootstrap
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_QA_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CI: 'true'
+      CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - name: Assert destination and nonexistence of QA Worker
+        run: node qa/security/private-worker-bootstrap.mjs preflight
+      - name: Revalidate isolated disabled Worker configuration
+        run: python qa/security/validate_private_worker.py
+      - name: Upload ONLY the disabled private QA Python Worker
+        working-directory: backend
+        run: uv run --frozen pywrangler deploy --config wrangler.qa.jsonc
+      - name: Verify no public workers.dev subdomain and exact target
+        run: node qa/security/private-worker-bootstrap.mjs postflight
+
   python-tests:
     name: Python unit tests
     runs-on: ubuntu-latest
