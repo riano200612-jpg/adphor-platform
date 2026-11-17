@@ -12,7 +12,8 @@ test('regression gate: modern navigation and PQRS recovery cannot be silently re
  const app=read('src/js/app.js');
  const pqrs=read('src/js/ui-pqrs-unified.js');
  assert.match(app,/mountUnifiedPqrs\(\$\('page-content'\)/);
- assert.match(app,/Equipo, fotos y datos reales/);
+ assert.match(app,/\['staff','users','Equipo administrativo'\]/);
+ assert.match(app,/\['corporate-staff','people-group','Equipo corporativo'\]/);
  assert.match(app,/mountMeetingAssessment/);
  assert.match(app,/mountMissAdphorChat/);
  assert.match(pqrs,/Propietarios · Radicar PQRS/);
