@@ -16,5 +16,11 @@ test('original corporate portrait is a real bundled WebP asset',async()=>{
  assert.equal(photo.subarray(0,4).toString(),'RIFF');
  assert.equal(photo.subarray(8,12).toString(),'WEBP');
  const app=readFileSync(new URL('../src/js/app.js',import.meta.url),'utf8');
- assert.match(app,/VITE_ADPHOR_AVATAR_PATH \|\| '\/assets\/branding\/miss-adphor\.webp'/);
+ const match=app.match(/VITE_ADPHOR_AVATAR_PATH\\s*\\|\\|\\s*'([^']+)'/);
+ assert.ok(match,'App must declare a default corporate avatar');
+ const current=match[1];
+ assert.equal(approvedAvatarPath(current),current,'Current avatar path must remain same-origin and vetted');
+ const bundled=readFileSync(new URL('../public'+current,import.meta.url));
+ assert.equal(bundled.subarray(0,4).toString(),'RIFF');
+ assert.equal(bundled.subarray(8,12).toString(),'WEBP');
 });
