@@ -1,5 +1,6 @@
 import {validateQaVisitEvidence} from './services/qa-visit-evidence-policy.js';
 import {canPrepareSyntheticVisitPdf,createSyntheticVisitPdfFile} from './services/qa-visit-synthetic-pdf.js';
+import {createSyntheticVisitOfficeFile,SYNTHETIC_VISIT_OFFICE} from './services/qa-visit-synthetic-office.js';
 
 // All content from Supabase is text-only. Signed links are requested explicitly,
 // expire after 90 seconds and are never persisted in the browser.
@@ -137,6 +138,29 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
     }
    });
    section.append(prepareSynthetic,note);
+   // All generated files use the same user-confirmed Storage + RLS upload path.
+   for(const [kind,labelText] of [
+    ['docx','Preparar Word sintético de prueba (solo QA)'],
+    ['xlsx','Preparar Excel sintético de prueba (solo QA)']
+   ]){
+    const control=document.createElement('button');
+    control.type='button';control.className='btn secondary';
+    control.dataset.visitSyntheticOffice=kind;
+    control.textContent=labelText;
+    control.addEventListener('click',()=>{
+     if(sending)return;
+     try{
+      const transfer=new DataTransfer();
+      transfer.items.add(createSyntheticVisitOfficeFile(kind));
+      fileInput.files=transfer.files;
+      showSelectedFiles();
+      message.textContent=SYNTHETIC_VISIT_OFFICE[kind].name+' preparado. Comprueba el documento y pulsa «Guardar evidencias privadas» para asociarlo a la visita QA.';
+     }catch{
+      message.textContent='Este navegador no permite preparar el documento Office sintético.';
+     }
+    });
+    section.append(control);
+   }
   }
   fileInput.addEventListener('change',showSelectedFiles);
   showSelectedFiles();
