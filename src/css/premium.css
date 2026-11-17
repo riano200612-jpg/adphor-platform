@@ -268,3 +268,15 @@
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 5px 14px rgba(8,29,48,.15);
 }
 @media(prefers-reduced-motion:reduce){.btn,.meeting-page button:not(.calendar-day),.pqrs-new,.pqrs-submit,.pqrs-refresh{transition:none!important}}
+
+
+/* Desktop navigation: keep every authorized module reachable on short screens. */
+@media(min-width:851px){
+  .sidebar{height:100dvh;max-height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+  .sidebar .brand,.sidebar-caption,.sidebar-bottom{flex-shrink:0}
+  .sidebar nav{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding-right:4px;padding-bottom:12px;scrollbar-width:thin;scrollbar-color:rgba(209,226,239,.48) transparent}
+  .sidebar nav::-webkit-scrollbar{width:6px}
+  .sidebar nav::-webkit-scrollbar-thumb{background:rgba(209,226,239,.48);border-radius:10px}
+  .sidebar nav button{flex-shrink:0}
+  .sidebar-bottom{margin-top:0}
+}
