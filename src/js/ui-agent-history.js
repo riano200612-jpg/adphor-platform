@@ -12,14 +12,18 @@ export function draftCard(item, canReview = false) {
 }
 
 export async function mountAgentHistory(container, {repo, projectId, role}) {
+  const mountToken=Symbol('agent-history');
+  container.__adphorAgentMountToken=mountToken;
+  const active=()=>container.isConnected && container.__adphorAgentMountToken===mountToken;
   if (!['admin','coordinator'].includes(role)) {
     container.innerHTML = '<p class="notice">El historial está disponible para Administración y Coordinación.</p>'; return;
   }
   if (!repo.agentRuns) {
     container.innerHTML = '<p class="notice">El historial requiere una sesión conectada a Supabase.</p>'; return;
   }
-  if (repo.agentApiConfigured === false) {
-    container.innerHTML = '<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>Los agentes Operaciones, Análisis e Informes cuentan con componentes y pruebas, pero no hay una API de ejecución y auditoría configurada en esta QA.</p><p>Miss ADPHOR sí permite un panorama integral de solo lectura, basado en registros autorizados de la copropiedad. No ejecuta modelos ni aprueba, modifica o envía informes.</p><p class="notice">El historial y la ejecución persistente del enjambre permanecerán deshabilitados hasta certificar un backend con sesión MFA AAL2, RLS y trazabilidad.</p></section>';
+  const readOnly=repo.agentApiConfigured===false;
+  if(readOnly && repo.agentRegistryReadOnlyEnabled!==true){
+    container.innerHTML='<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>En esta sesión no hay una API de ejecución y auditoría configurada ni un registro de lectura QA verificado. Miss ADPHOR mantiene el panorama integral de solo lectura. Consulta y ejecución del enjambre deshabilitadas.</p></section>';
     return;
   }
   if (typeof repo.agentReadiness !== 'function') {
@@ -31,16 +35,16 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
   try {
     readiness = await repo.agentReadiness(projectId);
   } catch {
-    if (container.isConnected) container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">No se verificó la preparación del backend mediante la sesión autorizada. No se habilitan ejecuciones ni aprobaciones.</p></section>';
+    if (active()) container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">No se verificó la preparación del backend mediante la sesión autorizada. Comprueba MFA AAL2 y el registro QA protegido. No se habilitan ejecuciones ni aprobaciones.</p></section>';
     return;
   }
-  if (!container.isConnected) return;
+  if (!active()) return;
   if (!readiness.registry_ready) {
     container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">El registro de ejecuciones y auditoría no está verificado en Supabase QA. No se permiten ejecuciones ni aprobaciones.</p></section>';
     return;
   }
   let currentDraft = null;
-  const canReview = role === 'admin' && readiness.reviews_ready === true && typeof repo.reviewAgentRun === 'function';
+  const canReview = !readOnly && role === 'admin' && readiness.reviews_ready === true && typeof repo.reviewAgentRun === 'function';
   const renderDraft = item => {
     currentDraft = item;
     return draftCard(item, canReview && item.status === 'Pendiente de aprobación del administrador');
@@ -49,10 +53,10 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
   let loading = false;
   let requestId = null;
   let hasNext = false;
-  container.innerHTML = `<section class="panel"><h2>Historial del enjambre</h2><p>Análisis por reglas: identifica vencidos, asignaciones pendientes y problemas de datos. Los modelos de IA todavía no están activados.</p><p>Cada ejecución guarda un borrador pendiente de aprobación. No cierra casos ni envía informes.</p>${!readiness.rules_ready ? '<p class="notice">La ejecución está bloqueada hasta certificar el backend y habilitar explícitamente el piloto de reglas en QA.</p>' : ''}${!readiness.reviews_ready ? '<p class="notice">Las aprobaciones todavía no están disponibles para esta sesión.</p>' : ''}<button class="btn secondary" data-history="load">Consultar historial</button> ${role === 'admin' && readiness.rules_ready && repo.runAgentRules ? '<button class="btn primary" data-history="run">Ejecutar análisis por reglas</button>' : ''}</section><div data-results aria-live="polite"></div><div><button class="btn secondary" data-history="previous" disabled>Anterior</button> <button class="btn secondary" data-history="next" disabled>Siguiente</button></div>`;
+  container.innerHTML = `<section class="panel"><h2>Historial del enjambre</h2>${readOnly ? '<p>Solo lectura: registros de Supabase QA con MFA AAL2. El backend ejecutor no está conectado.</p>' : ''}<p>Análisis por reglas: identifica vencidos, asignaciones pendientes y problemas de datos. Los modelos de IA todavía no están activados.</p><p>Cada ejecución guarda un borrador pendiente de aprobación. No cierra casos ni envía informes.</p>${!readiness.rules_ready ? '<p class="notice">La ejecución está bloqueada hasta certificar el backend y habilitar explícitamente el piloto de reglas en QA.</p>' : ''}${!readiness.reviews_ready ? '<p class="notice">Las aprobaciones todavía no están disponibles para esta sesión.</p>' : ''}<button class="btn secondary" data-history="load">Consultar historial</button> ${!readOnly && role === 'admin' && readiness.rules_ready && repo.runAgentRules ? '<button class="btn primary" data-history="run">Ejecutar análisis por reglas</button>' : ''}</section><div data-results aria-live="polite"></div><div><button class="btn secondary" data-history="previous" disabled>Anterior</button> <button class="btn secondary" data-history="next" disabled>Siguiente</button></div>`;
   container.addEventListener('click', async event => {
     const button = event.target.closest('[data-history]');
-    if (!button || loading) return;
+    if (!active() || !button || loading) return;
     if (['approve','reject'].includes(button.dataset.history)) {
       if (!canReview || !currentDraft || currentDraft.decided_at) return;
       const decision = button.dataset.history === 'approve' ? 'approved' : 'rejected';
@@ -64,14 +68,14 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
       feedback.textContent = 'Registrando tu decisión…';
       try {
         const review = await repo.reviewAgentRun(projectId, currentDraft.id, currentDraft.result_hash, decision, note);
-        if (!container.isConnected) return;
+        if (!active()) return;
         const item = {...currentDraft, ...review, status: decision === 'approved' ? 'Aprobado por el administrador' : 'Rechazado por el administrador'};
         container.querySelector('[data-results]').innerHTML = renderDraft(item);
       } catch (error) {
-        if (container.isConnected) feedback.textContent = error.message;
+        if (active()) feedback.textContent = error.message;
       } finally {
         loading = false;
-        if (container.isConnected) {
+        if (active()) {
           container.querySelectorAll('[data-history]').forEach(b => b.disabled = false);
           container.querySelector('[data-history="previous"]').disabled = offset === 0;
           container.querySelector('[data-history="next"]').disabled = !hasNext;
@@ -90,29 +94,29 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
         requestId ||= crypto.randomUUID();
         const saved = await repo.runAgentRules(projectId, requestId);
         requestId = null;
-        if (!container.isConnected) return;
+        if (!active()) return;
         const item = await repo.agentRunDetail(projectId, saved.id);
-        if (container.isConnected) results.innerHTML = '<p class="notice">Borrador guardado. Requiere aprobación del Administrador.</p>' + renderDraft(item);
+        if (active()) results.innerHTML = '<p class="notice">Borrador guardado. Requiere aprobación del Administrador.</p>' + renderDraft(item);
         return;
       }
       if (button.dataset.history === 'detail') {
         const item = await repo.agentRunDetail(projectId, button.dataset.runId);
-        if (container.isConnected) results.innerHTML = renderDraft(item);
+        if (active()) results.innerHTML = renderDraft(item);
         return;
       }
       const items = await repo.agentRuns(projectId, nextOffset);
-      if (!container.isConnected) return;
+      if (!active()) return;
       offset = nextOffset;
       hasNext = items.length === 20;
       results.innerHTML = items.length ? historyCards(items) : '<section class="panel"><h3>No hay ejecuciones visibles en esta página</h3><p>Los nuevos registros aparecerán cuando se conecte y ejecute el servicio de agentes.</p></section>';
       container.querySelector('[data-history="previous"]').disabled = offset === 0;
       container.querySelector('[data-history="next"]').disabled = items.length < 20;
     } catch (error) {
-      if (!container.isConnected) return;
+      if (!active()) return;
       results.textContent = error.name === 'TimeoutError' ? 'El servicio tardó demasiado. Intenta nuevamente.' : error instanceof TypeError ? 'No se pudo conectar con el servicio de asistentes.' : error.message;
     } finally {
       loading = false;
-      if (container.isConnected) {
+      if (active()) {
         container.querySelectorAll('[data-history]').forEach(b => b.disabled = false);
         container.querySelector('[data-history="previous"]').disabled = offset === 0;
         container.querySelector('[data-history="next"]').disabled = !hasNext;
