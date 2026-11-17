@@ -76,3 +76,40 @@ test('private portrait loads on mobile and replaces initials rather than getting
  await expect(page.locator('.staff-company-placeholder')).toHaveCount(0);
  expect(await page.getByRole('img',{name:'Fotografía de Claudia Zúñiga'}).evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);
 });
+
+test('corporate admin chooses matching numbered source photo; mismatched and uncertain identities are blocked',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('./');
+  await page.evaluate(async()=>{
+    const {mountCorporateStaff}=await import('/adphor-platform/src/js/ui-corporate-staff.js');
+    document.body.replaceChildren();
+    const root=document.createElement('main');document.body.append(root);
+    window.photoImports=[];
+    const people=[
+      {id:'delegate-16',name:'Ruby Luz Ramos',role_label:'Delegado',department:'Delegados',carousel_visible:true,assigned_properties:0,functions:[],photo_path:null},
+      {id:'delegate-54',name:'aa',role_label:'Auxiliar de Tecnología',department:'Tecnología',carousel_visible:true,assigned_properties:0,functions:[],photo_path:null},
+    ];
+    const photo='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#aaa"/></svg>');
+    await mountCorporateStaff(root,{repo:{
+      corporateStaffDirectory:async()=>people,
+      corporateStaffCanManage:async()=>true,
+      corporateStaffHistory:async()=>[],
+      corporateStaffPhoto:async()=>photo,
+      corporateStaffUploadPhoto:async(id,file)=>{
+        window.photoImports.push([id,file.name]);
+        return id+'/'+'a'.repeat(64)+'.jpg';
+      },
+    }});
+  });
+  const upload=page.getByLabel('Seleccionar fotografía de Ruby Luz Ramos');
+  const save=page.getByRole('button',{name:'Guardar fotografía'});
+  await expect(page.getByLabel('Seleccionar fotografía de aa')).toHaveCount(0);
+  await upload.setInputFiles({name:'54. James Alexander Riaño Becerra.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,0,1,2,3,4,5,6,7,8,9])});
+  await expect(save).toBeDisabled();
+  await upload.setInputFiles({name:'16. Ruby Ramos.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,0,1,2,3,4,5,6,7,8,9])});
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(page.getByRole('img',{name:'Fotografía de Ruby Luz Ramos'})).toBeVisible();
+  await expect(page.locator('.staff-company-card').first().locator('.staff-company-placeholder')).toHaveCount(0);
+  expect(await page.evaluate(()=>window.photoImports)).toEqual([['delegate-16','16. Ruby Ramos.jpg']]);
+});
