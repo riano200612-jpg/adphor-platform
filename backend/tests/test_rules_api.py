@@ -128,6 +128,15 @@ class APITests(unittest.TestCase):
         self.assertEqual(response.status_code,422)
         self.assertEqual(self.inserts,[])
 
+    def test_detail_checks_tenant_membership_before_returning_draft(self):
+        self.existing = [{'id':RUN,'project_id':'demo-01','draft':'Private draft'}]
+        self.role = 'viewer'
+        self.assertEqual(self.run_request(method='GET',path='/agent-runs/'+RUN).status_code,403)
+        self.role = 'coordinator'
+        response = self.run_request(method='GET',path='/agent-runs/'+RUN)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(response.json()['draft'],'Private draft')
+
     def test_hidden_detail_returns_not_found(self):
         self.assertEqual(self.run_request(method='GET',path='/agent-runs/'+RUN).status_code,404)
 
