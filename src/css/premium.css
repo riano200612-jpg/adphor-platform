@@ -280,3 +280,13 @@
   .sidebar nav button{flex-shrink:0}
   .sidebar-bottom{margin-top:0}
 }
+
+
+/* Searchable copropiedad picker — compact results without expanding the topbar. */
+.project-control{position:relative}
+.project-search-results:not([hidden]){position:absolute;top:100%;left:0;z-index:60;width:min(420px,95vw);max-height:min(330px,55vh);overflow-y:auto;background:#fff;border:1px solid #aac4d7;border-radius:14px;box-shadow:0 16px 38px rgba(22,54,80,.22);padding:5px;display:flex;flex-direction:column;gap:2px}
+.project-search-result{display:block;width:100%;min-height:42px;text-align:left;padding:10px 12px;border:0;border-radius:9px;background:transparent;color:#204563;font:inherit;cursor:pointer;white-space:normal}
+.project-search-result:hover,.project-search-result:focus-visible{background:#e8f2f9;outline:2px solid #a1c4dc;outline-offset:-2px}
+.project-search-result[aria-selected=true]{font-weight:700;border-left:3px solid #b69b36}
+.project-search-empty{padding:12px;color:#576b7b}
+@media(max-width:580px){.project-search-results:not([hidden]){width:min(340px,calc(100vw - 32px));max-height:45vh}}
