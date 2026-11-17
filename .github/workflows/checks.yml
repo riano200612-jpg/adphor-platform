@@ -31,6 +31,27 @@ jobs:
             test-results/
             qa/visual-premium/
 
+  qa-python-worker-package:
+    name: Python Worker QA offline package
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - name: Validate private QA Worker configuration
+        run: python qa/security/validate_private_worker.py
+      - name: Build Python QA Worker bundle without deployment
+        working-directory: backend
+        env:
+          CI: 'true'
+          CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
+        run: uv run --frozen pywrangler deploy --config wrangler.qa.jsonc --dry-run --outdir=/tmp/adphor-ai-qa-worker
+
   python-tests:
     name: Python unit tests
     runs-on: ubuntu-latest
