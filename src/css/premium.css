@@ -207,3 +207,29 @@
 .staff-directory-card h2{font-size:1.2rem;margin:0}.staff-directory-card p{margin:0}
 .staff-directory-portrait{width:144px;height:144px;border-radius:1rem;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:2.5rem}
 .staff-directory-role{font-weight:700;color:var(--navy,#234661)}
+
+
+/* QA Integral Glass Premium v2: overrides legacy premium meeting-button rules. */
+.btn.primary,.meeting-page button.primary,.pqrs-new,.pqrs-submit{
+  background:linear-gradient(135deg,#4c7898 0%,#2c5475 47%,#1b3d5a 100%);
+  color:#fff;border:1px solid rgba(255,255,255,.27);border-radius:15px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(7,29,48,.24),0 8px 20px rgba(28,65,93,.23);
+}
+.btn.secondary,.meeting-page button:not(.primary):not(.calendar-day),.pqrs-refresh{
+  background:linear-gradient(140deg,rgba(255,255,255,.96),rgba(219,235,246,.67));
+  color:#244c6c;border:1px solid rgba(115,157,187,.48);border-radius:15px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 6px 18px rgba(28,65,93,.10);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+}
+.meeting-page button[aria-pressed="true"],.meeting-page button[aria-selected="true"],.meeting-page button.active{
+  background:linear-gradient(135deg,#426c8d,#244b6d);color:#fff;border-color:#678aa4;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 7px 17px rgba(25,63,91,.22);
+}
+.meeting-page button:not(.calendar-day):hover:not(:disabled),.btn.secondary:hover:not(:disabled){
+  border-color:#83aac3;box-shadow:inset 0 1px 0 #fff,0 9px 21px rgba(28,65,93,.17);
+}
+.meeting-page button.primary:hover:not(:disabled),.btn.primary:hover:not(:disabled){
+  background:linear-gradient(135deg,#5683a3,#315c7e 55%,#204562);
+}
+.meeting-page button:focus-visible,.btn:focus-visible{outline:3px solid #c4a54b;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.meeting-page button,.btn{transition:none!important;transform:none!important}}
