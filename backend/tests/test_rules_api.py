@@ -1,4 +1,6 @@
 import os
+import base64
+import json
 import unittest
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -13,6 +15,11 @@ from backend.src.adphor_ai.rules import run_rules, PENDING
 USER = '11111111-1111-4111-8111-111111111111'
 RUN = '22222222-2222-4222-8222-222222222222'
 CASE = '33333333-3333-4333-8333-333333333333'
+def synthetic_token(aal='aal2'):
+    # Test-only JWT-shaped bearer. Upstream /auth/v1/user is mocked separately.
+    payload = base64.urlsafe_b64encode(json.dumps({'sub':USER,'aal':aal}).encode()).decode().rstrip('=')
+    return 'synthetic.' + payload + '.synthetic'
+
 NOW = datetime(2026,10,22,12,tzinfo=timezone.utc)
 TICKET = {'id':CASE,'project_id':'demo-01','version':1,'status':'Por verificar','assignee':None,'due_date':'2026-10-20'}
 MEMBER = {'project_id':'demo-01','user_id':USER,'role':'admin'}
@@ -54,6 +61,7 @@ class APITests(unittest.TestCase):
         settings.start()
         self.addCleanup(settings.stop)
         self.role = 'admin'
+        self.token = synthetic_token()
         self.inserts = []
         self.reads = 0
         self.changed = False
@@ -72,7 +80,7 @@ class APITests(unittest.TestCase):
             import json
             self.inserts.append(json.loads(req.content))
             return httpx.Response(201)
-        self.assertEqual(req.headers['authorization'],'Bearer user-test-token')
+        self.assertEqual(req.headers['authorization'],'Bearer '+self.token)
         self.assertEqual(req.headers['apikey'],'sb_publishable_test')
         if path == '/auth/v1/user': return httpx.Response(200,json={'id':USER})
         if path == '/rest/v1/memberships':
@@ -89,7 +97,7 @@ class APITests(unittest.TestCase):
     def run_request(self, method='POST', json=None, auth=True, path='/agent-runs'):
         with TestClient(app) as client:
             with patch.object(app.state,'http',httpx.AsyncClient(transport=httpx.MockTransport(self.upstream))):
-                return client.request(method,path,headers={'Authorization':'Bearer user-test-token'} if auth else {},
+                return client.request(method,path,headers={'Authorization':'Bearer '+self.token} if auth else {},
                                       json=json if json is not None else {'project_id':'demo-01','request_id':RUN})
 
     def test_success_inserts_only_pending_rules_snapshot(self):
@@ -99,6 +107,14 @@ class APITests(unittest.TestCase):
         self.assertEqual(len(self.inserts),1)
         self.assertNotIn('administrator_id',self.inserts[0])
         self.assertNotIn('decision',self.inserts[0])
+
+    def test_agent_endpoints_require_existing_aal2_session(self):
+        self.token = synthetic_token('aal1')
+        for method, path in [('GET','/agent-runs?project_id=demo-01'),
+                             ('GET','/agent-runs/'+RUN),('POST','/agent-runs')]:
+            response = self.run_request(method=method,path=path)
+            self.assertEqual(response.status_code,403,(method,path,response.text))
+        self.assertEqual(self.inserts,[])
 
     def test_missing_session_denied(self):
         self.assertEqual(self.run_request(auth=False).status_code,401)
