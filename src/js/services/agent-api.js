@@ -9,7 +9,7 @@ export function agentApiOrigin(value, development = false) {
 }
 
 export function validateAgentScope(projectId, offset = 0) {
-  if (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(projectId)) throw new Error('Selecciona una copropiedad válida.');
+  if (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(projectId)) throw new Error('Selecciona una copropiedad válida.');
   if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('La página del historial no es válida.');
 }
 
