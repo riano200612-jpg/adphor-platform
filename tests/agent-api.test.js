@@ -36,3 +36,17 @@ test('detail rejects a different property and escapes draft HTML', async () => {
   await assert.rejects(agentRuleRequest({origin:'https://api.example.com',token:'test',projectId:'demo-01',runId:'run-1',fetcher:async()=>({ok:true,json:async()=>({id:'run-1',project_id:'other',draft:'text'})})}), /borrador no válido/);
   assert.equal(draftCard({draft:'<script>alert(1)</script>'}).includes('<script>'),false);
 });
+
+test('agent API rejects invalid tenant and pagination before any network request', async () => {
+  let calls = 0;
+  const fetcher = async () => { calls++; throw Error('network must not be called'); };
+  for (const projectId of ['', '../other', 'tenant?other', null]) {
+    await assert.rejects(fetchAgentRuns({origin:'https://api.example.com',token:'test',projectId,fetcher}), /copropiedad válida/);
+    await assert.rejects(agentRuleRequest({origin:'https://api.example.com',token:'test',projectId,requestId:'req-1',fetcher}), /copropiedad válida/);
+  }
+  for (const offset of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(fetchAgentRuns({origin:'https://api.example.com',token:'test',projectId:'tenant-1',offset,fetcher}), /página del historial/);
+  }
+  await assert.rejects(agentRuleRequest({origin:'https://api.example.com',token:'test',projectId:'tenant-1',runId:'../other',fetcher}), /identificador del borrador/);
+  assert.equal(calls,0);
+});
