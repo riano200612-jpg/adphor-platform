@@ -15,7 +15,7 @@ import { assignedProjects, assignedMembers, assignedTickets } from './assigned-p
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
-import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
+import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from './agent-api.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
 const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
@@ -148,6 +148,13 @@ export function createCloudRepository(url, key) {
       if (!origin) throw new Error("El servicio de consultas no está conectado.");
       const { session } = check(await client.auth.getSession());
       return fetchTenantSummary({ origin, token: session?.access_token, projectId });
+    },
+    async agentReadiness(projectId) {
+      if (!authPolicy.isolatedQa) throw new Error('El enjambre solo puede verificarse en QA Integral.');
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error('La API de agentes no está conectada.');
+      const { session } = check(await client.auth.getSession());
+      return fetchAgentReadiness({origin, token: session?.access_token, projectId});
     },
     async reviewAgentRun(projectId, runId, resultHash, decision, note) {
       return submitAgentReview(client, {projectId, runId, resultHash, decision, note});

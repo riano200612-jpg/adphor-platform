@@ -55,8 +55,9 @@ class RulesTests(unittest.TestCase):
 class APITests(unittest.TestCase):
     def setUp(self):
         # Bind fixtures per test, independent of module import order or host credentials.
-        settings=patch.multiple('backend.local_api',BASE='https://test.supabase.co',
-            KEY='sb_publishable_test',Config=Configuracion('https://test.supabase.co',
+        settings=patch.multiple('backend.local_api',BASE='https://qfctnnnnltghepwujpdm.supabase.co',
+            KEY='sb_publishable_test',ORIGIN='https://qa.example.invalid',
+            Config=Configuracion('https://qfctnnnnltghepwujpdm.supabase.co',
                 'sb_publishable_test','https://qa.example.invalid'))
         settings.start()
         self.addCleanup(settings.stop)
@@ -66,7 +67,11 @@ class APITests(unittest.TestCase):
         self.reads = 0
         self.changed = False
         self.existing = []
-        self.keys = patch.dict(os.environ,{'SUPABASE_AGENT_WRITER_KEY':'sb_secret_test_only'})
+        self.registry_missing = False
+        self.reviews_missing = False
+        self.keys = patch.dict(os.environ,{
+            'SUPABASE_AGENT_WRITER_KEY':'sb_secret_test_only',
+            'ADPHOR_QA_AGENT_RULES_ENABLED':'true'})
         self.keys.start()
 
     def tearDown(self): self.keys.stop()
@@ -91,7 +96,10 @@ class APITests(unittest.TestCase):
             self.reads += 1
             return httpx.Response(200,json=[dict(TICKET,version=2 if self.changed and self.reads>1 else 1)])
         if path == '/rest/v1/agent_runs': return httpx.Response(200,json=self.existing)
-        if path == '/rest/v1/agent_run_status': return httpx.Response(200,json=self.existing)
+        if path == '/rest/v1/agent_run_status':
+            return httpx.Response(404,json={'code':'PGRST205'}) if self.registry_missing else httpx.Response(200,json=self.existing)
+        if path == '/rest/v1/agent_reviews':
+            return httpx.Response(404,json={'code':'PGRST205'}) if self.reviews_missing else httpx.Response(200,json=[])
         raise AssertionError(path)
 
     def run_request(self, method='POST', json=None, auth=True, path='/agent-runs'):
@@ -114,6 +122,46 @@ class APITests(unittest.TestCase):
                              ('GET','/agent-runs/'+RUN),('POST','/agent-runs')]:
             response = self.run_request(method=method,path=path)
             self.assertEqual(response.status_code,403,(method,path,response.text))
+        self.assertEqual(self.inserts,[])
+
+    def test_readiness_requires_current_aal2_and_membership(self):
+        self.token = synthetic_token('aal1')
+        self.assertEqual(self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').status_code,403)
+        self.token = synthetic_token()
+        self.role = 'viewer'
+        self.assertEqual(self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').status_code,403)
+
+    def test_readiness_is_live_and_does_not_expose_secrets(self):
+        response = self.run_request(method='GET',path='/agent-readiness?project_id=demo-01')
+        self.assertEqual(response.status_code,200,response.text)
+        data = response.json()
+        self.assertEqual(data,{'mode':'qa_rules_only','project_id':'demo-01',
+            'registry_ready':True,'reviews_ready':True,'rules_ready':True,'models_ready':False})
+        self.assertNotIn('sb_secret_',response.text)
+        self.assertEqual(self.inserts,[])
+        self.registry_missing=True
+        missing=self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').json()
+        self.assertFalse(missing['registry_ready'])
+        self.assertFalse(missing['rules_ready'])
+        self.registry_missing=False
+        self.reviews_missing=True
+        without_reviews=self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').json()
+        self.assertTrue(without_reviews['registry_ready'])
+        self.assertFalse(without_reviews['reviews_ready'])
+        self.role='coordinator'
+        coordination=self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').json()
+        self.assertFalse(coordination['rules_ready'])
+        self.assertFalse(coordination['reviews_ready'])
+
+    def test_disabled_pilot_denies_post_before_any_snapshot_or_write(self):
+        with patch.dict(os.environ,{'ADPHOR_QA_AGENT_RULES_ENABLED':''}):
+            response=self.run_request()
+            self.assertEqual(response.status_code,503,response.text)
+            self.assertEqual(self.inserts,[])
+            readiness=self.run_request(method='GET',path='/agent-readiness?project_id=demo-01').json()
+            self.assertFalse(readiness['rules_ready'])
+        with patch('backend.local_api.BASE','https://oqizvirqjwbbhyyjpthq.supabase.co'):
+            self.assertEqual(self.run_request().status_code,503)
         self.assertEqual(self.inserts,[])
 
     def test_missing_session_denied(self):

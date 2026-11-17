@@ -96,3 +96,24 @@ Si falla la confirmación de guardado, consultar el historial antes de reintenta
 
 Pruebas del cliente: `node --test tests/agent-api.test.js tests/agent-review.test.js`.
 Reiniciar Python tras actualizar para que el detalle también devuelva `note`.
+
+## Puerta de preparación segura (QA Integral, 2026-11-17)
+
+La pantalla Historial **no habilita** ejecutar ni revisar borradores por el simple hecho de
+tener `VITE_AGENTS_API_URL`. Antes, consulta `GET /agent-readiness?project_id=...`
+con JWT del usuario autenticado, MFA AAL2 y membresía activa comprobada por el servidor.
+
+La API consulta el registro `agent_run_status` y el acceso a `agent_reviews`
+con el token humano (sin extraer datos, `limit=0`), y devuelve banderas de
+solo lectura. En ausencia de API, esquema, MFA, rol o respuesta válida, el cliente
+oculta las operaciones. El indicador nunca implica modelos ML/DL/PLN activos.
+
+El servidor también exige la variable `ADPHOR_QA_AGENT_RULES_ENABLED=true` **para cada POST**,
+además de una URL Supabase **exactamente** QA (`qfctnnnnltghepwujpdm`) y un origen
+HTTPS distinto de producción. Esta variable debe permanecer ausente/desactivada
+hasta que el propietario certifique almacenamiento, RLS, Access, AAL2 y pruebas E2E
+sobre QA Integral. Una clave de escritor privada por sí sola jamás habilita ejecutar.
+
+No se aplican migraciones, no se usan datos de clientes ni se modifica producción
+en este incremento. El endpoint de preparación es un preflight, no sustituye la
+certificación E2E de escritura/lectura/aprobación.

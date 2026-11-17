@@ -100,6 +100,7 @@ async def require_role(request, actor, project, allowed):
         "select":"role", "project_id":f"eq.{project}", "user_id":f"eq.{actor['id']}", "limit":"2"})
     if not isinstance(rows, list) or len(rows) != 1 or rows[0]["role"] not in allowed:
         raise HTTPException(403, "Tu perfil no puede realizar esta acción en la copropiedad.")
+    return rows[0]["role"]
 
 
 # Default: disabled; staging + synthetic fixtures only; no real data adapter.
@@ -157,10 +158,51 @@ class RunRequest(BaseModel):
     request_id: UUID
 
 
+def qa_rules_enabled():
+    """Explicit QA-only gate; a writer key alone never enables execution."""
+    return (
+        os.environ.get("ADPHOR_QA_AGENT_RULES_ENABLED") == "true"
+        and BASE == "https://qfctnnnnltghepwujpdm.supabase.co"
+        and ORIGIN.startswith("https://")
+        and ORIGIN != "https://adphor-platform.pages.dev"
+    )
+
+
 @app.get("/health")
 async def health():
     return {"status":"ok", "agents_enabled":False, "rules_available":True,
             "rules_persistence_configured": bool(os.environ.get("SUPABASE_AGENT_WRITER_KEY"))}
+
+
+@app.get("/agent-readiness")
+async def agent_readiness(request: Request, actor: Annotated[dict, Depends(agent_identity)],
+                          project_id: str = Query(pattern=r"^[A-Za-z0-9_-]{1,100}$")):
+    """Live, scoped preflight. It does not execute a model or write data."""
+    role = await require_role(request, actor, project_id, ("admin", "coordinator"))
+    registry_ready = False
+    reviews_ready = False
+    try:
+        runs = await call(request, actor["token"], "/rest/v1/agent_run_status", params={
+            "select": "id", "project_id": f"eq.{project_id}", "limit": "0"})
+        registry_ready = isinstance(runs, list)
+    except HTTPException as error:
+        if error.status_code in (401, 403):
+            raise
+    if registry_ready:
+        try:
+            reviews = await call(request, actor["token"], "/rest/v1/agent_reviews", params={
+                "select": "run_id", "project_id": f"eq.{project_id}", "limit": "0"})
+            reviews_ready = isinstance(reviews, list)
+        except HTTPException as error:
+            if error.status_code in (401, 403):
+                raise
+    writer = os.environ.get("SUPABASE_AGENT_WRITER_KEY", "")
+    rules_ready = (registry_ready and qa_rules_enabled()
+                   and writer.startswith(("sb_secret_", "eyJ")))
+    return {"mode": "qa_rules_only", "project_id": project_id,
+            "registry_ready": registry_ready, "reviews_ready": reviews_ready and role == "admin",
+            "rules_ready": rules_ready and role == "admin",
+            "models_ready": False}
 
 
 @app.get("/agent-runs")
@@ -191,6 +233,8 @@ async def detail(run_id: UUID, request: Request, actor: Annotated[dict, Depends(
 @app.post("/agent-runs")
 async def execute_rules(body: RunRequest, request: Request, actor: Annotated[dict, Depends(agent_identity)]):
     await require_role(request, actor, body.project_id, ("admin",))
+    if not qa_rules_enabled():
+        raise HTTPException(503, "La ejecución por reglas no está habilitada en QA certificada.")
     run_id = str(body.request_id)
     existing = await call(request, actor["token"], "/rest/v1/agent_runs", params={
         "select":"id,project_id,source_snapshot", "id":f"eq.{run_id}", "limit":"1"})

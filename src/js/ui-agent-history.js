@@ -11,7 +11,7 @@ export function draftCard(item, canReview = false) {
   return `<article class="panel"><h3 class="agent-state ${stateClass(item.status)}">${esc(item.status)}</h3><p>Lectura: ${esc(date(item.source_read_at))} · Colombia</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit">${esc(item.draft)}</pre>${item.decided_at ? `<p>Decisión registrada: ${esc(date(item.decided_at))} · Colombia</p><p>Administrador: ${esc(item.administrator_id)}</p><p>Observaciones: ${esc(item.note || 'Sin observaciones')}</p><p>La decisión corresponde a esta versión; el texto original del borrador se conserva.</p>` : canReview ? `<section><label for="agent-review-note">Observaciones del Administrador (máximo 4000 caracteres)</label><textarea id="agent-review-note" data-review-note maxlength="4000" rows="3" style="width:100%"></textarea><p>La decisión es definitiva para esta versión. No envía el informe ni cierra casos.</p><button class="btn primary" data-history="approve">Aprobar borrador</button> <button class="btn secondary" data-history="reject">Rechazar borrador</button><p data-review-feedback role="status"></p></section>` : ''}<p>Consultar este documento no lo aprueba ni lo envía.</p></article>`;
 }
 
-export function mountAgentHistory(container, {repo, projectId, role}) {
+export async function mountAgentHistory(container, {repo, projectId, role}) {
   if (!['admin','coordinator'].includes(role)) {
     container.innerHTML = '<p class="notice">El historial está disponible para Administración y Coordinación.</p>'; return;
   }
@@ -22,8 +22,25 @@ export function mountAgentHistory(container, {repo, projectId, role}) {
     container.innerHTML = '<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>Los agentes Operaciones, Análisis e Informes cuentan con componentes y pruebas, pero no hay una API de ejecución y auditoría configurada en esta QA.</p><p>Miss ADPHOR sí permite un panorama integral de solo lectura, basado en registros autorizados de la copropiedad. No ejecuta modelos ni aprueba, modifica o envía informes.</p><p class="notice">El historial y la ejecución persistente del enjambre permanecerán deshabilitados hasta certificar un backend con sesión MFA AAL2, RLS y trazabilidad.</p></section>';
     return;
   }
+  if (typeof repo.agentReadiness !== 'function') {
+    container.innerHTML = '<p class="notice">No hay diagnóstico autenticado del enjambre; se mantienen deshabilitadas sus acciones.</p>';
+    return;
+  }
+  container.innerHTML = '<section class="panel"><h2>Estado del enjambre</h2><p role="status">Verificando permisos, registro y configuración del servicio…</p></section>';
+  let readiness;
+  try {
+    readiness = await repo.agentReadiness(projectId);
+  } catch {
+    if (container.isConnected) container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">No se verificó la preparación del backend mediante la sesión autorizada. No se habilitan ejecuciones ni aprobaciones.</p></section>';
+    return;
+  }
+  if (!container.isConnected) return;
+  if (!readiness.registry_ready) {
+    container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">El registro de ejecuciones y auditoría no está verificado en Supabase QA. No se permiten ejecuciones ni aprobaciones.</p></section>';
+    return;
+  }
   let currentDraft = null;
-  const canReview = role === 'admin' && typeof repo.reviewAgentRun === 'function';
+  const canReview = role === 'admin' && readiness.reviews_ready === true && typeof repo.reviewAgentRun === 'function';
   const renderDraft = item => {
     currentDraft = item;
     return draftCard(item, canReview && item.status === 'Pendiente de aprobación del administrador');
@@ -32,7 +49,7 @@ export function mountAgentHistory(container, {repo, projectId, role}) {
   let loading = false;
   let requestId = null;
   let hasNext = false;
-  container.innerHTML = `<section class="panel"><h2>Historial del enjambre</h2><p>Análisis por reglas: identifica vencidos, asignaciones pendientes y problemas de datos. Los modelos de IA todavía no están activados.</p><p>Cada ejecución guarda un borrador pendiente de aprobación. No cierra casos ni envía informes.</p><button class="btn secondary" data-history="load">Consultar historial</button> ${role === 'admin' && repo.runAgentRules ? '<button class="btn primary" data-history="run">Ejecutar análisis por reglas</button>' : ''}</section><div data-results aria-live="polite"></div><div><button class="btn secondary" data-history="previous" disabled>Anterior</button> <button class="btn secondary" data-history="next" disabled>Siguiente</button></div>`;
+  container.innerHTML = `<section class="panel"><h2>Historial del enjambre</h2><p>Análisis por reglas: identifica vencidos, asignaciones pendientes y problemas de datos. Los modelos de IA todavía no están activados.</p><p>Cada ejecución guarda un borrador pendiente de aprobación. No cierra casos ni envía informes.</p>${!readiness.rules_ready ? '<p class="notice">La ejecución está bloqueada hasta certificar el backend y habilitar explícitamente el piloto de reglas en QA.</p>' : ''}${!readiness.reviews_ready ? '<p class="notice">Las aprobaciones todavía no están disponibles para esta sesión.</p>' : ''}<button class="btn secondary" data-history="load">Consultar historial</button> ${role === 'admin' && readiness.rules_ready && repo.runAgentRules ? '<button class="btn primary" data-history="run">Ejecutar análisis por reglas</button>' : ''}</section><div data-results aria-live="polite"></div><div><button class="btn secondary" data-history="previous" disabled>Anterior</button> <button class="btn secondary" data-history="next" disabled>Siguiente</button></div>`;
   container.addEventListener('click', async event => {
     const button = event.target.closest('[data-history]');
     if (!button || loading) return;
