@@ -30,7 +30,7 @@ test('corporate photo import allows only active AAL2 corporate admins, enforces 
     await db.exec(await read(photoMigration));
     await db.exec([
       "insert into auth.users values('00000000-0000-4000-8000-000000000001');",
-      "insert into qa_staff_members(id,name,role_code,role_label,active) values('delegate-16','Ruby Luz Ramos','D','Delegado',true),('delegate-54','aa','T','Auxiliar de Tecnología',true);",
+      "insert into qa_staff_members(id,name,role_code,role_label,active,source_sha256) values('delegate-16','Ruby Luz Ramos','D','Delegado',true,repeat('b',64)),('delegate-54','aa','T','Auxiliar de Tecnología',true,repeat('c',64));",
       "set role authenticated;",
       "set request.jwt.claim.sub='00000000-0000-4000-8000-000000000001';",
       "set test.aal='aal2';set test.principal='technical_admin';",
