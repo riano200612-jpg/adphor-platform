@@ -1,6 +1,6 @@
 // ADPHOR QA only. Google freeBusy read-only: no event details or writes.
 import {QA_PROJECT_URL, QA_FRONTEND, QA_SOURCE,
-  validateAvailabilityBody, parseValidatedAal2, normalizeBusy} from './core.js';
+  validateAvailabilityBody, parseValidatedAal2, normalizeBusy, missingQaCalendarConfigMask} from './core.js';
 
 const cors = {
   'Access-Control-Allow-Origin': QA_FRONTEND,
@@ -80,7 +80,15 @@ Deno.serve(async req => {
     client_secret:Deno.env.get('ADPHOR_QA_CALENDAR_OAUTH_CLIENT_SECRET'),
     refresh_token:Deno.env.get('ADPHOR_QA_CALENDAR_OAUTH_REFRESH_TOKEN'),
   };
-  if(!calendarId||!Object.values(oauth).every(Boolean))return unavailable('oauth_configuration','Google Calendar corporativo no configurado en QA.');
+  // Only after Auth AAL2 and a one-row authorized membership check.
+  // Encode absent names as fixed mask bits; never log secrets or their fingerprints.
+  const missingMask=missingQaCalendarConfigMask(calendarId,oauth);
+  if(missingMask){
+    console.warn(JSON.stringify({
+      event:'adphor_qa_calendar_missing_config',request_id:requestId,missing_mask:missingMask,
+    }));
+    return unavailable('oauth_configuration','Google Calendar corporativo no configurado en QA.');
+  }
   try {
     const grant=await checkedFetch('https://oauth2.googleapis.com/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},

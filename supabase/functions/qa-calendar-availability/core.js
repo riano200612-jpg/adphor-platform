@@ -46,3 +46,10 @@ export function normalizeBusy(result,calendarId) {
     return {start:slot.start,end:slot.end};
   });
 }
+// A presence-only bitmask used exclusively in authorized QA diagnostics.
+// 1: calendar ID; 2: OAuth client ID; 4: OAuth client secret; 8: refresh token.
+// No value, length, prefix, hash or credential-dependent detail is logged.
+export function missingQaCalendarConfigMask(calendarId,oauth) {
+  const values=[calendarId,oauth?.client_id,oauth?.client_secret,oauth?.refresh_token];
+  return values.reduce((mask,value,index)=>mask|(!value?(1<<index):0),0);
+}
