@@ -23,7 +23,7 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
   }
   const readOnly=repo.agentApiConfigured===false;
   if(readOnly && repo.agentRegistryReadOnlyEnabled!==true){
-    container.innerHTML='<section class="panel"><h2>Enjambre sin conexión</h2><p>Consulta y ejecución deshabilitadas para esta sesión.</p></section>';
+    container.innerHTML='<section class="panel"><h2>Enjambre ADPHOR · Estado del servicio</h2><p>En esta sesión no hay una API de ejecución y auditoría configurada ni un registro de lectura QA verificado. Consulta y ejecución deshabilitadas.</p></section>';
     return;
   }
   if (typeof repo.agentReadiness !== 'function') {
@@ -35,7 +35,7 @@ export async function mountAgentHistory(container, {repo, projectId, role}) {
   try {
     readiness = await repo.agentReadiness(projectId);
   } catch {
-    if (active()) container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">No se pudo comprobar MFA AAL2 o el registro QA autorizado. No se habilitan ejecuciones ni aprobaciones.</p></section>';
+    if (active()) container.innerHTML = '<section class="panel"><h2>Enjambre no disponible</h2><p class="notice">No se verificó la preparación del backend mediante la sesión autorizada. Comprueba MFA AAL2 y el registro QA protegido. No se habilitan ejecuciones ni aprobaciones.</p></section>';
     return;
   }
   if (!active()) return;
