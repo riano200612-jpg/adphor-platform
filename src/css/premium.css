@@ -233,3 +233,38 @@
 }
 .meeting-page button:focus-visible,.btn:focus-visible{outline:3px solid #c4a54b;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.meeting-page button,.btn{transition:none!important;transform:none!important}}
+
+
+/* ADPHOR Executive Glass v3 — refined sapphire / pearl / champagne gradient. */
+.btn,.meeting-page button:not(.calendar-day),.pqrs-new,.pqrs-submit,.pqrs-refresh{
+  transition:background .22s ease,box-shadow .22s ease,border-color .22s ease,transform .22s ease;
+}
+.btn.primary,.meeting-page button.primary,.pqrs-new,.pqrs-submit{
+  background:linear-gradient(118deg,#638baa 0%,#3b6689 25%,#274e70 58%,#173752 100%);
+  border:1px solid rgba(220,235,247,.48);border-radius:16px;color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.46),inset 0 -2px 0 rgba(10,31,51,.18),0 10px 23px rgba(29,66,96,.22),0 2px 5px rgba(29,66,96,.09);
+}
+.btn.secondary,.meeting-page button:not(.primary):not(.calendar-day),.pqrs-refresh{
+  background:linear-gradient(120deg,rgba(255,255,255,.98) 0%,rgba(242,248,252,.92) 33%,rgba(213,232,245,.82) 74%,rgba(234,242,248,.94) 100%);
+  border:1px solid rgba(127,170,199,.56);border-radius:16px;color:#214968;
+  box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(128,163,188,.15),0 8px 21px rgba(32,74,105,.12);
+  -webkit-backdrop-filter:blur(14px) saturate(130%);backdrop-filter:blur(14px) saturate(130%);
+}
+.meeting-page button[aria-pressed="true"],.meeting-page button[aria-selected="true"],.meeting-page button.active{
+  background:linear-gradient(120deg,#577f9e,#305b7d 52%,#1d4261);color:#fff;
+  border-color:rgba(216,231,242,.48);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),0 8px 20px rgba(29,66,96,.22);
+}
+.btn.primary:hover:not(:disabled),.meeting-page button.primary:hover:not(:disabled),.pqrs-new:hover:not(:disabled),.pqrs-submit:hover:not(:disabled){
+  background:linear-gradient(118deg,#729ab7,#487495 35%,#315a7b 75%,#214560);
+}
+.btn.secondary:hover:not(:disabled),.meeting-page button:not(.primary):not(.calendar-day):hover:not(:disabled),.pqrs-refresh:hover:not(:disabled){
+  background:linear-gradient(120deg,#fff,#e9f4fb 50%,#d4e8f6);
+  border-color:#88b3d0;box-shadow:inset 0 1px 0 #fff,0 11px 25px rgba(32,74,105,.16);
+}
+.sidebar nav button[aria-current]{
+  background:linear-gradient(110deg,rgba(123,161,190,.25),rgba(255,255,255,.09) 55%,rgba(184,159,78,.10));
+  border:1px solid rgba(208,226,240,.23);border-left:3px solid #c7aa4c;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 5px 14px rgba(8,29,48,.15);
+}
+@media(prefers-reduced-motion:reduce){.btn,.meeting-page button:not(.calendar-day),.pqrs-new,.pqrs-submit,.pqrs-refresh{transition:none!important}}
