@@ -2,11 +2,15 @@
   "name": "adphor-ai-qa",
   "main": "src/worker.py",
   "compatibility_date": "2026-11-17",
-  "compatibility_flags": ["python_workers"],
+  "compatibility_flags": [
+    "python_workers"
+  ],
   "workers_dev": false,
   "vars": {
     "SUPABASE_URL": "https://qfctnnnnltghepwujpdm.supabase.co",
     "ALLOWED_ORIGIN": "https://qa-integral-claude-reviewed.adphor-platform.pages.dev",
-    "QA_AGENT_READONLY_ENABLED": "false"
-  }
+    "QA_AGENT_READONLY_ENABLED": "false",
+    "QA_PRIVATE_SERVICE_ONLY": "true"
+  },
+  "preview_urls": false
 }

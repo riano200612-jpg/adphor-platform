@@ -10,22 +10,27 @@ class Default(WorkerEntrypoint):
     async def fetch(self, request):
         origin = request.headers.get('Origin') or ''
         allowed = getattr(self.env, 'ALLOWED_ORIGIN', '')
+        private_qa = getattr(self.env, 'QA_PRIVATE_SERVICE_ONLY', '') == 'true'
         headers = {'Content-Type': 'application/json; charset=utf-8',
                    'Cache-Control': 'no-store', 'Vary': 'Origin',
                    'X-Content-Type-Options': 'nosniff'}
-        if origin and origin != allowed:
+        if (private_qa and (not allowed or origin != allowed)) or (origin and origin != allowed):
             return Response(json.dumps({'error':'Origen no permitido.'}), status=403, headers=headers)
-        if origin == allowed and allowed:
+        if not private_qa and origin == allowed and allowed:
             headers.update({'Access-Control-Allow-Origin':allowed,
                             'Access-Control-Allow-Methods':'GET, OPTIONS',
                             'Access-Control-Allow-Headers':'Authorization, Content-Type'})
         def reply(data, status=200):
             return Response(json.dumps(data, ensure_ascii=False), status=status, headers=headers)
         if request.method == 'OPTIONS':
+            if private_qa:
+                return reply({'error':'API privada: solo lecturas autenticadas.'},405)
             return Response('', status=204, headers=headers)
         if request.method != 'GET':
             return reply({'error':'Esta etapa solo permite consultas; no ejecuta ni aprueba el enjambre.'},405)
         url = urlparse(request.url)
+        if private_qa and url.path not in ('/health', '/agent-readiness', '/agent-runs') and not url.path.startswith('/agent-runs/'):
+            return reply({'error':'Ruta no disponible.'},404)
         if url.path == '/health':
             qa = getattr(self.env, 'QA_AGENT_READONLY_ENABLED', '') == 'true'
             return reply({'service':'adphor-ai','status':'qa-read-only' if qa else 'connection-only',
