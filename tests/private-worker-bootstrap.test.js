@@ -1,13 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {runBootstrapCheck,validateAccount,validateConfig,assertNoPublicSubdomain,assertWorkerState} from '../qa/security/private-worker-bootstrap-core.mjs';
+import {runBootstrapCheck,validateAccount,validateQaDestination,validateConfig,assertNoPublicSubdomain,assertWorkerState} from '../qa/security/private-worker-bootstrap-core.mjs';
 const valid=JSON.parse(readFileSync(new URL('../backend/wrangler.qa.jsonc',import.meta.url),'utf8'));
 const account='d7c467dca048f6f09a93d78bb59e616d';
-const env={CLOUDFLARE_ACCOUNT_ID:account,CLOUDFLARE_API_TOKEN:'synthetic-qa-token-for-tests'};
+const env={CLOUDFLARE_ACCOUNT_ID:account,CLOUDFLARE_API_TOKEN:'synthetic-qa-token-for-tests',ADPHOR_QA_URL:'https://qa-integral-claude-reviewed.adphor-platform.pages.dev'};
 test('bootstrap keeps exclusively QA destination and disabled private config',()=>{
   assert.doesNotThrow(()=>validateConfig(valid));
   assert.doesNotThrow(()=>validateAccount(account));
+  assert.doesNotThrow(()=>validateQaDestination(env.ADPHOR_QA_URL));
+  assert.throws(()=>validateQaDestination('https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev'),/only approved QA Integral/);
+  assert.throws(()=>validateQaDestination('https://adphor-platform.pages.dev'),/only approved QA Integral/);
   for(const [field,value] of Object.entries({
     workers_dev:true,preview_urls:true,route:'x.example/*',
     routes:['x.example/*'],name:'adphor-ai',triggers:{crons:['* * * * *']},
@@ -23,6 +26,15 @@ test('one-time preflight fails closed on existing script or missing token',async
   assert.throws(()=>assertWorkerState([],'postflight'),/not confirmed/);
   await assert.rejects(runBootstrapCheck('preflight',{env:{...env,CLOUDFLARE_API_TOKEN:''},
     fetcher:()=>{throw Error('No network expected');}}),/credential/);
+});
+test('outdated or missing environment destination fails before any Cloudflare request',async()=>{
+  let attempts=0;
+  for(const url of ['https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev',
+                    'https://adphor-platform.pages.dev','']) {
+    await assert.rejects(runBootstrapCheck('preflight',{env:{...env,ADPHOR_QA_URL:url},
+      fetcher:()=>{attempts++;throw Error('no network expected');}}),/only approved QA Integral/);
+  }
+  assert.equal(attempts,0);
 });
 test('preflight and postflight query only expected Cloudflare read URLs, no secrets in output',async()=>{
   const urls=[];

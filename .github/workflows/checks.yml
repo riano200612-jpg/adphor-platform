@@ -70,6 +70,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_QA_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      ADPHOR_QA_URL: ${{ vars.ADPHOR_QA_URL }}
       CI: 'true'
       CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
     steps:

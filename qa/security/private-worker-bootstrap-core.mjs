@@ -5,6 +5,12 @@
  */
 export const ACCOUNT_ID = 'd7c467dca048f6f09a93d78bb59e616d';
 export const WORKER_NAME = 'adphor-ai-qa';
+export const QA_URL = 'https://qa-integral-claude-reviewed.adphor-platform.pages.dev';
+export function validateQaDestination(url) {
+  if(url !== QA_URL) {
+    throw Error('QA environment URL differs from the only approved QA Integral destination.');
+  }
+}
 
 export function validateConfig(config) {
   if(!config || config.name !== WORKER_NAME || config.workers_dev !== false ||
@@ -39,6 +45,7 @@ export async function runBootstrapCheck(phase, {
 }={}) {
   if(!['preflight','postflight'].includes(phase))throw Error('Invalid bootstrap phase.');
   validateAccount(env.CLOUDFLARE_ACCOUNT_ID);
+  validateQaDestination(env.ADPHOR_QA_URL);
   if(typeof env.CLOUDFLARE_API_TOKEN!=='string' ||
      env.CLOUDFLARE_API_TOKEN.length<16)throw Error('Cloudflare QA API credential is unavailable.');
   if(config)validateConfig(config);

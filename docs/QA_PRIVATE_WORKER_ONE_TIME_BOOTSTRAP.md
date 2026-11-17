@@ -28,3 +28,7 @@ necesarios antes de cualquier habilitación. Si falla, no reintentar sin diagnos
 si el Worker ya existe; cualquier despliegue adicional requiere revisión.
 
 La activación de consulta desde Pages será una fase separada, nunca automática.
+
+## P0: QA histórica retirada — destino obligatorio
+
+El preflight también exige `ADPHOR_QA_URL` igual a `https://qa-integral-claude-reviewed.adphor-platform.pages.dev`, leyéndola de la variable del environment `adphor-qa`. Si todavía apunta a la QA histórica, falta o contiene otro dominio, el despliegue se bloquea **antes de cualquier llamada a Cloudflare**, aunque el token exista. La variable se debe actualizar en GitHub mediante la verificación oficial de identidad; no se almacena código OTP ni API token en este repositorio.
