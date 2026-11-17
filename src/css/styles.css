@@ -61,3 +61,40 @@ dialog{padding:0;border:0;border-radius:16px;width:min(740px,calc(100vw - 28px))
 .pqrs-cases article h3{font-size:15px;color:var(--pqrs-blue)}
 .pqrs-cases article button{background:#edf3f7;color:var(--pqrs-blue);border-radius:8px;padding:10px 13px;font-weight:650;justify-self:start}
 @media(max-width:680px){.pqrs-fields{grid-template-columns:1fr}.pqrs-form{padding:17px}.pqrs-submit,.pqrs-new{width:100%}.pqrs-actions{display:block}.pqrs-header{align-items:stretch}}
+
+
+/* ADPHOR Glass Premium: presentation only; keep button semantics and permissions intact. */
+:root{--adphor-glass-blue:#264b6b;--adphor-glass-gold:#c4a54b}
+.btn,.pqrs-new,.pqrs-submit,.pqrs-refresh,.pqrs-cases article button{
+  position:relative;border-radius:14px;
+  transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn.primary,.pqrs-new,.pqrs-submit{
+  color:#fff;
+  background:linear-gradient(145deg,#426e8d 0%,#264b6b 52%,#193b58 100%);
+  border:1px solid rgba(255,255,255,.24);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -1px 0 rgba(12,34,54,.25),0 7px 18px rgba(26,62,89,.20);
+}
+.btn.secondary,.pqrs-refresh,.pqrs-cases article button{
+  color:#244b6c;
+  background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(227,239,248,.62));
+  border:1px solid rgba(119,158,186,.38);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 5px 14px rgba(33,70,96,.09);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+.btn.primary:hover:not(:disabled),.pqrs-new:hover:not(:disabled),.pqrs-submit:hover:not(:disabled){
+  background:linear-gradient(145deg,#507e9e,#2c5678 55%,#1b405e);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 9px 22px rgba(26,62,89,.25);
+}
+.btn.secondary:hover:not(:disabled),.pqrs-refresh:hover:not(:disabled),.pqrs-cases article button:hover:not(:disabled){
+  background:linear-gradient(145deg,#fff,rgba(220,237,248,.88));
+  border-color:rgba(92,143,179,.6);
+  box-shadow:inset 0 1px 0 #fff,0 8px 19px rgba(33,70,96,.14);
+}
+.btn:active:not(:disabled),.pqrs-new:active:not(:disabled),.pqrs-submit:active:not(:disabled),.pqrs-refresh:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 2px 5px rgba(22,51,75,.16)}
+.btn:focus-visible,.pqrs-new:focus-visible,.pqrs-submit:focus-visible,.pqrs-refresh:focus-visible{outline:3px solid #c4a54b;outline-offset:3px}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .btn:hover:not(:disabled),.pqrs-new:hover:not(:disabled),.pqrs-submit:hover:not(:disabled),.pqrs-refresh:hover:not(:disabled){transform:translateY(-1px)}
+}
+@media(prefers-reduced-motion:reduce){.btn,.pqrs-new,.pqrs-submit,.pqrs-refresh,.pqrs-cases article button{transition:none!important;transform:none!important}}
