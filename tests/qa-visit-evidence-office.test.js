@@ -4,6 +4,8 @@ import {randomUUID} from 'node:crypto';
 import {validateQaVisitEvidence,QA_VISIT_OFFICE_EXT} from '../src/js/services/qa-visit-evidence-policy.js';
 import {validateQaEvidence} from '../src/js/services/qa-evidence-policy.js';
 import {officeEvidenceObjectId} from '../src/js/services/qa-visit-evidence.js';
+import {createSyntheticVisitOfficeFile} from '../src/js/services/qa-visit-synthetic-office.js';
+import {File} from 'node:buffer';
 const doc='application/vnd.openxmlformats-officedocument.wordprocessingml.document',sheet='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 test('Office OpenXML accepted only for Visits, with exact extension and MIME',()=>{
  for(const [type,ext] of Object.entries(QA_VISIT_OFFICE_EXT)){
@@ -21,11 +23,23 @@ test('Office OpenXML accepted only for Visits, with exact extension and MIME',()
 });
 test('Office uploads get stable scoped IDs and reject a non-ZIP header',async()=>{
  const request=randomUUID(),actor=randomUUID();
- const content=Uint8Array.from([0x50,0x4b,0x03,0x04,1,2,3,4]);
- const file={name:'acta.docx',type:doc,size:content.length,async arrayBuffer(){return content.buffer;}};
+ const file=createSyntheticVisitOfficeFile('docx',File);
+ const content=new Uint8Array(await file.arrayBuffer());
  const id=await officeEvidenceObjectId(file,'p1',request,actor);
  assert.match(id,/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
  assert.equal(id,await officeEvidenceObjectId(file,'p1',request,actor));
  assert.notEqual(id,await officeEvidenceObjectId(file,'p2',request,actor));
- await assert.rejects(officeEvidenceObjectId({...file,async arrayBuffer(){return Uint8Array.from([0,0,0,0,1,2,3,4]).buffer;}},'p1',request,actor),/cabecera ZIP/);
+ await assert.rejects(officeEvidenceObjectId({
+  name:file.name,type:file.type,size:file.size,
+  async arrayBuffer(){return Uint8Array.from([0,0,0,0,1,2,3,4]).buffer;}
+ },'p1',request,actor),/cabecera ZIP/);
+ const fakeZip=Uint8Array.from([0x50,0x4b,0x03,0x04,1,2,3,4]);
+ await assert.rejects(officeEvidenceObjectId({
+  name:'fake.docx',type:doc,size:fakeZip.length,async arrayBuffer(){return fakeZip.buffer;}
+ },'p1',request,actor),/no válido/);
+ const excel=createSyntheticVisitOfficeFile('xlsx',File);
+ assert.match(await officeEvidenceObjectId(excel,'p1',request,actor),/^[0-9a-f-]{36}$/);
+ await assert.rejects(officeEvidenceObjectId({
+  name:'fake.xlsx',type:sheet,size:file.size,arrayBuffer:()=>file.arrayBuffer()
+ },'p1',request,actor),/no válido/);
 });

@@ -1,5 +1,6 @@
 import {validateQaVisitEvidence,normalizeQaVisitFileName,QA_VISIT_OFFICE_EXT} from './qa-visit-evidence-policy.js';
 import {evidenceObjectId} from './qa-case-evidence.js';
+import {validateQaVisitOfficePackage} from './qa-visit-ooxml-inspector.js';
 
 const QA_URL='https://qfctnnnnltghepwujpdm.supabase.co';
 const BUCKET='qa-visit-evidence';
@@ -16,6 +17,7 @@ export async function officeEvidenceObjectId(file,projectId,requestId,actor){
  if(bytes.length!==file.size||bytes.length<4||bytes.length>20971520||
     bytes[0]!==0x50||bytes[1]!==0x4b||bytes[2]!==0x03||bytes[3]!==0x04)
   throw Error('El documento Office no tiene una cabecera ZIP válida.');
+ await validateQaVisitOfficePackage(bytes,ext);
  const prefix=new TextEncoder().encode(['ADPHOR-QA-VISIT-OFFICE-V1',projectId,requestId,actor,file.type].join('|')+'|');
  const data=new Uint8Array(prefix.length+bytes.length);
  data.set(prefix);data.set(bytes,prefix.length);
