@@ -110,3 +110,16 @@ test('the agent UI never offers writes without live QA registry and human review
   assert.doesNotMatch(container.innerHTML,/data-history="run"/);
   assert.match(container.innerHTML,/No se verificó la preparación/);
 });
+
+test('read-only Worker detail GET carries explicit tenant scope', async () => {
+  const id='12345678-1234-4123-8123-123456789abc';
+  const value=await agentRuleRequest({origin:'https://example.com',token:'synthetic',
+    projectId:'demo-01',runId:id,fetcher:async(url,options)=>{
+      assert.equal(url.pathname,'/agent-runs/'+id);
+      assert.equal(url.searchParams.get('project_id'),'demo-01');
+      assert.equal(options.method,'GET');
+      assert.equal(options.body,undefined);
+      return {ok:true,json:async()=>({id,project_id:'demo-01',draft:'Prueba de lectura'})};
+    }});
+  assert.equal(value.project_id,'demo-01');
+});
