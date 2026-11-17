@@ -1,5 +1,5 @@
 const QA_REF = 'qfctnnnnltghepwujpdm';
-const QA_ALIAS = 'qa-pqrs-carrusel-integracion.adphor-platform.pages.dev';
+const QA_ALIAS = 'qa-integral-claude-reviewed.adphor-platform.pages.dev';
 
 // Recovery never loads a profile, tenant data or an operational session.
 export function readQaRecovery(location, history, supabaseUrl) {
