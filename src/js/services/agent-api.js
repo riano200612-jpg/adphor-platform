@@ -61,7 +61,9 @@ export async function agentRuleRequest({origin, token, projectId, requestId, run
   if (runId !== undefined && runId !== null && (typeof runId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(runId))) throw new Error('El identificador del borrador no es válido.');
   if (!token) throw new Error('Tu sesión terminó. Vuelve a ingresar.');
   const path = runId ? `/agent-runs/${encodeURIComponent(runId)}` : '/agent-runs';
-  const response = await fetcher(new URL(path, origin), {
+  const url = new URL(path, origin);
+  if (runId) url.searchParams.set('project_id', projectId);
+  const response = await fetcher(url, {
     method: runId ? 'GET' : 'POST',
     headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'},
     ...(runId ? {} : {body: JSON.stringify({project_id: projectId, request_id: requestId})}),

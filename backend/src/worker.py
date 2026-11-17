@@ -3,6 +3,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 from workers import WorkerEntrypoint, Response, fetch
 from adphor_ai.gateway import Configuracion, ConexionError, verificar_con_timeout
+from adphor_ai.qa_readonly_api import handle_agent_readonly
 
 
 class Default(WorkerEntrypoint):
@@ -26,9 +27,31 @@ class Default(WorkerEntrypoint):
             return reply({'error':'Esta etapa solo permite consultas; no ejecuta ni aprueba el enjambre.'},405)
         url = urlparse(request.url)
         if url.path == '/health':
-            return reply({'service':'adphor-ai','status':'connection-only'})
+            qa = getattr(self.env, 'QA_AGENT_READONLY_ENABLED', '') == 'true'
+            return reply({'service':'adphor-ai','status':'qa-read-only' if qa else 'connection-only',
+                          'models_ready':False, 'rules_ready':False})
         if url.path == '/ready':
             return reply({'ready':False,'pending':['modelos_ml_dl_pln','persistencia_auditoria','api_de_aprobacion']},503)
+        if url.path in ('/agent-readiness', '/agent-runs') or url.path.startswith('/agent-runs/'):
+            config = Configuracion(getattr(self.env,'SUPABASE_URL',''),
+                                   getattr(self.env,'SUPABASE_PUBLISHABLE_KEY',''), allowed)
+            async def qa_fetch_json(url, auth_headers):
+                response = await fetch(url, method='GET', headers=auth_headers, redirect='error')
+                try:
+                    data = await response.json()
+                except Exception:
+                    data = None
+                return response.status, data
+            try:
+                data = await handle_agent_readonly(
+                    config, request.headers.get('Authorization') or '', request.method,
+                    url.path, parse_qs(url.query, keep_blank_values=True), qa_fetch_json,
+                    enabled=getattr(self.env,'QA_AGENT_READONLY_ENABLED','') == 'true')
+                return reply(data)
+            except ConexionError as error:
+                return reply({'error':str(error)}, error.status)
+            except Exception:
+                return reply({'error':'No fue posible consultar el registro QA.'},502)
         if url.path != '/v1/session':
             return reply({'error':'Ruta no disponible.'},404)
         config = Configuracion(getattr(self.env,'SUPABASE_URL',''),
