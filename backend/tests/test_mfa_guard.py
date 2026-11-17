@@ -14,5 +14,13 @@ class MfaGuardTests(unittest.TestCase):
             with self.subTest(token=bool(token)),self.assertRaises(HTTPException):
                 require_enrolled_mfa(user,token)
         require_enrolled_mfa(user,self.token(sub='qa-a',aal='aal2'))
+    def test_invalid_base64_payload_is_denied_not_server_error(self):
+        user={'id':'qa-a','factors':[{'status':'verified'}]}
+        for token in ['header.!.signature', 'header.a.signature', 'header.%%%%.signature']:
+            with self.subTest(token=token):
+                with self.assertRaises(HTTPException) as caught:
+                    require_enrolled_mfa(user,token,mandatory=True)
+                self.assertEqual(caught.exception.status_code,403)
+
     def test_no_factor_does_not_enroll_or_reset(self):
         require_enrolled_mfa({'id':'qa-a'},'already-validated-upstream')
