@@ -172,6 +172,11 @@ async def detail(run_id: UUID, request: Request, actor: Annotated[dict, Depends(
         "select":SUMMARY + ",draft,result_hash,note", "id":f"eq.{run_id}", "limit":"1"})
     if not data:
         raise HTTPException(404, "Ejecución no disponible.")
+    # Defence in depth: verify membership even if upstream RLS is misconfigured.
+    project_id = data[0].get("project_id") if isinstance(data[0], dict) else None
+    if not isinstance(project_id, str) or not project_id or len(project_id) > 100 or not project_id.replace("_", "").replace("-", "").isalnum() or not project_id.isascii():
+        raise HTTPException(404, "Ejecución no disponible.")
+    await require_role(request, actor, project_id, ("admin", "coordinator"))
     return data[0]
 
 
