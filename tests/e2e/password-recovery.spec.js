@@ -5,12 +5,12 @@ import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 
 // Run against an isolated built QA artifact, with all Auth traffic mocked.
-const origin = 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev';
+const origin = 'https://qa-integral-claude-reviewed.adphor-platform.pages.dev';
 let buildDir;
 test.beforeAll(async () => {
   buildDir = await mkdtemp(resolve(tmpdir(),'adphor-recovery-'));
   execFileSync(process.execPath, ['node_modules/vite/bin/vite.js','build','--outDir',buildDir], {env:{...process.env,
-    CF_PAGES:'1',CF_PAGES_BRANCH:'qa/pqrs-carrusel-integracion-20261104',ADPHOR_PROTECTED_STAGING_QA:'true',
+    CF_PAGES:'1',CF_PAGES_BRANCH:'qa/integral-claude-reviewed-20261111',ADPHOR_PROTECTED_STAGING_QA:'true',
     ADPHOR_QA_ACCESS_VERIFIED:'true',ADPHOR_QA_ACCESS_BOOTSTRAP:'false',VITE_REQUIRE_MFA:'true',
     VITE_PORTO_QA_ENABLED:'true',VITE_PORTO_STAGING_REF:'qfctnnnnltghepwujpdm',
     VITE_SUPABASE_URL:'https://qfctnnnnltghepwujpdm.supabase.co',VITE_SUPABASE_ANON_KEY:'sb_publishable_recovery_test'},stdio:'pipe'});

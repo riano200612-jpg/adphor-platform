@@ -8,11 +8,11 @@ function read(href, backend = url) {
   const result = readQaRecovery(new URL(href), {replaceState(_state, _title, path) {cleaned = path;}}, backend);
   return {result, cleaned};
 }
-const origin = 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev';
+const origin = 'https://qa-integral-claude-reviewed.adphor-platform.pages.dev';
 const fragment = '#type=recovery&access_token=test-access&refresh_token=test-refresh';
 test('recovery removes URL credentials and only accepts isolated QA targets', () => {
   assert.deepEqual(read(origin + fragment), {result: {access_token:'test-access', refresh_token:'test-refresh'}, cleaned:'/'});
-  for (const host of ['https://adphor-platform.pages.dev', 'https://evil.example', 'http://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev']) {
+  for (const host of ['https://adphor-platform.pages.dev', 'https://evil.example', 'http://qa-integral-claude-reviewed.adphor-platform.pages.dev', 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev']) {
     assert.ok(read(host + fragment).result.error);
   }
   assert.ok(read(origin + fragment, 'https://oqizvirqjwbbhyyjpthq.supabase.co').result.error);
