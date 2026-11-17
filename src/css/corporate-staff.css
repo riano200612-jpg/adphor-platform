@@ -26,6 +26,11 @@
 .staff-company-card.is-hidden-from-roster{border-style:dashed;opacity:.78}
 .staff-company-toggle{margin-top:auto}
 .staff-company-error{color:#a22424;font-weight:600}
+.staff-company-upload{display:flex;flex-direction:column;gap:.55rem;width:100%;margin-top:.5rem;padding-top:.7rem;border-top:1px solid #d6e0e9}
+.staff-company-upload-label{display:flex;flex-direction:column;gap:.35rem;font-size:.84rem;font-weight:600;color:#234661}
+.staff-company-upload-label input{max-width:100%;font:inherit}
+.staff-company-upload-feedback{font-size:.8rem;line-height:1.4;color:#38586d;overflow-wrap:anywhere}
+
 .staff-company-error[hidden]{display:none}
 .staff-company-history{margin-top:1.5rem;padding:1rem;border:1px solid #d6e0e9;border-radius:14px}
 .staff-company-history summary{cursor:pointer;font-weight:700;color:#234661}

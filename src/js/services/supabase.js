@@ -84,6 +84,7 @@ export function createCloudRepository(url, key) {
     async corporateStaffCanManage(){if(!corporateStaff||!user)return false;return corporateStaff.canManage();},
     async corporateStaffSetVisible(id,visible){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.setVisible(id,visible);},
     async corporateStaffPhoto(path){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.photo(path);},
+    async corporateStaffUploadPhoto(id,file){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.uploadPhoto(id,file);},
     async corporateStaffHistory(){if(!corporateStaff||!user)throw Error('Sesión QA requerida.');return corporateStaff.history();},
     async staffDirectory(projectId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.list(projectId);},
     async staffPhotoUrl(projectId,personId){if(!staff||!user)throw Error('Equipo disponible solo en QA autorizado.');return staff.photo(projectId,personId);},

@@ -60,3 +60,38 @@ test('history is a corporate RPC subject to AAL2',async()=>{
   assert.deepEqual(await f.repo.history(),[]);
   assert.deepEqual(f.calls,[['qa_carousel_history',undefined]]);
 });
+
+test('private portrait import validates actual bytes, computes SHA-256, and confirms database attachment',async()=>{
+  const calls=[];
+  const identity={auth:{
+    mfa:{getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal2'}})},
+    getUser:async()=>({data:{user:{id:'00000000-0000-4000-8000-000000000001'}}}),
+  },rpc:async(name,args)=>{
+    calls.push([name,args]);
+    if(name==='qa_carousel_can_manage')return {data:true};
+    if(name==='qa_carousel_attach_photo')return {data:
+      args.p_staff_id+'/'+args.p_sha256+'.'+args.p_extension};
+    throw new Error('Unexpected RPC '+name);
+  },storage:{from:bucket=>({
+    upload:async(path,file,opts)=>{
+      calls.push(['upload',bucket,path,file.size,opts.upsert,opts.contentType]);
+      return {data:{path}};
+    },
+  })}};
+  const service=createCorporateStaff(identity);
+  const photo=new Blob([new Uint8Array([0xff,0xd8,0xff,0xdb,0,1,2,3,4,5,6,7,8,9,10,11])],{type:'image/jpeg'});
+  const path=await service.uploadPhoto('delegate-16',photo);
+  assert.match(path,/^delegate-16\/[a-f0-9]{64}\.jpg$/);
+  assert.deepEqual(calls[0],['qa_carousel_can_manage',undefined]);
+  assert.equal(calls[1][0],'upload');
+  assert.equal(calls[1][1],'qa-staff-photos');
+  assert.equal(calls[1][4],false);
+  assert.equal(calls[1][5],'image/jpeg');
+  assert.deepEqual(calls[2],['qa_carousel_attach_photo',{
+    p_staff_id:'delegate-16',p_sha256:path.split('/')[1].slice(0,64),p_extension:'jpg'}]);
+  const wrong=new Blob(['invalid contents for JPEG'],{type:'image/jpeg'});
+  await assert.rejects(service.uploadPhoto('delegate-16',wrong),/JPEG, PNG o WebP auténticas/);
+  await assert.rejects(service.uploadPhoto('../traversal',photo),/imagen válida/);
+  const insufficient=fixture({aal:'aal1'});
+  await assert.rejects(insufficient.repo.uploadPhoto('delegate-16',photo),/MFA AAL2/);
+});

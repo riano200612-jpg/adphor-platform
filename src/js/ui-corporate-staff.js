@@ -9,6 +9,16 @@ const normalize = value => String(value ?? '').normalize('NFD')
   .replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es').trim();
 const initials = name => String(name ?? '').trim().split(/\s+/).slice(0,2)
   .map(chunk=>chunk[0]||'').join('').toUpperCase();
+const photoFileMatches = (person,file) => {
+  if(!file || !/^delegate-[0-9]+$/.test(person.id)||person.name.trim().length<3)return false;
+  const id=person.id.slice('delegate-'.length);
+  const name=normalize(file.name||'').replace(/\.(jpg|jpeg|png|webp)$/i,'');
+  const match=name.match(/^([0-9]+)[.\s_-]+(.+)$/);
+  if(!match || String(Number(match[1]))!==String(Number(id)))return false;
+  const parts=normalize(person.name).split(/[^a-z0-9]+/).filter(x=>x.length>=3);
+  const source=match[2].split(/[^a-z0-9]+/).filter(x=>x.length>=3);
+  return source.some(x=>parts.includes(x));
+};
 const portrait = (card, person, repo, alive) => {
   // Lazy images must be attached to the document before the browser will fetch them.
   // Keep initials underneath until the private signed image is fully decoded.
@@ -16,7 +26,7 @@ const portrait = (card, person, repo, alive) => {
   const placeholder=make('span',initials(person.name),'staff-company-portrait staff-company-placeholder');
   placeholder.setAttribute('aria-hidden','true');
   frame.append(placeholder);
-  card.append(frame);
+  card.prepend(frame);
   if(!person.photo_path || typeof repo.corporateStaffPhoto!=='function')return;
   const img=document.createElement('img');
   img.className='staff-company-portrait staff-company-photo';
@@ -152,6 +162,52 @@ export async function mountCorporateStaff(root,{repo}) {
         }finally{if(alive())button.disabled=false;}
       });
       card.append(visibility,button);
+    }
+    // Copy one verified source photo into private QA storage; never alter Drive originals.
+    if(canManage && !person.photo_path && typeof repo.corporateStaffUploadPhoto==='function'
+      && person.name.trim().length>=3) {
+      const uploader=make('div','','staff-company-upload');
+      const label=make('label','Fotografía pendiente · selecciona el archivo '+
+        person.id.slice('delegate-'.length)+' de José:','staff-company-upload-label');
+      const field=document.createElement('input');
+      field.type='file';field.accept='image/jpeg,image/png,image/webp';
+      field.setAttribute('aria-label','Seleccionar fotografía de '+person.name);
+      label.append(field);
+      const save=make('button','Guardar fotografía','btn secondary');
+      save.type='button';save.disabled=true;
+      const feedback=make('p','','staff-company-upload-feedback');
+      feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+      field.addEventListener('change',()=>{
+        const selected=field.files?.[0];
+        const correct=photoFileMatches(person,selected);
+        save.disabled=!correct;
+        feedback.textContent=!selected?'':correct
+          ?'Archivo '+selected.name+' listo para asociar a '+person.name+'.'
+          :'El número del archivo o nombre no coincide con este colaborador. No se cargó.';
+      });
+      save.addEventListener('click',async()=>{
+        const selected=field.files?.[0];
+        if(save.disabled || !alive() || !photoFileMatches(person,selected))return;
+        save.disabled=true;field.disabled=true;
+        feedback.textContent='Importando fotografía de forma privada…';
+        try{
+          const path=await repo.corporateStaffUploadPhoto(person.id,selected);
+          if(!alive())return;
+          if(typeof path!=='string'||!path.startsWith(person.id+'/'))
+            throw new Error('No se confirmó la asociación de la fotografía.');
+          person.photo_path=path;
+          card.querySelector('.staff-company-photo-frame')?.remove();
+          portrait(card,person,repo,alive);
+          uploader.remove();
+          status.textContent='Fotografía guardada para '+person.name+' · '+people.length+' colaboradores.';
+        }catch(e){
+          if(alive())feedback.textContent=(e?.message||'No se pudo importar la fotografía.')+
+            ' No se modificó la ficha del colaborador.';
+        }finally{
+          if(alive()){field.disabled=false;save.disabled=!photoFileMatches(person,field.files?.[0]);}
+        }
+      });
+      uploader.append(label,save,feedback);card.append(uploader);
     }
     cards.push({person,card});carousel.append(card);
   }
