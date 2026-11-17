@@ -55,3 +55,24 @@ test('corporate read-only user cannot see hidden people or switch controls',asyn
  await expect(page.locator('.staff-company-toggle')).toHaveCount(0);
  await expect(page.getByText('Persona Oculta QA')).toHaveCount(0);
 });
+
+test('private portrait loads on mobile and replaces initials rather than getting stuck lazy-loading',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('./');
+ await page.evaluate(async()=>{
+   const {mountCorporateStaff}=await import('/adphor-platform/src/js/ui-corporate-staff.js');
+   const root=document.createElement('main');
+   document.body.replaceChildren(root);
+   const photo='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#aaa"/></svg>');
+   await mountCorporateStaff(root,{repo:{
+     corporateStaffDirectory:async()=>[{id:'delegate-32',name:'Claudia Zúñiga',role_label:'Coordinador Zona Norte',
+       department:'Coordinación',carousel_visible:true,assigned_properties:10,functions:[],
+       photo_path:'delegate-32/'+'a'.repeat(64)+'.jpg'}],
+     corporateStaffCanManage:async()=>false,
+     corporateStaffPhoto:async()=>photo,
+   }});
+ });
+ await expect(page.getByRole('img',{name:'Fotografía de Claudia Zúñiga'})).toBeVisible();
+ await expect(page.locator('.staff-company-placeholder')).toHaveCount(0);
+ expect(await page.getByRole('img',{name:'Fotografía de Claudia Zúñiga'}).evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);
+});

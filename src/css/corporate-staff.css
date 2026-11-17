@@ -13,7 +13,11 @@
 .staff-company-card[hidden]{display:none}
 .staff-company-card h2{font-size:1.15rem;line-height:1.3;margin:0;overflow-wrap:anywhere}
 .staff-company-card p{margin:0}
+.staff-company-photo-frame{display:block;position:relative;width:128px;height:128px;flex:none}
+.staff-company-photo-frame>.staff-company-portrait{position:absolute;inset:0}
 .staff-company-portrait{width:128px;height:128px;object-fit:cover;display:grid;place-items:center;border-radius:18px}
+.staff-company-photo{opacity:0;transition:opacity .15s ease-in}
+.staff-company-photo.is-loaded{opacity:1}
 .staff-company-placeholder{background:#25485e;color:white;border:3px solid #baa140;font-size:2rem;font-weight:700}
 .staff-company-role{font-weight:700;color:#203e57}
 .staff-company-department{font-size:.85rem;font-weight:600;color:#546b7d}
@@ -32,4 +36,4 @@
  .staff-company-arrows button{flex:1}
  .staff-company-card{flex-basis:min(270px,82vw)}
 }
-@media(prefers-reduced-motion:reduce){.staff-company-carousel{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){.staff-company-carousel{scroll-behavior:auto}.staff-company-photo{transition:none}}
