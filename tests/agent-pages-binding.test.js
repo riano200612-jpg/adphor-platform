@@ -27,7 +27,7 @@ function make(path='/agent-readiness?project_id=demo-01',opt={}){
  return {requests,context:{request,env:{
    ADPHOR_QA_AGENT_READONLY_PROXY_ENABLED:envFlag,
    ...(bind?{ADPHOR_AGENT_READONLY:service}:{})}},
- }};
+ };
 }
 async function denied(status,shape){
  const {requests,context}=make(shape.path??'/agent-readiness?project_id=demo-01',shape);
