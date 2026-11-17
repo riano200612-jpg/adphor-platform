@@ -78,7 +78,7 @@ function loginScreen() {
     const email = root.querySelector('#login-form [name="email"]')?.value.trim();
     const status = $('password-recovery-status');
     const button = $('request-password-recovery');
-    if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       status.textContent = 'Escribe primero tu correo corporativo en el campo de acceso.';
       return;
     }
