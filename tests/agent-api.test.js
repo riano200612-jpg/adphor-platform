@@ -40,7 +40,7 @@ test('detail rejects a different property and escapes draft HTML', async () => {
 test('agent API rejects invalid tenant and pagination before any network request', async () => {
   let calls = 0;
   const fetcher = async () => { calls++; throw Error('network must not be called'); };
-  for (const projectId of ['', '../other', 'tenant?other', null]) {
+  for (const projectId of ['', '../other', 'tenant?other', null, 'a'.repeat(101)]) {
     await assert.rejects(fetchAgentRuns({origin:'https://api.example.com',token:'test',projectId,fetcher}), /copropiedad válida/);
     await assert.rejects(agentRuleRequest({origin:'https://api.example.com',token:'test',projectId,requestId:'req-1',fetcher}), /copropiedad válida/);
   }
