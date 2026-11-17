@@ -2,7 +2,7 @@ name: Validate ADPHOR
 on:
   pull_request:
   push:
-    branches: [main, qa/pqrs-carrusel-integracion-20261104]
+    branches: [main, qa/pqrs-carrusel-integracion-20261104, qa/integral-claude-reviewed-20261111]
 permissions:
   contents: read
 jobs:
