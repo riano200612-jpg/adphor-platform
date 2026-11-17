@@ -8,7 +8,13 @@ export function agentApiOrigin(value, development = false) {
   return url.origin;
 }
 
+export function validateAgentScope(projectId, offset = 0) {
+  if (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(projectId)) throw new Error('Selecciona una copropiedad válida.');
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('La página del historial no es válida.');
+}
+
 export async function fetchAgentRuns({origin, token, projectId, offset = 0, fetcher = fetch}) {
+  validateAgentScope(projectId, offset);
   if (!token) throw new Error('Tu sesión terminó. Vuelve a ingresar.');
   const url = new URL('/agent-runs', origin);
   url.search = new URLSearchParams({project_id: projectId, limit: '20', offset: String(offset)});
@@ -25,6 +31,8 @@ export async function fetchAgentRuns({origin, token, projectId, offset = 0, fetc
 }
 
 export async function agentRuleRequest({origin, token, projectId, requestId, runId, fetcher = fetch}) {
+  validateAgentScope(projectId);
+  if (runId !== undefined && runId !== null && (typeof runId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(runId))) throw new Error('El identificador del borrador no es válido.');
   if (!token) throw new Error('Tu sesión terminó. Vuelve a ingresar.');
   const path = runId ? `/agent-runs/${encodeURIComponent(runId)}` : '/agent-runs';
   const response = await fetcher(new URL(path, origin), {
