@@ -87,6 +87,14 @@ async def identity(request: Request, credentials: Annotated[HTTPAuthorizationCre
     return {"id": user["id"], "token": credentials.credentials}
 
 
+async def agent_identity(request: Request, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]):
+    """Require an already verified AAL2 session only for administrative agent endpoints."""
+    actor = await identity(request, credentials)
+    # identity() has already validated this exact bearer token with Supabase.
+    require_enrolled_mfa({"id": actor["id"]}, actor["token"], mandatory=True)
+    return actor
+
+
 async def require_role(request, actor, project, allowed):
     rows = await call(request, actor["token"], "/rest/v1/memberships", params={
         "select":"role", "project_id":f"eq.{project}", "user_id":f"eq.{actor['id']}", "limit":"2"})
@@ -156,7 +164,7 @@ async def health():
 
 
 @app.get("/agent-runs")
-async def list_runs(request: Request, actor: Annotated[dict, Depends(identity)],
+async def list_runs(request: Request, actor: Annotated[dict, Depends(agent_identity)],
                     project_id: str = Query(pattern=r"^[A-Za-z0-9_-]{1,100}$"),
                     limit: int = Query(default=20,ge=1,le=100), offset: int = Query(default=0,ge=0,le=10000)):
     await require_role(request, actor, project_id, ("admin", "coordinator"))
@@ -167,7 +175,7 @@ async def list_runs(request: Request, actor: Annotated[dict, Depends(identity)],
 
 
 @app.get("/agent-runs/{run_id}")
-async def detail(run_id: UUID, request: Request, actor: Annotated[dict, Depends(identity)]):
+async def detail(run_id: UUID, request: Request, actor: Annotated[dict, Depends(agent_identity)]):
     data = await call(request, actor["token"], "/rest/v1/agent_run_status", params={
         "select":SUMMARY + ",draft,result_hash,note", "id":f"eq.{run_id}", "limit":"1"})
     if not data:
@@ -181,7 +189,7 @@ async def detail(run_id: UUID, request: Request, actor: Annotated[dict, Depends(
 
 
 @app.post("/agent-runs")
-async def execute_rules(body: RunRequest, request: Request, actor: Annotated[dict, Depends(identity)]):
+async def execute_rules(body: RunRequest, request: Request, actor: Annotated[dict, Depends(agent_identity)]):
     await require_role(request, actor, body.project_id, ("admin",))
     run_id = str(body.request_id)
     existing = await call(request, actor["token"], "/rest/v1/agent_runs", params={
