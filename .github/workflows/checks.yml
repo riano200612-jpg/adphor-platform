@@ -19,6 +19,8 @@ jobs:
       - run: node qa/porto/test-persistence.mjs
       - run: node qa/checks/build-isolation.mjs
       - run: npm run build
+      - name: Compile Cloudflare Pages Functions (no deployment)
+        run: npm exec --yes --package=wrangler@4.157.0 -- wrangler pages functions build functions --outdir=/tmp/adphor-pages-functions-build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

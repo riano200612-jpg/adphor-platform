@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "include": [
+    "/agent-readiness",
+    "/agent-runs",
+    "/agent-runs/*"
+  ],
+  "exclude": []
+}
