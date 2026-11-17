@@ -3,6 +3,7 @@
 This is not a JWT verifier and must never replace server-side token validation.
 """
 import base64
+import binascii
 import json
 from fastapi import HTTPException
 
@@ -17,7 +18,7 @@ def require_enrolled_mfa(validated_user: dict, validated_token: str, *, mandator
             raise ValueError('format')
         payload = json.loads(base64.urlsafe_b64decode(parts[1] + '=' * (-len(parts[1]) % 4)))
         allowed = payload.get('sub') == validated_user['id'] and payload.get('aal') == 'aal2'
-    except (ValueError, TypeError, KeyError, UnicodeDecodeError):
+    except (ValueError, TypeError, KeyError, UnicodeDecodeError, binascii.Error):
         allowed = False
     if not allowed:
         raise HTTPException(403, 'Completa la verificación adicional de tu cuenta.')
