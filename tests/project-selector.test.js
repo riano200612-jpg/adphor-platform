@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chooseProject, searchProjects, projectPreference} from '../src/js/ui-project-selector.js';
@@ -23,4 +24,12 @@ test('unavailable browser storage does not break navigation',()=>{
  const storage={getItem(){throw Error('disabled')},setItem(){throw Error('quota')}};
  assert.equal(projectPreference(storage,'qa-user'),'');
  assert.equal(projectPreference(storage,'qa-user','qa-1'),'');
+});
+
+test('searchbox avoids unsupported ARIA expanded state and announces results',()=>{
+ const source=readFileSync(new URL('../src/js/ui-project-selector.js',import.meta.url),'utf8');
+ assert.doesNotMatch(source,/search\.setAttribute\('aria-expanded'/);
+ assert.match(source,/search\.setAttribute\('aria-controls'/);
+ assert.match(source,/search\.setAttribute\('aria-describedby',status\.id\)/);
+ assert.match(source,/status\.setAttribute\('role','status'\)/);
 });

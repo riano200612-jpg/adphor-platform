@@ -13,10 +13,10 @@ export function mountProjectSelector(root, {projects, selected, onChange, select
   const search = document.createElement('input'); search.type='search'; search.placeholder='Buscar copropiedad';
   search.setAttribute('aria-label','Buscar copropiedad'); search.autocomplete='off';
   const select=document.createElement('select'); select.id=selectId;
-  const status=document.createElement('small'); status.setAttribute('role','status');
+  const status=document.createElement('small'); status.id=selectId+'-search-status';status.setAttribute('role','status');
   const results=document.createElement('div');results.className='project-search-results';results.setAttribute('role','listbox');results.setAttribute('aria-label','Coincidencias de copropiedades');results.hidden=true;
   const resultsId=selectId+'-search-results';results.id=resultsId;
-  search.setAttribute('aria-controls',resultsId);search.setAttribute('aria-expanded','false');
+  search.setAttribute('aria-controls',resultsId);search.setAttribute('aria-describedby',status.id);
   let current=chooseProject(projects,selected);
   const selectProject=id=>{
     if(!projects.some(p=>p.id===id)) return;
@@ -42,7 +42,7 @@ export function mountProjectSelector(root, {projects, selected, onChange, select
       if(!visible.length){const empty=document.createElement('span');empty.className='project-search-empty';empty.textContent='Sin coincidencias';results.append(empty);}
       if(visible.length>12){const more=document.createElement('small');more.textContent=`Mostrando 12 de ${visible.length}; escribe más para precisar`;results.append(more);}
     }
-    results.hidden=!searching;search.setAttribute('aria-expanded',String(searching));
+    results.hidden=!searching;
   }
   search.addEventListener('input',render);
   search.addEventListener('keydown',event=>{
