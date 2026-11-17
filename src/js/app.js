@@ -86,9 +86,10 @@ function loginScreen() {
     status.textContent = 'Procesando solicitud…';
     try {
       const client = createClient(url, key, {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-      await client.auth.resetPasswordForEmail(email, {
+      const {error} = await client.auth.resetPasswordForEmail(email, {
         redirectTo: 'https://qa-integral-claude-reviewed.adphor-platform.pages.dev/'
       });
+      if (error) throw error;
       status.textContent = 'Si la cuenta está habilitada, recibirás instrucciones en tu correo. Revisa también spam.';
     } catch {
       status.textContent = 'No fue posible procesar la solicitud. Intenta más tarde o contacta al administrador.';
