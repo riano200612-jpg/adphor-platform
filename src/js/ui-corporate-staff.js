@@ -10,18 +10,28 @@ const normalize = value => String(value ?? '').normalize('NFD')
 const initials = name => String(name ?? '').trim().split(/\s+/).slice(0,2)
   .map(chunk=>chunk[0]||'').join('').toUpperCase();
 const portrait = (card, person, repo, alive) => {
+  // Lazy images must be attached to the document before the browser will fetch them.
+  // Keep initials underneath until the private signed image is fully decoded.
+  const frame=make('span','','staff-company-photo-frame');
   const placeholder=make('span',initials(person.name),'staff-company-portrait staff-company-placeholder');
   placeholder.setAttribute('aria-hidden','true');
-  card.append(placeholder);
+  frame.append(placeholder);
+  card.append(frame);
   if(!person.photo_path || typeof repo.corporateStaffPhoto!=='function')return;
   const img=document.createElement('img');
-  img.className='staff-company-portrait';
+  img.className='staff-company-portrait staff-company-photo';
   img.alt='Fotografía de '+person.name;
   img.width=128; img.height=128; img.loading='lazy';
+  img.onload=()=>{
+    if(!alive() || !card.isConnected)return;
+    placeholder.remove();
+    img.classList.add('is-loaded');
+  };
+  img.onerror=()=>{img.remove();};
   repo.corporateStaffPhoto(person.photo_path).then(url=>{
     if(!alive() || !card.isConnected)return;
-    img.onload=()=>{if(alive() && card.isConnected)placeholder.replaceWith(img);};
-    img.onerror=()=>{img.remove();};
+    // Append first: a detached lazy <img> can never reach its onload callback.
+    frame.append(img);
     img.src=url;
   }).catch(()=>{});
 };
