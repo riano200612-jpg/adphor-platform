@@ -129,7 +129,7 @@ begin
     v_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$' then
    raise exception 'IAM_INVALID_REQUEST';
  end if;
- if p_action not in ('prepare_invite','link_invite','cancel_invite','grant','suspend','offboard') then
+ if p_action not in ('prepare_invite','link_invite','cancel_invite','grant','suspend','offboard','confirm_auth_ban') then
    raise exception 'IAM_INVALID_ACTION';
  end if;
  if length(v_reason)<8 or length(v_reason)>500 then
@@ -204,6 +204,9 @@ begin
      select v_email,value->>'project_id',value->>'role' from jsonb_array_elements(p_assignments);
    insert into public.memberships(project_id,user_id,role)
      select g.project_id,v_record.user_id,g.role from qa_identity_private.iam_grants g where g.email=v_email;
+ elsif p_action='confirm_auth_ban' then
+   if not found or v_record.status not in ('suspended','offboarded') or v_record.user_id is null
+     then raise exception 'IAM_TARGET_NOT_RESTRICTED'; end if;
  elsif p_action in ('suspend','offboard') then
    if not found or v_record.status not in ('active','suspended') or v_record.user_id is null
       then raise exception 'IAM_TARGET_NOT_MANAGED'; end if;
@@ -213,7 +216,8 @@ begin
    delete from public.memberships where user_id=v_record.user_id;
  end if;
  v_result:=jsonb_build_object('status',
-   case when p_action in ('suspend','offboard') then 'restricted_pending_auth_ban' else 'database_applied' end,
+   case when p_action in ('suspend','offboard') then 'restricted_pending_auth_ban'
+        when p_action='confirm_auth_ban' then 'ban_verified' else 'database_applied' end,
    'action',p_action,'email',v_email,'user_id',
    case when p_action='link_invite' then p_user else v_record.user_id end);
  insert into qa_identity_private.iam_audit(request_id,actor_id,session_id,action,target_email,reason,input,result)
