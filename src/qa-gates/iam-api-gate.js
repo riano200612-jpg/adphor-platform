@@ -72,7 +72,7 @@ export function createIamQaHandler(makeClient){
    if(request.method==='GET'){
      const snapshot=await rpc(client,'qa_iam_snapshot',{p_actor:identity.userId,p_session:identity.sessionId});
      if(!snapshot||!Array.isArray(snapshot.accounts)||!Array.isArray(snapshot.audit))return deny(503);
-     return json(200,{enabled:true,accounts:snapshot.accounts,audit:snapshot.audit});
+     return json(200,{enabled:true,admin_state:snapshot.admin_state||null,accounts:snapshot.accounts,audit:snapshot.audit});
    }
    const raw=await request.text();
    if(raw.length>12000)return deny(413);
