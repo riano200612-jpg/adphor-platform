@@ -1,10 +1,135 @@
-/* QA-only optional multimedia welcome; login is never gated. */
-.client-avatar-frame .miss-welcome-video{display:block;width:min(220px,100%);max-height:270px;aspect-ratio:9/16;object-fit:contain;border-radius:8px;background:#19384f}
-.client-avatar-frame .miss-welcome-video[hidden],.client-avatar-frame .client-avatar-image[hidden]{display:none!important}
-.miss-welcome-controls{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:6px 0 0}
-.miss-welcome-controls button{background:#153956;color:#f8e7ad;border:1px solid #d1ae53;border-radius:999px;padding:9px 14px;min-height:44px;font-weight:650;font-size:12px;line-height:1.25}
-.miss-welcome-controls button:hover{background:#254c6c}
-.miss-welcome-controls button:focus-visible{outline:3px solid #e0c573;outline-offset:3px}
-.miss-welcome-controls button[hidden]{display:none!important}
-@media(prefers-reduced-motion:no-preference){#login-form.miss-welcome-ready{animation:miss-welcome-reveal 240ms ease-out both}@keyframes miss-welcome-reveal{from{opacity:.9;transform:translateY(3px)}to{opacity:1;transform:none}}}
-@media(max-width:700px){.client-avatar-frame .miss-welcome-video{width:min(140px,100%);max-height:170px}}
+/* Only the verified QA Integral hostname receives .miss-welcome-cover.
+   Keep the original photography/video, login and other environments untouched. */
+.miss-welcome-cover .login-story{
+  min-height:0;
+  padding:clamp(20px,3vw,42px);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:stretch;
+  gap:20px;
+}
+.miss-welcome-cover .login-story::after{display:none}
+.miss-welcome-cover .login-story>.brand{position:relative;z-index:2}
+.miss-welcome-cover .login-story>div:nth-child(2){
+  display:flex;
+  flex:1;
+  min-width:0;
+  width:100%;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+/* The hero presents only Miss ADPHOR; login fields remain in the next panel. */
+.miss-welcome-cover .login-story>div:nth-child(2)>.eyebrow,
+.miss-welcome-cover .login-story>div:nth-child(2)>h1,
+.miss-welcome-cover .login-story>div:nth-child(2)>p,
+.miss-welcome-cover .login-story .login-steps,
+.miss-welcome-cover .login-story>small,
+.miss-welcome-cover .login-story .miss-adphor-bubble,
+.miss-welcome-cover .login-story .miss-adphor-hello,
+.miss-welcome-cover .login-story #miss-login-assistant{display:none!important}
+
+.miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){
+  position:relative;
+  isolation:isolate;
+  display:block;
+  width:min(100%,400px);
+  max-width:100%;
+  aspect-ratio:9/16;
+  height:auto;
+  padding:0;
+  margin:0 auto;
+  overflow:hidden;
+  border:1px solid #d9be79a8;
+  border-radius:20px;
+  background:#132f43;
+  box-shadow:0 14px 38px #041a2f4d;
+}
+.miss-welcome-cover .client-avatar-frame .client-avatar-image,
+.miss-welcome-cover .client-avatar-frame .miss-welcome-video{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:0;
+  max-width:none;
+  max-height:none;
+  aspect-ratio:9/16;
+  object-fit:cover;
+  object-position:center 35%;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:#132f43;
+}
+.miss-welcome-cover .client-avatar-frame .miss-welcome-video[hidden],
+.miss-welcome-cover .client-avatar-frame .client-avatar-image[hidden]{display:none!important}
+.miss-welcome-cover .client-avatar-frame::after{
+  content:'';
+  position:absolute;
+  inset:auto 0 0;
+  height:25%;
+  background:linear-gradient(to top,#061b2bbd,transparent);
+  pointer-events:none;
+  z-index:1;
+}
+.miss-welcome-cover .client-avatar-frame>strong{
+  position:absolute;
+  z-index:2;
+  left:17px;
+  bottom:25px;
+  margin:0;
+  font-size:clamp(15px,2vw,19px);
+  line-height:1.2;
+  font-weight:650;
+  letter-spacing:.03em;
+  color:#fff9eb;
+  text-shadow:0 2px 10px #061b2b;
+}
+.miss-welcome-cover .miss-welcome-controls{
+  position:absolute;
+  z-index:3;
+  right:13px;
+  bottom:12px;
+  width:auto;
+  margin:0;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+}
+.miss-welcome-cover .miss-welcome-sound{
+  display:grid;
+  place-items:center;
+  width:52px;
+  height:52px;
+  min-width:52px;
+  min-height:52px;
+  border-radius:50%;
+  background:#12344fe8;
+  color:#fff;
+  border:1px solid #d9be79a8;
+  box-shadow:0 5px 18px #051b2b88;
+  font-size:19px;
+  line-height:1;
+  transition:background-color .15s ease,transform .15s ease;
+}
+.miss-welcome-cover .miss-welcome-sound:hover{background:#275978}
+.miss-welcome-cover .miss-welcome-sound:active{transform:scale(.97)}
+.miss-welcome-cover .miss-welcome-sound:focus-visible{outline:3px solid #f4d67d;outline-offset:3px}
+@media(max-width:580px){
+  .miss-welcome-cover.login-shell{padding:10px}
+  .miss-welcome-cover .login-story{padding:18px;gap:15px;border-radius:22px}
+  .miss-welcome-cover .login-story .brand{font-size:24px}
+  .miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){width:min(100%,400px);border-radius:16px}
+}
+@media(prefers-reduced-motion:reduce){
+  .miss-welcome-cover .miss-welcome-sound{transition:none}
+}
+@media(prefers-reduced-motion:no-preference){
+  #login-form.miss-welcome-ready{animation:miss-welcome-reveal .24s ease-out both}
+  @keyframes miss-welcome-reveal{from{opacity:.9;transform:translateY(3px)}to{opacity:1;transform:none}}
+}
