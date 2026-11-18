@@ -41,7 +41,7 @@ test('audit and global controls stay private',()=>{
  assert.match(migration,/SET search_path TO ''/);
 });
 test('synthetic negative tests must explicitly rollback',()=>{
- assert.match(check,/^BEGIN;/);assert.match(check,/ROLLBACK;/);
+ assert.match(check,/^BEGIN;/m);assert.match(check,/ROLLBACK;/);
  for(const x of ['forged provider receipt accepted','recipient injection accepted',
  'notice transitioned despite gate disabled'])assert.ok(check.includes(x));
 });
