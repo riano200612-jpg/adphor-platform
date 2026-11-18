@@ -50,6 +50,9 @@ test('isolated IAM migration: only active admin with live session can invite, as
  await db.query(command(IDS[1],'link_invite',TARGET,'Persona prueba',STAFF));
  assert.equal((await db.query(`select count(*)::int as n from public.memberships where user_id='${STAFF}'`)).rows[0].n,1);
  await db.exec(`select set_config('request.jwt.claims','{"sub":"${STAFF}","aal":"aal2","session_id":"${STAFF_SESSION}"}',false)`);
+ // Invitar y asignar no equivale a verificar correo; sin confirmación no se concede acceso.
+ assert.equal((await db.query('select qa_identity_private.current_principal() as role')).rows[0].role,null);
+ await db.exec(`update auth.users set email_confirmed_at=now() where id='${STAFF}'`);
  assert.equal((await db.query('select qa_identity_private.current_principal() as role')).rows[0].role,'managed_staff');
  await db.query(command(IDS[2],'suspend',TARGET));
  assert.equal((await db.query(`select count(*)::int as n from public.memberships where user_id='${STAFF}'`)).rows[0].n,0);
