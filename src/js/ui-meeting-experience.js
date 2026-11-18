@@ -1,8 +1,10 @@
 // Presentation layer only. Existing booking/assessment services retain authority.
+import {prepareManualGoogleDraft,buildManualCalendarIcs} from './services/manual-google-handoff.js';
+import {meetingDurationHours} from './services/client-meeting-mapping.js';
 const dateKey=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d));
 export function bogotaInput(iso){const parts=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(iso));return parts.replace(' ','T');}
 export function bogotaInstant(input){if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input))throw Error('Indica fecha y hora válidas.');const d=new Date(input+':00-05:00');if(!Number.isFinite(+d)||bogotaInput(d)!==input)throw Error('Fecha u hora inválida.');return d;}
-export function enhanceMeetings(root,{form,list,projectName,demo,getRows}){
+export function enhanceMeetings(root,{form,list,projectName,demo,getRows,role='viewer',isProjectCurrent=()=>true}){
  root.classList.add('meeting-page');
  const oldPanel=root.firstElementChild;oldPanel.className='panel wizard';
  const h=oldPanel.querySelector('h2');h.textContent='Agendar reunión';
@@ -23,6 +25,46 @@ export function enhanceMeetings(root,{form,list,projectName,demo,getRows}){
  const context=document.createElement('p');context.className='notice';context.textContent='Copropiedad: '+projectName;fieldsets[0].querySelector('div').prepend(context);
  const timezone=document.createElement('p');timezone.className='notice';timezone.textContent='Todos los horarios corresponden a Colombia. Se conserva un margen de 30 minutos entre reuniones.';fieldsets[1].querySelector('div').append(timezone);
  const review=document.createElement('dl');review.className='wizard-review';fieldsets[4].append(review);
+ if(!demo&&['admin','coordinator'].includes(role)){
+  const handoff=document.createElement('section');handoff.className='meeting-manual-handoff';
+  handoff.setAttribute('aria-label','Entrega manual a Google Calendar');
+  const heading=document.createElement('h3');heading.textContent='Entrega manual a Google Calendar';
+  const explanation=document.createElement('p');explanation.className='notice';
+  explanation.textContent='Esta opción prepara un borrador en la cuenta Google del trabajador que lo abra. No confirma reservas ni sincroniza ADPHOR con Google. Comprueba la disponibilidad, selecciona el calendario autorizado y guarda el evento manualmente. No se envían invitaciones desde ADPHOR.';
+  const openDraft=document.createElement('button');openDraft.type='button';openDraft.className='btn secondary';
+  openDraft.textContent='Abrir borrador en Google Calendar';
+  const downloadDraft=document.createElement('button');downloadDraft.type='button';downloadDraft.className='btn secondary';
+  downloadDraft.textContent='Descargar evento provisional .ics';
+  const message=document.createElement('p');message.setAttribute('aria-live','polite');
+  const draft=()=>{
+   if(!handoff.isConnected||!isProjectCurrent())throw Error('La copropiedad cambió. Vuelve a abrir Reuniones.');
+   const start=bogotaInstant(form.elements.start.value);
+   const hours=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
+   const end=form.elements.end.value?bogotaInstant(form.elements.end.value):new Date(+start+hours*3600000);
+   return prepareManualGoogleDraft({title:form.elements.subject.value,start:start.toISOString(),end:end.toISOString()});
+  };
+  openDraft.addEventListener('click',()=>{
+   try{
+    const prepared=draft();
+    window.open(prepared.url,'_blank','noopener,noreferrer');
+    message.textContent='Borrador solicitado. Revisa Google Calendar, selecciona el calendario correcto y pulsa Guardar. Ninguna reunión se ha confirmado automáticamente.';
+   }catch(error){message.textContent=error.message;}
+  });
+  downloadDraft.addEventListener('click',()=>{
+   try{
+    const provisional=draft();
+    const content=buildManualCalendarIcs({draft:provisional,uid:crypto.randomUUID()});
+    const url=URL.createObjectURL(new Blob([content],{type:'text/calendar;charset=utf-8'}));
+    const anchor=document.createElement('a');anchor.href=url;anchor.download='adphor-reunion-pendiente.ics';
+    handoff.append(anchor);anchor.click();anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    message.textContent='Archivo provisional descargado. Importarlo no confirma la reserva en ADPHOR. Ninguna reunión se ha confirmado automáticamente.';
+   }catch(error){message.textContent=error.message;}
+  });
+  handoff.append(heading,explanation,openDraft,downloadDraft,message);
+  fieldsets[4].append(handoff);
+ }
+
  const submit=form.querySelector('button:not([type=button])');submit.type='submit';submit.className='primary';submit.textContent=demo?'Confirmar en calendario local':'Solicitar evaluación';
  const footer=document.createElement('footer');footer.className='wizard-footer';const back=document.createElement('button');back.type='button';back.textContent='Anterior';const next=document.createElement('button');next.type='button';next.className='primary';next.textContent='Continuar';footer.append(back,next,submit);form.append(footer);
  const clear=form.querySelector('[data-clear]');clear.hidden=true;
