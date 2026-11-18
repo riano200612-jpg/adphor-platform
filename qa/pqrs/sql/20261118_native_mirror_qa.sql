@@ -27,7 +27,7 @@ BEGIN
  VALUES(mirror_id,'initial_email','BLOCKED','DESTINATION_NOT_CERTIFIED')
  ON CONFLICT ON CONSTRAINT unique_case_event DO NOTHING;
  RETURN NEW;
-END $function$
+END $function$;
 
 REVOKE ALL ON FUNCTION adphor_pqrs_qa.capture_native_pqrs() FROM PUBLIC,anon,authenticated;
 DROP TRIGGER IF EXISTS adphor_pqrs_qa_native_copy ON public.pilot_pqrs;
