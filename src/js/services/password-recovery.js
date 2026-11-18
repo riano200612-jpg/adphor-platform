@@ -11,7 +11,7 @@ export function readQaRecovery(location, history, supabaseUrl) {
   if (!present) return null;
   // Remove credentials before any asynchronous work or UI interaction.
   history.replaceState(null, '', location.pathname);
-  const allowedHost = location.hostname === QA_ALIAS || /^[a-f0-9]{8}\.adphor-platform\.pages\.dev$/.test(location.hostname);
+  const allowedHost = location.hostname === QA_ALIAS;
   if (location.protocol !== 'https:' || !allowedHost || supabaseUrl !== `https://${QA_REF}.supabase.co`) {
     return {error: 'La recuperación solo está disponible en ADPHOR QA autorizado.'};
   }

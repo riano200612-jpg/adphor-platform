@@ -15,6 +15,7 @@ test('recovery removes URL credentials and only accepts isolated QA targets', ()
   for (const host of ['https://adphor-platform.pages.dev', 'https://evil.example', 'http://qa-integral-claude-reviewed.adphor-platform.pages.dev', 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev']) {
     assert.ok(read(host + fragment).result.error);
   }
+  assert.ok(read('https://a3abd4f9.adphor-platform.pages.dev'+fragment).result.error);
   assert.ok(read(origin + fragment, 'https://oqizvirqjwbbhyyjpthq.supabase.co').result.error);
   assert.equal(read(origin).result, null);
 });

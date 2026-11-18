@@ -15,6 +15,7 @@ import { assignedProjects, assignedMembers, assignedTickets } from './assigned-p
 import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
+import {createIamClient} from './iam-client.js';
 import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from './agent-api.js';
 import {qaAgentRegistryReadiness,qaAgentRuns,qaAgentRunDetail} from './qa-agent-registry.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
@@ -72,6 +73,7 @@ export function createCloudRepository(url, key) {
   return {
     porto,
     visits,
+    iam:authPolicy.isolatedQa?createIamClient(client.auth):null,
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.

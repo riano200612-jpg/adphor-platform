@@ -3,7 +3,8 @@
   "include": [
     "/agent-readiness",
     "/agent-runs",
-    "/agent-runs/*"
+    "/agent-runs/*",
+    "/api/iam"
   ],
   "exclude": []
 }
