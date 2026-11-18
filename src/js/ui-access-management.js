@@ -1,3 +1,4 @@
+import {mountLiveIamAdmin} from './ui-iam-live.js';
 import {PROPERTY_ROLES,visibleAccessInventory,filterAccessInventory,prepareAccessDraft} from './services/access-governance.js';
 import '../css/access-management.css';
 
@@ -43,7 +44,7 @@ function draftOutput(){
     result.value=text;result.hidden=false;result.focus();result.select();
   },error(message){status.textContent=message;result.hidden=true;result.value='';}};
 }
-export function mountAccessManagement(root,{members=[],projects=[]}={}){
+export function mountAccessManagement(root,{members=[],projects=[],iam=null}={}){
   if(!root)return;
   root.replaceChildren();
   const users=visibleAccessInventory(members,projects);
@@ -135,4 +136,6 @@ export function mountAccessManagement(root,{members=[],projects=[]}={}){
   search.addEventListener('input',renderRows);renderRows();
   panel.append(el('p','Seguridad: los botones habilitados únicamente preparan texto local. El servidor deberá verificar administrador general, MFA AAL2, tenencia y aprobación, proteger al último administrador, revocar sesiones y registrar cada cambio antes de permitir su ejecución.','access-security-note'));
   root.append(panel);
+  // El servidor determina si realmente existen privilegios generales y operaciones activas.
+  void mountLiveIamAdmin(root,{iam,projects});
 }
