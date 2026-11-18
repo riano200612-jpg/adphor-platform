@@ -15,6 +15,14 @@ export function createPortoRepository(client, config) {
     return actor;
   };
   return {
+    async routeReadiness(project) {
+      await assertProject(project);
+      const result=checked(await client.from('qa_pqrs_route_readiness')
+        .select('project_id,readiness,issue_code,candidate_email_present,last_reconciled_at')
+        .eq('project_id',project).single());
+      if(!result||result.project_id!==project)throw Error('Estado de destinatario no corresponde a esta copropiedad.');
+      return result;
+    },
     async weeklySummary(project,weekStart=null,slaHours=24) {
       await assertProject(project);
       const result=checked(await client.rpc('qa_pqrs_weekly_summary',{
