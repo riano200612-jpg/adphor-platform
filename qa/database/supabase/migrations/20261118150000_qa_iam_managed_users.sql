@@ -121,6 +121,7 @@ declare
  v_existing qa_identity_private.iam_audit%rowtype;
  v_input jsonb;
  v_result jsonb;
+ v_impact integer:=0;
 begin
  if not public.qa_iam_is_operator(p_actor,p_session) then
    raise exception 'IAM_NOT_AUTHORIZED' using errcode='42501';
@@ -198,28 +199,54 @@ begin
  elsif p_action='grant' then
    if not found or v_record.status<>'active' or v_record.user_id is null
       then raise exception 'IAM_TARGET_NOT_ACTIVE'; end if;
-   delete from public.memberships where user_id=v_record.user_id;
+   -- Nunca retirar una membresía referenciada por casos/visitas/PQRS.
+   if exists(
+    select 1 from public.tickets t where t.assignee=v_record.user_id
+     and not exists(select 1 from jsonb_array_elements(p_assignments) g
+       where g->>'project_id'=t.project_id)
+   ) or exists(
+    select 1 from public.qa_visits v where v.responsible_id=v_record.user_id
+     and not exists(select 1 from jsonb_array_elements(p_assignments) g
+       where g->>'project_id'=v.project_id)
+   ) or exists(
+    select 1 from public.pilot_pqrs q where q.assignee=v_record.user_id
+     and not exists(select 1 from jsonb_array_elements(p_assignments) g
+       where g->>'project_id'=q.project_id)
+   ) then
+     raise exception 'IAM_REASSIGN_REQUIRED';
+   end if;
+   -- Upsert primero: cambiar el rol sin romper las claves foráneas existentes.
+   insert into public.memberships(project_id,user_id,role)
+     select g->>'project_id',v_record.user_id,g->>'role'
+     from jsonb_array_elements(p_assignments) g
+     on conflict(project_id,user_id) do update set role=excluded.role;
+   delete from public.memberships where user_id=v_record.user_id
+     and project_id not in (select g->>'project_id' from jsonb_array_elements(p_assignments) g);
    delete from qa_identity_private.iam_grants where email=v_email;
    insert into qa_identity_private.iam_grants(email,project_id,role)
      select v_email,value->>'project_id',value->>'role' from jsonb_array_elements(p_assignments);
-   insert into public.memberships(project_id,user_id,role)
-     select g.project_id,v_record.user_id,g.role from qa_identity_private.iam_grants g where g.email=v_email;
  elsif p_action='confirm_auth_ban' then
    if not found or v_record.status not in ('suspended','offboarded') or v_record.user_id is null
      then raise exception 'IAM_TARGET_NOT_RESTRICTED'; end if;
  elsif p_action in ('suspend','offboard') then
    if not found or v_record.status not in ('active','suspended') or v_record.user_id is null
       then raise exception 'IAM_TARGET_NOT_MANAGED'; end if;
+   -- Bloqueo inmediato del principal: RLS + RPC rechazan sesiones antiguas.
+   -- No borrar membresías aún: referencias históricas de tickets, visitas y PQRS.
+   select
+      (select count(*) from public.tickets where assignee=v_record.user_id)
+     +(select count(*) from public.qa_visits where responsible_id=v_record.user_id)
+     +(select count(*) from public.pilot_pqrs where assignee=v_record.user_id)
+    into v_impact;
    update qa_identity_private.iam_accounts set status=
      case when p_action='suspend' then 'suspended' else 'offboarded' end,
      updated_at=now() where email=v_email;
-   delete from public.memberships where user_id=v_record.user_id;
  end if;
  v_result:=jsonb_build_object('status',
    case when p_action in ('suspend','offboard') then 'restricted_pending_auth_ban'
         when p_action='confirm_auth_ban' then 'ban_verified' else 'database_applied' end,
-   'action',p_action,'email',v_email,'user_id',
-   case when p_action='link_invite' then p_user else v_record.user_id end);
+   'action',p_action,'email',v_email,'historical_assignments_to_reassign',v_impact,
+   'user_id',case when p_action='link_invite' then p_user else v_record.user_id end);
  insert into qa_identity_private.iam_audit(request_id,actor_id,session_id,action,target_email,reason,input,result)
  values(p_request,p_actor,p_session,p_action,v_email,v_reason,v_input,v_result);
  return v_result;
