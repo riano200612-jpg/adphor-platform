@@ -1,6 +1,7 @@
 // ADPHOR unified PQRS interface. Retain the client's operational Apps Script
 // until the authenticated PostgreSQL API and private object storage are certified.
 import {normalizeAppsScriptExecUrl} from './ui-client-legacy-bridge.js';
+import {resolveOriginalPqrsExec} from './services/pqrs-original-qa-link.js';
 const CONFIG_KEY='adphor-client-exec-links-v1';
 const ROUTES=Object.freeze({owners:'form',tracking:'status',staff:'portal-team'});
 export function sourcePortalUrl({environment='',stored=''}={}){
@@ -46,7 +47,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
  }else config.append(el('p','El administrador debe configurar el enlace del portal si no existe una integración global.','muted'));
  const tabs=[['owners','Propietarios · Radicar PQRS'],['tracking','Consultar radicado'],...(mayStaff?[['staff','Empleados · Portal y PQRS']]:[])];
  function resolveBase(){
-   try{return sourcePortalUrl({environment,stored:input.value||saved});}
+   try{return resolveOriginalPqrsExec({environment,stored:input.value||saved,hostname:globalThis.location?.hostname||'',role});}
    catch(err){notice.textContent=err.message;return '';}
  }
  function draw(){
@@ -58,7 +59,7 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
      return;
    }
    try{currentUrl=pqrsPortalRoute(base,selected);frame.src=currentUrl;preview.replaceChildren(frame,fallback);launch.disabled=false;copyTracking.disabled=false;
-       notice.textContent='Enlace del Portal original configurado. Verifica su inicio de sesión y que el radicado y los adjuntos se confirmen dentro del formulario antes de cerrar la página. Este acceso no prueba por sí solo que el servidor respondió correctamente.';}
+       notice.textContent='Portal original conectado. Confirma el número de radicado y los adjuntos en el formulario antes de cerrar. La entrega de correos a cada copropiedad aún no está certificada: utiliza únicamente casos autorizados para las pruebas.';}
    catch(err){notice.textContent=err.message;launch.disabled=true;}
  }
  for(const [id,label] of tabs){
