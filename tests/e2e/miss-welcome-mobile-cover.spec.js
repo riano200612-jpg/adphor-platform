@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 
 test.use({viewport:{width:390,height:844}});
 
@@ -6,9 +7,13 @@ test('QA Integral cover shows a full-height Miss ADPHOR portrait with one overla
   await page.goto('./');
   // Emulate the QA-only visual state on the local E2E host, without
   // changing the production hostname allowlist or Cloudflare Access.
+  // CI runs a compiled static site on :8000; serve the unmodified module
+  // through a same-origin test-only route to exercise the actual player code.
+  const source=await readFile(new URL('../../src/js/ui-miss-adphor-welcome.js',import.meta.url),'utf8');
+  await page.route('**/__miss-welcome-e2e.js',route=>route.fulfill({status:200,contentType:'text/javascript',body:source}));
   await page.locator('.login-shell').evaluate(el=>el.classList.add('miss-welcome-cover'));
   await page.evaluate(async()=>{
-    const {mountMissAdphorWelcome}=await import('/src/js/ui-miss-adphor-welcome.js');
+    const {mountMissAdphorWelcome}=await import('/__miss-welcome-e2e.js');
     mountMissAdphorWelcome(document);
   });
 
