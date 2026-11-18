@@ -262,6 +262,17 @@ begin
    raise exception 'IAM_NOT_AUTHORIZED' using errcode='42501';
  end if;
  return jsonb_build_object(
+   'admin_state',jsonb_build_object(
+     'configured',(select count(*) from qa_identity_private.principals where application_role='technical_admin'),
+     'active',(select count(*) from qa_identity_private.principals where application_role='technical_admin' and active),
+     'confirmed',(select count(*) from qa_identity_private.principals p
+       join auth.users u on lower(u.email)=p.email
+       where p.application_role='technical_admin' and u.email_confirmed_at is not null),
+     'mfa_verified',(select count(distinct u.id) from qa_identity_private.principals p
+       join auth.users u on lower(u.email)=p.email
+       join auth.mfa_factors f on f.user_id=u.id and f.status='verified'
+       where p.application_role='technical_admin')
+   ),
    'accounts',coalesce((select jsonb_agg(jsonb_build_object('email',m.email,
      'name',m.display_name,'user_id',m.user_id,'status',m.status,
      'assignments',coalesce((select jsonb_agg(jsonb_build_object(
