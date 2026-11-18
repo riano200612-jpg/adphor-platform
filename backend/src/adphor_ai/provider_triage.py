@@ -45,6 +45,7 @@ def _validated_provider(row, project_id):
     if (not valid_uuid(row.get("id")) or not isinstance(row.get("display_name"), str)
         or not 1 <= len(row["display_name"].strip()) <= 120
         or not isinstance(specialties, list) or not 1 <= len(specialties) <= 12
+        or any(not isinstance(kind, str) for kind in specialties)
         or len(specialties) != len(set(specialties))
         or any(kind not in KINDS for kind in specialties)
         or row.get("status") not in ("approved", "inactive", "suspended")
@@ -120,6 +121,8 @@ def stage_feedback_for_human_curation(*, draft, reviewer_id, outcome,
         or not valid_uuid(draft.get("incident_id"))
         or not isinstance(draft.get("sha256"), str)
         or not re.fullmatch(r"[a-f0-9]{64}", draft["sha256"])
+        or not valid_uuid(draft.get("project_id")) and not PROJECT.fullmatch(str(draft.get("project_id", "")))
+        or draft.get("category") not in KINDS
         or not valid_uuid(reviewer_id) or outcome not in ("accepted", "rejected")
         or lawful_basis_confirmed is not True
         or not isinstance(version, str) or not re.fullmatch(r"[a-zA-Z0-9._-]{1,40}", version)):
