@@ -1,6 +1,6 @@
 /**
- * Miss ADPHOR audiovisual welcome — opt-in and restricted to QA Integral hostname.
- * Never gates login, Supabase, MFA, or the existing Miss ADPHOR chat.
+ * Miss ADPHOR QA Integral welcome: a large, unobstructed video with one
+ * accessible speaker button. No production/login/MFA or original asset changes.
  */
 export const MISS_WELCOME_VIDEO_PATH = '/assets/branding/miss-adphor-bienvenida-qa.mp4';
 export const MISS_WELCOME_SESSION_KEY = 'adphor.qa.missWelcomeSeen.v1';
@@ -10,47 +10,54 @@ export function shouldOfferMissWelcome({enabled,hostname}={}) {
 }
 
 export function mountMissAdphorWelcome(root, options={}) {
-  const frame = root?.querySelector?.('.client-avatar-frame');
-  const portrait = frame?.querySelector?.('.client-avatar-image');
-  if (!frame || !portrait || typeof document==='undefined') return () => {};
-  if ((options.videoPath ?? MISS_WELCOME_VIDEO_PATH) !== MISS_WELCOME_VIDEO_PATH) return () => {};
-  const controls = document.createElement('div');
-  controls.className = 'miss-welcome-controls';
-  controls.setAttribute('role','group');
-  controls.setAttribute('aria-label','Presentación audiovisual de Miss ADPHOR');
-  const playButton = document.createElement('button');
-  playButton.type = 'button';
-  playButton.className = 'miss-welcome-play';
-  playButton.textContent = 'Escuchar bienvenida';
-  playButton.setAttribute('aria-label','Reproducir bienvenida de Miss ADPHOR con sonido');
-  const skipButton = document.createElement('button');
-  skipButton.type = 'button';
-  skipButton.className = 'miss-welcome-skip';
-  skipButton.textContent = 'Omitir presentación';
-  skipButton.hidden = true;
-  const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-  const video = document.createElement('video');
-  video.className = 'miss-welcome-video';
-  video.preload = reducedMotion ? 'none' : 'auto';
-  video.playsInline = true;
+  const frame=root?.querySelector?.('.client-avatar-frame');
+  const portrait=frame?.querySelector?.('.client-avatar-image');
+  if(!frame || !portrait || typeof document==='undefined')return ()=>{};
+  if((options.videoPath ?? MISS_WELCOME_VIDEO_PATH)!==MISS_WELCOME_VIDEO_PATH)return ()=>{};
+
+  const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
+  const video=document.createElement('video');
+  video.className='miss-welcome-video';
+  video.preload=reducedMotion?'none':'auto';
+  video.playsInline=true;
   video.setAttribute('playsinline','');
-  video.autoplay = !reducedMotion;
-  video.loop = false;
-  video.muted = !reducedMotion;
-  video.defaultMuted = !reducedMotion;
-  if(!reducedMotion) video.setAttribute('muted','');
-  video.controls = false;
-  video.hidden = true;
+  video.autoplay=!reducedMotion;
+  video.loop=false;
+  video.controls=false;
+  video.hidden=true;
   video.setAttribute('aria-label','Video de presentación de Miss ADPHOR');
   video.setAttribute('disablepictureinpicture','');
   video.setAttribute('controlslist','nodownload noremoteplayback');
   const poster=portrait.getAttribute('src');
-  if(poster) video.poster=poster;
-  controls.append(playButton,skipButton);
+  if(poster)video.poster=poster;
+
+  const controls=document.createElement('div');
+  controls.className='miss-welcome-controls';
+  const soundButton=document.createElement('button');
+  soundButton.type='button';
+  soundButton.className='miss-welcome-sound';
+  controls.append(soundButton);
   portrait.after(video);
   frame.append(controls);
-  let disposed=false, pending=false, loaded=false;
-  const remember=()=>{try{sessionStorage.setItem(MISS_WELCOME_SESSION_KEY,'1')}catch{/* optional */}};
+
+  let disposed=false,pending=false,loaded=false;
+  const updateSound=(muted)=>{
+    video.muted=muted;
+    video.defaultMuted=muted;
+    if(muted)video.setAttribute('muted','');
+    else video.removeAttribute('muted');
+    soundButton.setAttribute('aria-pressed',String(!muted));
+    const label=muted?'Activar sonido de Miss ADPHOR':'Silenciar video de Miss ADPHOR';
+    soundButton.setAttribute('aria-label',label);
+    soundButton.title=label;
+    // Icons are trusted constants; no dynamic user content is injected.
+    soundButton.innerHTML=muted
+      ? '<i class="fa-solid fa-volume-xmark" aria-hidden="true"></i>'
+      : '<i class="fa-solid fa-volume-high" aria-hidden="true"></i>';
+  };
+  updateSound(true);
+
+  const remember=()=>{try{globalThis.sessionStorage?.setItem(MISS_WELCOME_SESSION_KEY,'1');}catch{/*optional*/}};
   const showPortrait=()=>{
     if(disposed)return;
     video.pause();
@@ -58,64 +65,50 @@ export function mountMissAdphorWelcome(root, options={}) {
     video.hidden=true;
     portrait.hidden=false;
     frame.classList.remove('miss-welcome-playing');
-    skipButton.hidden=true;
-    playButton.hidden=false;
-    playButton.textContent='Repetir presentación';
-    playButton.setAttribute('aria-label','Volver a reproducir bienvenida de Miss ADPHOR');
+    updateSound(true);
     remember();
     root.querySelector('#login-form')?.classList.add('miss-welcome-ready');
   };
-  const onError=()=>{showPortrait();playButton.textContent='Volver a intentar bienvenida';};
-  const play=async(withSound=false)=>{
-    if(pending || disposed)return;
+  const play=async(withSound)=>{
+    if(pending||disposed)return;
     pending=true;
-    try {
-      // Browsers allow muted inline autoplay; sound requires a visitor gesture.
-      video.muted=!withSound;
-      video.defaultMuted=!withSound;
-      if(withSound)video.removeAttribute('muted');
-      else video.setAttribute('muted','');
+    try{
+      updateSound(!withSound);
       if(!loaded){video.src=MISS_WELCOME_VIDEO_PATH;video.load();loaded=true;}
-      else if(video.readyState>0) video.currentTime=0;
+      else if(video.readyState>0)video.currentTime=0;
       video.hidden=false;
       portrait.hidden=true;
       frame.classList.add('miss-welcome-playing');
-      skipButton.hidden=false;
-      playButton.hidden=withSound;
-      if(!withSound){
-        playButton.textContent='Activar sonido';
-        playButton.setAttribute('aria-label','Escuchar la presentación desde el inicio con sonido');
-      }
       await video.play();
-    } catch {onError();}
-    finally {pending=false;}
+    }catch{
+      // The page and login remain usable if the browser blocks autoplay.
+      showPortrait();
+    }finally{pending=false;}
   };
-  playButton.addEventListener('click',()=>{
-    if(!video.hidden){
-      video.muted=!video.muted;
-      video.defaultMuted=video.muted;
-      if(video.muted){
-        video.setAttribute('muted','');
-        playButton.textContent='Activar sonido';
-        playButton.setAttribute('aria-label','Escuchar la presentación desde el inicio con sonido');
-      }else{
-        video.removeAttribute('muted');
+  soundButton.addEventListener('click',async()=>{
+    if(disposed)return;
+    if(video.hidden){await play(true);return;}
+    if(video.muted){
+      updateSound(false);
+      try{
         if(video.readyState>0)video.currentTime=0;
-        playButton.textContent='Silenciar video';
-        playButton.setAttribute('aria-label','Silenciar el video de Miss ADPHOR');
-      }
-      return;
-    }
-    void play(true);
+        await video.play();
+      }catch{updateSound(true);}
+    }else updateSound(true);
   });
-  skipButton.addEventListener('click',showPortrait);
   video.addEventListener('ended',showPortrait);
-  video.addEventListener('error',onError);
-  if(reducedMotion){
-    playButton.textContent='Reproducir presentación (opcional)';
-  }else{
-    // Fail open: an autoplay denial restores the portrait and manual replay.
-    void play(false);
-  }
-  return ()=>{disposed=true;video.pause();video.removeAttribute('src');video.load();video.remove();controls.remove();portrait.hidden=false;frame.classList.remove('miss-welcome-playing');};
+  video.addEventListener('error',showPortrait);
+  if(!reducedMotion)void play(false);
+  // With reduced motion enabled the original portrait stays visible; the
+  // speaker button allows starting the presentation on an explicit tap.
+  return ()=>{
+    disposed=true;
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    video.remove();
+    controls.remove();
+    portrait.hidden=false;
+    frame.classList.remove('miss-welcome-playing');
+  };
 }
