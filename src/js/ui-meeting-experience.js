@@ -30,7 +30,7 @@ export function enhanceMeetings(root,{form,list,projectName,demo,getRows,role='v
   handoff.setAttribute('aria-label','Entrega manual a Google Calendar');
   const heading=document.createElement('h3');heading.textContent='Entrega manual a Google Calendar';
   const explanation=document.createElement('p');explanation.className='notice';
-  explanation.textContent='Esta opción prepara un borrador en la cuenta Google del trabajador que lo abra. No confirma reservas ni sincroniza ADPHOR con Google. Comprueba la disponibilidad, selecciona el calendario autorizado y guarda el evento manualmente. No se envían invitaciones desde ADPHOR.';
+  explanation.textContent='Desde ADPHOR se prepara una reunión para Google Calendar. Se abre en la cuenta Google del trabajador: verifica cuenta y permisos, elige «Reuniones», comprueba conflictos y guarda allí. Para reuniones virtuales/mixtas, añade Google Meet en Google. Usa el enlace O el archivo ICS, nunca ambos, para evitar duplicados. Esta acción no confirma reservas ni sincroniza Google con ADPHOR.';
   const openDraft=document.createElement('button');openDraft.type='button';openDraft.className='btn secondary';
   openDraft.textContent='Abrir borrador en Google Calendar';
   const downloadDraft=document.createElement('button');downloadDraft.type='button';downloadDraft.className='btn secondary';
@@ -41,13 +41,13 @@ export function enhanceMeetings(root,{form,list,projectName,demo,getRows,role='v
    const start=bogotaInstant(form.elements.start.value);
    const hours=meetingDurationHours(form.elements.meetingType.value,form.elements.duration.value);
    const end=form.elements.end.value?bogotaInstant(form.elements.end.value):new Date(+start+hours*3600000);
-   return prepareManualGoogleDraft({title:form.elements.subject.value,start:start.toISOString(),end:end.toISOString()});
+   return prepareManualGoogleDraft({title:form.elements.subject.value,start:start.toISOString(),end:end.toISOString(),property:projectName,meetingType:form.elements.meetingType.value,modality:form.elements.modality.value});
   };
   openDraft.addEventListener('click',()=>{
    try{
     const prepared=draft();
     window.open(prepared.url,'_blank','noopener,noreferrer');
-    message.textContent='Borrador solicitado. Revisa Google Calendar, selecciona el calendario correcto y pulsa Guardar. Ninguna reunión se ha confirmado automáticamente.';
+    message.textContent='Borrador enviado al navegador. Verifica la cuenta Google y selecciona «Reuniones» si tienes autorización; añade Meet si es virtual y pulsa Guardar. No importes el ICS después. Ninguna reunión se ha confirmado automáticamente.';
    }catch(error){message.textContent=error.message;}
   });
   downloadDraft.addEventListener('click',()=>{
@@ -58,7 +58,7 @@ export function enhanceMeetings(root,{form,list,projectName,demo,getRows,role='v
     const anchor=document.createElement('a');anchor.href=url;anchor.download='adphor-reunion-pendiente.ics';
     handoff.append(anchor);anchor.click();anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
-    message.textContent='Archivo provisional descargado. Importarlo no confirma la reserva en ADPHOR. Ninguna reunión se ha confirmado automáticamente.';
+    message.textContent='Archivo provisional descargado. Impórtalo solo si NO guardaste el evento desde el enlace. No acredita reserva en ADPHOR. Ninguna reunión se ha confirmado automáticamente.';
    }catch(error){message.textContent=error.message;}
   });
   handoff.append(heading,explanation,openDraft,downloadDraft,message);

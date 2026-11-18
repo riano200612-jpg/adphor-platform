@@ -25,8 +25,28 @@ test('authorized cloud QA meeting: manual Google draft and tentative ICS; no boo
  const url=new URL(await page.evaluate(()=>window.__manualUrl));
  expect(url.origin).toBe('https://calendar.google.com');
  expect(url.searchParams.get('action')).toBe('TEMPLATE');
+ expect(url.searchParams.get('stz')).toBe('America/Bogota');
+ expect(url.searchParams.get('etz')).toBe('America/Bogota');
+ expect(url.searchParams.get('details')).toContain('Copropiedad: QA Aislada');
+ expect(url.searchParams.get('details')).toContain('Tipo de reunión: Consejo');
+ expect(url.searchParams.get('details')).toContain('Modalidad: Presencial');
  const dl=page.waitForEvent('download');
  await page.getByRole('button',{name:'Descargar evento provisional .ics'}).click();
  expect((await dl).suggestedFilename()).toBe('adphor-reunion-pendiente.ics');
  await expect(page.getByText('Ninguna reunión se ha confirmado automáticamente.',{exact:false})).toBeVisible();
+});
+
+test('viewer has no Google Calendar handoff buttons in cloud QA',async({page,baseURL})=>{
+ const fixture=new URL('manual-google-viewer-fixture',baseURL).href;
+ const moduleUrl=new URL('src/js/ui-meeting-assessment.js',baseURL).href;
+ await page.route('**/manual-google-viewer-fixture',route=>route.fulfill({contentType:'text/html',body:
+  '<!doctype html><main id="meetings"></main><script type="module">'+
+  "import {mountMeetingAssessment} from '"+moduleUrl+"';"+
+  "mountMeetingAssessment(document.querySelector('#meetings'),{projectId:'p1',projectName:'QA Aislada',role:'viewer',members:[],repo:{mode:'cloud',verifiedCalendarEnabled:false,calendarAvailabilityConfigured:false}});"+
+  '</script>'
+ }));
+ await page.goto(fixture);
+ await page.locator('[data-schedule]').click();
+ await expect(page.getByRole('button',{name:'Abrir borrador en Google Calendar'})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Descargar evento provisional .ics'})).toHaveCount(0);
 });
