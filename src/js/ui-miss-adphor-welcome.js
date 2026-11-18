@@ -28,13 +28,17 @@ export function mountMissAdphorWelcome(root, options={}) {
   skipButton.className = 'miss-welcome-skip';
   skipButton.textContent = 'Omitir presentación';
   skipButton.hidden = true;
+  const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   const video = document.createElement('video');
   video.className = 'miss-welcome-video';
-  video.preload = 'none';
+  video.preload = reducedMotion ? 'none' : 'auto';
   video.playsInline = true;
-  video.autoplay = false;
+  video.setAttribute('playsinline','');
+  video.autoplay = !reducedMotion;
   video.loop = false;
-  video.muted = false;
+  video.muted = !reducedMotion;
+  video.defaultMuted = !reducedMotion;
+  if(!reducedMotion) video.setAttribute('muted','');
   video.controls = false;
   video.hidden = true;
   video.setAttribute('aria-label','Video de presentación de Miss ADPHOR');
@@ -50,6 +54,7 @@ export function mountMissAdphorWelcome(root, options={}) {
   const showPortrait=()=>{
     if(disposed)return;
     video.pause();
+    video.autoplay=false;
     video.hidden=true;
     portrait.hidden=false;
     frame.classList.remove('miss-welcome-playing');
@@ -61,27 +66,56 @@ export function mountMissAdphorWelcome(root, options={}) {
     root.querySelector('#login-form')?.classList.add('miss-welcome-ready');
   };
   const onError=()=>{showPortrait();playButton.textContent='Volver a intentar bienvenida';};
-  const play=async()=>{
+  const play=async(withSound=false)=>{
     if(pending || disposed)return;
     pending=true;
     try {
+      // Browsers allow muted inline autoplay; sound requires a visitor gesture.
+      video.muted=!withSound;
+      video.defaultMuted=!withSound;
+      if(withSound)video.removeAttribute('muted');
+      else video.setAttribute('muted','');
       if(!loaded){video.src=MISS_WELCOME_VIDEO_PATH;video.load();loaded=true;}
       else if(video.readyState>0) video.currentTime=0;
       video.hidden=false;
       portrait.hidden=true;
       frame.classList.add('miss-welcome-playing');
       skipButton.hidden=false;
-      playButton.hidden=true;
+      playButton.hidden=withSound;
+      if(!withSound){
+        playButton.textContent='Activar sonido';
+        playButton.setAttribute('aria-label','Escuchar la presentación desde el inicio con sonido');
+      }
       await video.play();
     } catch {onError();}
     finally {pending=false;}
   };
-  playButton.addEventListener('click',play);
+  playButton.addEventListener('click',()=>{
+    if(!video.hidden){
+      video.muted=!video.muted;
+      video.defaultMuted=video.muted;
+      if(video.muted){
+        video.setAttribute('muted','');
+        playButton.textContent='Activar sonido';
+        playButton.setAttribute('aria-label','Escuchar la presentación desde el inicio con sonido');
+      }else{
+        video.removeAttribute('muted');
+        if(video.readyState>0)video.currentTime=0;
+        playButton.textContent='Silenciar video';
+        playButton.setAttribute('aria-label','Silenciar el video de Miss ADPHOR');
+      }
+      return;
+    }
+    void play(true);
+  });
   skipButton.addEventListener('click',showPortrait);
   video.addEventListener('ended',showPortrait);
   video.addEventListener('error',onError);
-  if(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+  if(reducedMotion){
     playButton.textContent='Reproducir presentación (opcional)';
+  }else{
+    // Fail open: an autoplay denial restores the portrait and manual replay.
+    void play(false);
   }
   return ()=>{disposed=true;video.pause();video.removeAttribute('src');video.load();video.remove();controls.remove();portrait.hidden=false;frame.classList.remove('miss-welcome-playing');};
 }
