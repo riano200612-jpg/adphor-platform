@@ -1,0 +1,10 @@
+/* QA-only optional multimedia welcome; login is never gated. */
+.client-avatar-frame .miss-welcome-video{display:block;width:min(220px,100%);max-height:270px;aspect-ratio:9/16;object-fit:contain;border-radius:8px;background:#19384f}
+.client-avatar-frame .miss-welcome-video[hidden],.client-avatar-frame .client-avatar-image[hidden]{display:none!important}
+.miss-welcome-controls{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:6px 0 0}
+.miss-welcome-controls button{background:#153956;color:#f8e7ad;border:1px solid #d1ae53;border-radius:999px;padding:9px 14px;min-height:44px;font-weight:650;font-size:12px;line-height:1.25}
+.miss-welcome-controls button:hover{background:#254c6c}
+.miss-welcome-controls button:focus-visible{outline:3px solid #e0c573;outline-offset:3px}
+.miss-welcome-controls button[hidden]{display:none!important}
+@media(prefers-reduced-motion:no-preference){#login-form.miss-welcome-ready{animation:miss-welcome-reveal 240ms ease-out both}@keyframes miss-welcome-reveal{from{opacity:.9;transform:translateY(3px)}to{opacity:1;transform:none}}}
+@media(max-width:700px){.client-avatar-frame .miss-welcome-video{width:min(140px,100%);max-height:170px}}
