@@ -27,6 +27,7 @@ import '../css/styles.css';
 import '../css/client-source-review.css';
 import '../css/premium.css';
 import '../css/miss-adphor-welcome.css';
+import '../css/board-governance.css';
 import '../css/visits.css';
 import '../css/corporate-staff.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
