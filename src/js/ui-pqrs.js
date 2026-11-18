@@ -1,6 +1,7 @@
 import {uploadPrivateEvidence} from './services/private-evidence.js';
 import {mountWeeklyPqrs} from './ui-pqrs-weekly.js';
 import {mountPqrsRouteReadiness} from './ui-pqrs-route-readiness.js';
+import {mountRecipientReviewRequest} from './ui-pqrs-recipient-review.js';
 import { validateQaEvidence } from './services/qa-evidence-policy.js';
 export function pqrsDraftGuidance(form) {
   if(form.elements.subject.value.trim().length<3) return 'Escribe un asunto de al menos tres caracteres.';
@@ -16,6 +17,11 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
     const routeRoot=document.createElement('section');
     root.querySelector('.pqrs-toolbar').after(routeRoot);
     mountPqrsRouteReadiness(routeRoot,{repository,projectId});
+    if(role==='admin'&&typeof repository.requestRouteReview==='function') {
+      const reviewRoot=document.createElement('section');
+      routeRoot.after(reviewRoot);
+      mountRecipientReviewRequest(reviewRoot,{repository,projectId});
+    }
   }
   if(['admin','coordinator'].includes(role)&&typeof repository.weeklySummary==='function'){
     const weeklyRoot=document.createElement('section');

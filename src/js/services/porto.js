@@ -15,6 +15,30 @@ export function createPortoRepository(client, config) {
     return actor;
   };
   return {
+    async listPendingRouteReviews(project) {
+      await assertProject(project);
+      const rows=checked(await client.from('qa_pqrs_recipient_review_requests')
+        .select('id,project_id,status,requested_at,source_reconciled_at')
+        .eq('project_id',project).eq('status','PENDING')
+        .order('requested_at',{ascending:false}).limit(2));
+      if(!Array.isArray(rows)||rows.length>1||rows.some(row=>row.project_id!==project))
+        throw Error('La revisión de destinatario presenta información inconsistente.');
+      return rows;
+    },
+    async requestRouteReview(project) {
+      const actor=await assertProject(project);
+      const result=await client.from('qa_pqrs_recipient_review_requests')
+        .insert({project_id:project,requested_by:actor})
+        .select('id,project_id,status,requested_at,source_reconciled_at').single();
+      if(result.error?.code==='23505'){
+        const existing=await this.listPendingRouteReviews(project);
+        if(existing.length===1)return existing[0];
+      }
+      const row=checked(result);
+      if(row?.project_id!==project||row?.status!=='PENDING')
+        throw Error('La solicitud de revisión no fue confirmada.');
+      return row;
+    },
     async routeReadiness(project) {
       await assertProject(project);
       const result=checked(await client.from('qa_pqrs_route_readiness')
