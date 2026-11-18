@@ -66,7 +66,7 @@ test('handoff prepopulates authorized business context and Google Meet guidance 
  assert.match(params.get('details'),/no importes el archivo ICS/);
  assert.doesNotMatch(d.url,/attendees|guest|email|password|refresh_token/i);
  const ics=buildManualCalendarIcs({draft:d,uid:'12345678-abcd',now});
- assert.match(ics,/Copropiedad: Edificio QA Azul/);
+ assert.match(ics.replace(/\r\n /g,''),/Copropiedad: Edificio QA Azul/);
  assert.match(ics,/STATUS:TENTATIVE/);
  assert.doesNotMatch(ics,/ATTENDEE:/);
 });
