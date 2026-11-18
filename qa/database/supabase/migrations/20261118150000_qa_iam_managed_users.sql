@@ -42,6 +42,25 @@ revoke all on qa_identity_private.iam_accounts,qa_identity_private.iam_grants,qa
 grant select,insert,update,delete on qa_identity_private.iam_accounts,qa_identity_private.iam_grants,qa_identity_private.iam_audit to service_role;
 grant usage,select on sequence qa_identity_private.iam_audit_event_id_seq to service_role;
 
+-- Las tres cuentas administrativas existentes se fijan en plazas inmutables
+-- para impedir que una cuarta identidad herede permisos de altas/bajas.
+create table if not exists qa_identity_private.iam_admin_allowlist (
+ email text primary key references qa_identity_private.principals(email),
+ seat smallint unique not null check (seat between 1 and 3)
+);
+insert into qa_identity_private.iam_admin_allowlist(email,seat)
+select p.email,row_number() over(order by p.email)::smallint
+from qa_identity_private.principals p
+where p.application_role='technical_admin'
+on conflict(email) do nothing;
+do $begin
+ if (select count(*) from qa_identity_private.principals where application_role='technical_admin')<>3
+ or (select count(*) from qa_identity_private.iam_admin_allowlist)<>3
+ then raise exception 'IAM_REQUIRES_EXACTLY_THREE_ADMIN_SLOTS'; end if;
+end $;
+alter table qa_identity_private.iam_admin_allowlist enable row level security;
+revoke all on qa_identity_private.iam_admin_allowlist from public,anon,authenticated,service_role;
+
 -- El JWT se valida primero en el backend. Esta comprobación adicional consulta
 -- identidad real y sesión todavía viva, sin depender de user_metadata editable.
 create or replace function public.qa_iam_is_operator(p_user uuid,p_session uuid) returns boolean
@@ -50,6 +69,7 @@ language sql stable security definer set search_path='' as $$
    select 1 from auth.users u
    join auth.sessions s on s.user_id=u.id
    join qa_identity_private.principals p on p.email=lower(u.email)
+   join qa_identity_private.iam_admin_allowlist a on a.email=p.email
    where u.id=p_user and s.id=p_session and u.email_confirmed_at is not null
      and (u.banned_until is null or u.banned_until<=now())
      and p.active and p.application_role='technical_admin'
