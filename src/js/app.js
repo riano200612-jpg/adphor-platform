@@ -1,3 +1,4 @@
+import {mountAccessManagement} from './ui-access-management.js';
 import {mountVerifiedAgenda} from './ui-verified-agenda.js';
 import {mountVisitPreparation} from './ui-visit-preparation.js';
 import {renderMfaScreen} from './ui-mfa.js';
@@ -218,40 +219,8 @@ function reportPage() {
   const m = metrics(list);
   return heading('Informe de seguimiento', 'Estado actual de los casos registrados en el período elegido.', `<button class="btn secondary" data-action="csv">${icon('download')} Descargar CSV</button><button class="btn primary" data-action="print">${icon('print')} Imprimir / PDF</button>`) + `<label class="report-period no-print">Mes de registro <input id="report-month" type="month" value="${esc(state.reportMonth)}"><span class="muted">Déjalo vacío para incluir todo el historial.</span></label><article class="panel printable"><div class="report-title"><div><p class="eyebrow">ADPHOR · INFORME OPERATIVO</p><h2>${esc(project().name)}</h2><p>${state.reportMonth ? `Casos registrados en ${esc(state.reportMonth)}` : 'Todos los registros'} · Generado: ${stamp(new Date())}</p></div><span class="badge">${repo.mode === 'demo' ? 'Datos de demostración' : 'Resumen de bitácora'}</span></div><div class="report-numbers"><span><strong>${m.total}</strong>Total</span><span><strong>${m.pending}</strong>Pendientes</span><span><strong>${m.closed}</strong>Cerrados</span><span><strong>${m.overdue}</strong>Fuera de plazo</span></div><div tabindex="0" role="region" aria-label="Tabla de registros" class="table-wrap"><table><thead><tr><th>Área de trabajo</th><th>Pendientes</th><th>Por verificar</th><th>Cerradas</th></tr></thead><tbody>${project().areas.map(a => { const k = metrics(list.filter(t => t.area === a)); return `<tr><td>${esc(a)}</td><td>${k.pending}</td><td>${k.review}</td><td>${k.closed}</td></tr>`; }).join('')}</tbody></table></div><p class="muted report-note">Los valores corresponden al estado actual de la bitácora. Este informe no certifica auditorías legales, financieras ni condiciones técnicas de las instalaciones.</p></article>`;
 }
-function accessAuditPage() {
-  const memberships=state.members||[];
-  const users=new Map();
-  for(const member of memberships){
-    if(!member.user_id)continue;
-    const existing=users.get(member.user_id)||{name:member.name||'Usuario registrado',roles:new Set(),projects:new Set()};
-    existing.roles.add(member.role||'Sin rol');existing.projects.add(member.project_id);
-    users.set(member.user_id,existing);
-  }
-  const rows=[...users.values()].sort((a,b)=>a.name.localeCompare(b.name,'es'));
-  const features=[
-    ['user-plus','Invitar colaborador','Registrar un correo e iniciar una invitación segura.'],
-    ['building','Asignar copropiedades','Conceder acceso únicamente a los edificios autorizados.'],
-    ['shield','Roles y permisos','Separar administrador general, administrador local y colaborador.'],
-    ['user-lock','Suspender acceso','Bloquear un usuario y revocar sus sesiones activas.'],
-    ['user-minus','Dar de baja','Retirar permisos conservando la trazabilidad histórica.'],
-    ['clipboard-list','Historial de cambios','Consultar quién autorizó, modificó o revocó cada acceso.']
-  ];
-  return `<section class="access-console">
-    <div class="access-hero"><div><p class="eyebrow">CENTRO ADMINISTRATIVO · QA INTEGRAL</p><h1>Usuarios y permisos</h1><p>Gestiona las autorizaciones de ADPHOR desde un solo lugar. La consulta está disponible; las operaciones de cambio se habilitarán cuando estén certificadas.</p></div><span class="access-mode">Modo auditoría · Solo lectura</span></div>
-    <div class="access-metrics">
-      <div><span>Usuarios con asignaciones visibles</span><strong>${rows.length}</strong><small>No equivale al total de cuentas Auth</small></div>
-      <div><span>Copropiedades visibles</span><strong>${state.projects.length}</strong><small>Según permisos de esta sesión</small></div>
-      <div><span>Asignaciones visibles</span><strong>${memberships.length}</strong><small>Relaciones usuario–edificio</small></div>
-    </div>
-    <div class="access-section-heading"><div><h2>Administración de accesos</h2><p>Acciones previstas para el administrador general. Aún no están habilitadas.</p></div></div>
-    <div class="access-actions">${features.map(([glyph,title,description])=>`<article class="access-action"><span class="access-action-icon">${icon(glyph)}</span><h3>${title}</h3><p>${description}</p><button type="button" class="btn secondary" disabled aria-label="${title}: pendiente de certificación">Próximamente · No habilitado</button></article>`).join('')}</div>
-    <div class="access-section-heading"><div><h2>Inventario de accesos visibles</h2><p>Consulta de asignaciones, sin mostrar credenciales ni modificar cuentas.</p></div></div>
-    <div class="access-table-wrap"><table><thead><tr><th scope="col">Usuario</th><th scope="col">Rol registrado</th><th scope="col">Copropiedades</th><th scope="col">Estado de cuenta</th></tr></thead><tbody>${rows.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc([...u.roles].join(', '))}</td><td>${u.projects.size}</td><td>No verificado</td></tr>`).join('')||'<tr><td colspan="4">No hay asignaciones visibles.</td></tr>'}</tbody></table></div>
-    <p class="access-security-note"><strong>Seguridad:</strong> el rol actual <code>admin</code> corresponde a asignaciones por copropiedad; no demuestra autorización de administrador general. Antes de activar altas, suspensiones o bajas se exige control de rol en servidor, MFA, revocación de sesiones y registro de auditoría.</p>
-  </section>`;
-}
 function renderPage() {
-  if(state.page==='access-audit' && repo.mode==='cloud' && role()==='admin') { $('page-content').innerHTML=accessAuditPage();return; }
+  if(state.page==='access-audit' && repo.mode==='cloud' && role()==='admin') { mountAccessManagement($('page-content'),{members:state.members,projects:state.projects});return; }
   if(state.page==='staff' && repo.staffDirectoryEnabled){mountStaffDirectory($('page-content'),{repo,projectId:state.projectId,projectName:project()?.name});return;}
   if(state.page==='corporate-staff' && repo.staffDirectoryEnabled){mountCorporateStaff($('page-content'),{repo});return;}
   if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin') { mountClientSourceReview($('page-content'));return; }
