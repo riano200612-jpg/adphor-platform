@@ -41,7 +41,8 @@ test('isolated IAM migration: only active admin with live session can invite, as
  insert into auth.sessions values ('${SESSION}','${OWNER}'),('${STAFF_SESSION}','${STAFF}');
  insert into qa_identity_private.principals values
  ('owner@ejemplo.invalid','Owner','technical_admin','admin',true),
- ('segundo@ejemplo.invalid','Second','technical_admin','admin',false);
+ ('segundo@ejemplo.invalid','Second','technical_admin','admin',false),
+ ('tercero@ejemplo.invalid','Third','technical_admin','admin',false);
  `);
  await db.exec(sql);
  assert.equal((await db.query(`select public.qa_iam_is_operator('${OWNER}','${SESSION}') as allowed`)).rows[0].allowed,true);
