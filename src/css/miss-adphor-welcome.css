@@ -120,6 +120,36 @@
 .miss-welcome-cover .miss-welcome-sound:hover{background:#275978}
 .miss-welcome-cover .miss-welcome-sound:active{transform:scale(.97)}
 .miss-welcome-cover .miss-welcome-sound:focus-visible{outline:3px solid #f4d67d;outline-offset:3px}
+
+/* QA Integral — midnight-blue and champagne-gold corporate finish.
+   Subtle light only in the surrounding frame; never filter the original portrait/video. */
+.miss-welcome-cover .login-story{
+  background:
+    radial-gradient(ellipse at 92% 10%,rgba(226,189,113,.17) 0%,rgba(226,189,113,.05) 24%,transparent 53%),
+    radial-gradient(ellipse at 8% 91%,rgba(50,108,153,.30) 0%,transparent 58%),
+    linear-gradient(155deg,#153652 0%,#0c2743 49%,#081b32 100%);
+  border:1px solid rgba(218,183,110,.74);
+  box-shadow:inset 0 0 0 1px rgba(246,220,159,.10),0 16px 38px rgba(6,21,40,.24);
+}
+.miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){
+  border:2px solid transparent;
+  background:
+    linear-gradient(#122b40,#122b40) padding-box,
+    linear-gradient(145deg,#f6dfaa 0%,#c8a361 29%,#86632e 64%,#e4c88d 100%) border-box;
+  box-shadow:0 0 0 1px rgba(232,204,148,.13),0 20px 42px rgba(1,13,31,.45);
+}
+.miss-welcome-cover .client-avatar-frame>strong{
+  color:#fff3d1;
+  text-shadow:0 2px 10px rgba(0,12,25,.85);
+}
+.miss-welcome-cover .miss-welcome-sound{
+  background:linear-gradient(150deg,#244765 0%,#0b2743 100%);
+  border:1px solid #e0be7d;
+  color:#fff5de;
+  box-shadow:inset 0 1px rgba(255,238,201,.17),0 6px 16px rgba(2,13,31,.52);
+}
+.miss-welcome-cover .miss-welcome-sound:hover{background:linear-gradient(150deg,#315b78,#133653)}
+
 @media(max-width:580px){
   .miss-welcome-cover.login-shell{padding:10px}
   .miss-welcome-cover .login-story{padding:18px;gap:15px;border-radius:22px}
