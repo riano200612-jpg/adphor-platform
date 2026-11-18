@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 
 test.use({viewport:{width:390,height:844}});
 
-test('QA Integral cover shows a full-height Miss ADPHOR portrait with one overlaid sound icon',async({page})=>{
+test('QA Integral cover balances Miss ADPHOR portrait and login in a mobile viewport',async({page})=>{
   await page.goto('./');
   // Emulate the QA-only visual state on the local E2E host, without
   // changing the production hostname allowlist or Cloudflare Access.
@@ -29,8 +29,13 @@ test('QA Integral cover shows a full-height Miss ADPHOR portrait with one overla
   const button=await sound.boundingBox();
   expect(stage).not.toBeNull();
   expect(button).not.toBeNull();
-  expect(stage.width).toBeGreaterThan(260);
-  expect(stage.height/stage.width).toBeGreaterThan(1.65);
+  // Intermediate size: significantly larger than the old thumbnail,
+  // smaller than the nearly full-screen video, without stretching the face.
+  expect(stage.width).toBeGreaterThan(225);
+  expect(stage.width).toBeLessThan(330);
+  expect(stage.height/stage.width).toBeGreaterThan(1.53);
+  expect(stage.height/stage.width).toBeLessThan(1.60);
+  expect(stage.height).toBeLessThan(844*0.50);
   expect(button.x).toBeGreaterThan(stage.x+stage.width/2);
   expect(button.y).toBeGreaterThan(stage.y+stage.height/2);
   expect(button.width).toBeGreaterThanOrEqual(44);
@@ -64,7 +69,31 @@ test('QA Integral cover shows a full-height Miss ADPHOR portrait with one overla
   expect(palette.speakerBorder).toBe('solid');
   expect(palette.portraitFilter).toBe('none');
 
-  // The login must remain operable independently of multimedia.
-  await expect(page.locator('#login-form')).toBeVisible();
+  // The first screen must show the start of the login below the cover.
+  const login=page.locator('#login-form');
+  await expect(login).toBeVisible();
+  const loginBox=await login.boundingBox();
+  expect(loginBox).not.toBeNull();
+  expect(loginBox.y).toBeGreaterThan(stage.y+stage.height);
+  expect(loginBox.y).toBeLessThan(844*0.72);
+  const firstField=page.locator('#login-form input, #login-form select').first();
+  await expect(firstField).toBeVisible();
+  const fieldBox=await firstField.boundingBox();
+  expect(fieldBox.y).toBeLessThan(844);
   await expect(page.locator('#login-form button[type=submit], #login-form button.btn.primary')).toHaveCount(1);
+});
+
+test('narrow Android cover keeps the entry field visible without horizontal overflow',async({page})=>{
+  await page.setViewportSize({width:360,height:740});
+  await page.goto('./');
+  await page.locator('.login-shell').evaluate(el=>el.classList.add('miss-welcome-cover'));
+  const stage=await page.locator('.client-avatar-frame').boundingBox();
+  const field=await page.locator('#login-form input, #login-form select').first().boundingBox();
+  expect(stage).not.toBeNull();
+  expect(stage.height).toBeLessThan(740*0.50);
+  expect(stage.width).toBeGreaterThan(200);
+  expect(field).not.toBeNull();
+  expect(field.y).toBeLessThan(740);
+  const horizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1);
+  expect(horizontalOverflow).toBe(false);
 });

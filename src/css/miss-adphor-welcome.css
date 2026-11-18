@@ -150,11 +150,42 @@
 }
 .miss-welcome-cover .miss-welcome-sound:hover{background:linear-gradient(150deg,#315b78,#133653)}
 
+/* Compact mobile hero: medium portrait + login start in the first viewport.
+   Original MP4 and portrait are untouched. The 9:14 viewport crop favors the face. */
 @media(max-width:580px){
-  .miss-welcome-cover.login-shell{padding:10px}
-  .miss-welcome-cover .login-story{padding:18px;gap:15px;border-radius:22px}
-  .miss-welcome-cover .login-story .brand{font-size:24px}
-  .miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){width:min(100%,400px);border-radius:16px}
+  .miss-welcome-cover.login-shell{padding:8px}
+  .miss-welcome-cover .login-story{
+    padding:14px 16px 16px;
+    gap:10px;
+    border-radius:22px;
+  }
+  .miss-welcome-cover .login-story .brand{font-size:23px;line-height:1.2}
+  .miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){
+    width:min(100%,290px);
+    width:min(100%,320px,30.85svh);
+    max-height:48svh;
+    aspect-ratio:9/14;
+    border-radius:16px;
+  }
+  .miss-welcome-cover .client-avatar-frame .client-avatar-image,
+  .miss-welcome-cover .client-avatar-frame .miss-welcome-video{
+    aspect-ratio:9/14;
+    object-position:center 30%;
+  }
+  .miss-welcome-cover .client-avatar-frame>strong{
+    left:14px;
+    bottom:17px;
+    font-size:15px;
+  }
+  .miss-welcome-cover .miss-welcome-controls{right:10px;bottom:9px}
+  .miss-welcome-cover .miss-welcome-sound{
+    width:44px;height:44px;min-width:44px;min-height:44px;font-size:17px;
+  }
+  .miss-welcome-cover .login-form-wrap{padding:10px 0 0}
+  .miss-welcome-cover .login-form-wrap form{padding:18px;gap:12px}
+  .miss-welcome-cover .login-form-wrap .app-mark{display:none}
+  .miss-welcome-cover .login-form-wrap h2{font-size:22px;line-height:1.22}
+  .miss-welcome-cover .login-form-wrap .muted{font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){
   .miss-welcome-cover .miss-welcome-sound{transition:none}
