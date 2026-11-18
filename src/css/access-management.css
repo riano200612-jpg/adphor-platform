@@ -10,3 +10,16 @@
 .access-console .access-table-wrap button{white-space:nowrap}
 .access-console .access-workflow button{align-self:flex-start}
 @media(max-width:620px){.access-console .access-forms{grid-template-columns:1fr}}
+
+.access-console + .access-live{margin-top:1.5rem}
+.access-live .access-forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:1rem}
+.access-live .access-workflow{display:flex;flex-direction:column;gap:.65rem;min-width:0}
+.access-live .access-field{display:flex;flex-direction:column;gap:.25rem}
+.access-live input,.access-live select,.access-live textarea{width:100%;padding:.6rem;border:1px solid #aebbc5;border-radius:.5rem;font:inherit;background:#fff;color:#183542}
+.access-live .access-grants-editor{max-height:20rem;overflow:auto;display:grid;gap:.5rem;margin:1rem 0}
+.access-live .access-grant-row{display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.access-live .access-grant-row label{display:flex;gap:.5rem;align-items:center}
+.access-live .access-grant-row input{width:auto}
+.access-live .access-grant-row select{width:min(100%,11rem)}
+.access-live .access-table-wrap{overflow:auto}
+@media(max-width:620px){.access-live .access-forms{grid-template-columns:1fr}}
