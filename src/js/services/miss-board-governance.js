@@ -11,7 +11,7 @@ function isPartial(r){
 export function boardGovernancePlan(r){
  if(!r||typeof r!=='object'||Array.isArray(r)||
     typeof r.project_name!=='string'||!r.project_name.trim()||r.project_name.length>180||
-    typeof r.month!=='string'||!/^d$/.test('d')||
+    typeof r.month!=='string'||
     !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(r.month)||
     typeof r.cutoff!=='string'||!Number.isFinite(Date.parse(r.cutoff))||
     fields.some(f=>!validInt(r[f]))||!Array.isArray(r.areas)||r.areas.length>200||
