@@ -127,6 +127,11 @@ def stage_feedback_for_human_curation(*, draft, reviewer_id, outcome,
         or lawful_basis_confirmed is not True
         or not isinstance(version, str) or not re.fullmatch(r"[a-zA-Z0-9._-]{1,40}", version)):
         raise ProviderTriageError("No se cumplen los requisitos de aprendizaje supervisado.")
+    unsigned = {k: v for k, v in draft.items() if k != "sha256"}
+    digest = sha256(json.dumps(unsigned, sort_keys=True, ensure_ascii=False,
+                               separators=(",", ":")).encode("utf-8")).hexdigest()
+    if digest != draft["sha256"]:
+        raise ProviderTriageError("La propuesta fue modificada después de su generación.")
     return {
         "incident_ref": draft["incident_id"], "project_ref": draft["project_id"],
         "category": draft["category"], "review_outcome": outcome,
