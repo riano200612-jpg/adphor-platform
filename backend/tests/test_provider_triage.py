@@ -102,6 +102,9 @@ class ProviderTriageTests(unittest.TestCase):
         self.assertFalse(staging["persisted"])
         self.assertFalse(staging["model_trained"])
         self.assertNotIn("Proveedor sintético",str(staging))
+        tampered = draft | {"priority": "critical"}
+        with self.assertRaises(ProviderTriageError):
+            stage_feedback_for_human_curation(**(opts | {"draft": tampered}))
         for patch in ({"lawful_basis_confirmed":False},{"outcome":"auto"},{"reviewer_id":"ai-agent"}):
             with self.assertRaises(ProviderTriageError):
                 stage_feedback_for_human_curation(**(opts|patch))
