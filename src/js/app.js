@@ -37,6 +37,7 @@ import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isMa
 import { createDemoRepository, DEMO_USERS } from './services/demo.js';
 import { createCloudRepository } from './services/supabase.js';
 import {applicationRepositoryMode} from './services/qa-auth-policy.js';
+import {delegateAdminLabel,verifyGeneralAdmin,corporatePageAllowed} from './services/delegate-scope.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -55,7 +56,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const icon = name => `<i class="fa-solid fa-${name}" aria-hidden="true"></i>`;
 const fmt = date => date && !Number.isNaN(new Date(date).getTime()) ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' }).format(new Date(date.length === 10 ? `${date}T12:00:00-05:00` : date)) : '—';
 const stamp = date => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(date));
-const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null };
+const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false };
 let busy = false;
 let monthlyResult = null;
 let monthlyKey = '';
@@ -137,8 +138,13 @@ function loginScreen() {
 }
 function mfaScreen(enrollmentRequired=false,enrollment=null){renderMfaScreen(root,enrollmentRequired,enrollment);}
 async function refresh() {
+  state.corporateAdmin = false;
   const data = await repo.load();
   Object.assign(state, data);
+  // Only the server-side AAL2 IAM gate can attest general administration.
+  state.corporateAdmin = await verifyGeneralAdmin(repo.iam, {
+    eligible: repo.mode === 'cloud' && state.members.some(m => m.user_id === state.user?.id && m.role === 'admin')
+  });
   state.projectId = chooseProject(state.projects, state.projectId || projectPreference(sessionStorage,state.user?.id));
   projectPreference(sessionStorage,state.user?.id,state.projectId);
   state.lastSync = new Date();
@@ -153,10 +159,10 @@ function shell() {
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
   nav.splice(1,0,['meetings','calendar','Reuniones'],['agenda','calendar-days','Agenda'],['visits','route','Visitas'],['pqrs','inbox','PQRS']);
   if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo'],['corporate-staff','people-group','Equipo corporativo']);
-  if (repo.mode === 'cloud' && role()==='admin') nav.push(['qa-source','users','Auditoría histórica']);
-  if (repo.mode === 'cloud' && role()==='admin') nav.push(['access-audit','user-shield','Usuarios y permisos']);
+  if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['qa-source','users','Auditoría histórica']);
+  if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['access-audit','user-shield','Usuarios y permisos']);
   if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
-  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' || project()?.id === 'demo-01' ? 'Entorno de prueba · origen histórico disponible' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : (project()?.is_demo || project()?.id === 'demo-01') ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div><div id="miss-adphor-chat-root"></div>`;
+  root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' || project()?.id === 'demo-01' ? 'Entorno de prueba · origen histórico disponible' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${role()==='admin' ? delegateAdminLabel(state.corporateAdmin) : ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : (project()?.is_demo || project()?.id === 'demo-01') ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div><div id="miss-adphor-chat-root"></div>`;
   mountProjectSelector($('project-control'), {projects:state.projects, selected:state.projectId, onChange(id) {
     selectWorkspaceProject(id);
   }});
@@ -221,10 +227,11 @@ function reportPage() {
   return heading('Informe de seguimiento', 'Estado actual de los casos registrados en el período elegido.', `<button class="btn secondary" data-action="csv">${icon('download')} Descargar CSV</button><button class="btn primary" data-action="print">${icon('print')} Imprimir / PDF</button>`) + `<label class="report-period no-print">Mes de registro <input id="report-month" type="month" value="${esc(state.reportMonth)}"><span class="muted">Déjalo vacío para incluir todo el historial.</span></label><article class="panel printable"><div class="report-title"><div><p class="eyebrow">ADPHOR · INFORME OPERATIVO</p><h2>${esc(project().name)}</h2><p>${state.reportMonth ? `Casos registrados en ${esc(state.reportMonth)}` : 'Todos los registros'} · Generado: ${stamp(new Date())}</p></div><span class="badge">${repo.mode === 'demo' ? 'Datos de demostración' : 'Resumen de bitácora'}</span></div><div class="report-numbers"><span><strong>${m.total}</strong>Total</span><span><strong>${m.pending}</strong>Pendientes</span><span><strong>${m.closed}</strong>Cerrados</span><span><strong>${m.overdue}</strong>Fuera de plazo</span></div><div tabindex="0" role="region" aria-label="Tabla de registros" class="table-wrap"><table><thead><tr><th>Área de trabajo</th><th>Pendientes</th><th>Por verificar</th><th>Cerradas</th></tr></thead><tbody>${project().areas.map(a => { const k = metrics(list.filter(t => t.area === a)); return `<tr><td>${esc(a)}</td><td>${k.pending}</td><td>${k.review}</td><td>${k.closed}</td></tr>`; }).join('')}</tbody></table></div><p class="muted report-note">Los valores corresponden al estado actual de la bitácora. Este informe no certifica auditorías legales, financieras ni condiciones técnicas de las instalaciones.</p></article>`;
 }
 function renderPage() {
-  if(state.page==='access-audit' && repo.mode==='cloud' && role()==='admin') { mountAccessManagement($('page-content'),{members:state.members,projects:state.projects,iam:repo.iam});return; }
+  if(!corporatePageAllowed(state.page, state.corporateAdmin)) state.page = 'dashboard';
+  if(state.page==='access-audit' && repo.mode==='cloud' && role()==='admin' && state.corporateAdmin) { mountAccessManagement($('page-content'),{members:state.members,projects:state.projects,iam:repo.iam});return; }
   if(state.page==='staff' && repo.staffDirectoryEnabled){mountStaffDirectory($('page-content'),{repo,projectId:state.projectId,projectName:project()?.name});return;}
   if(state.page==='corporate-staff' && repo.staffDirectoryEnabled){mountCorporateStaff($('page-content'),{repo});return;}
-  if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin') { mountClientSourceReview($('page-content'));return; }
+  if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) { mountClientSourceReview($('page-content'));return; }
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
@@ -393,7 +400,7 @@ document.addEventListener('click', async event => {
   const el = event.target.closest('button,a[data-page]'); if (!el || busy) return;
   try {
     if(el.dataset.action==='enroll-mfa'){el.disabled=true;try{mfaScreen(true,await repo.enrollMfa());}catch(error){el.disabled=false;reportError(error);}return;}
-    if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;loginScreen();return;}
+    if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;state.corporateAdmin=false;loginScreen();return;}
     if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
     if (el.dataset.view) { state.view = el.dataset.view; renderPage(); return; }
@@ -405,7 +412,7 @@ document.addEventListener('click', async event => {
       case 'close-dialog': dialog.close(); break;
       case 'clear': state.filters = {}; renderPage(); break;
       case 'refresh': el.disabled = true; try { await refresh(); shell(); toast('Datos actualizados.'); } finally { el.disabled = false; } break;
-      case 'logout': monthlyResult=null; monthlyKey=''; await repo.logout(); state.user = null; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
+      case 'logout': monthlyResult=null; monthlyKey=''; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
       case 'monthly-load':
       case 'monthly-finalize': {
         const projectId=state.projectId, month=state.reportMonth, requestKey=currentReportKey();
@@ -475,7 +482,7 @@ async function startPortal() {
       return;
     }
   }catch{
-    state.user=null;
+    state.user=null;state.corporateAdmin=false;
     state.projects=[];state.members=[];state.tickets=[];
   }
   loginScreen();

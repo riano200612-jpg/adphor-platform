@@ -19,6 +19,8 @@ test.afterAll(async () => {if(buildDir) await rm(buildDir,{recursive:true,force:
 test.beforeEach(async ({page}) => {
   await page.route(`${origin}/**`, async route => {
     const path = new URL(route.request().url()).pathname;
+    // A synthetic property administrator is not a corporate IAM operator.
+    if (path === '/api/iam') return route.fulfill({status:403, json:{error:'Sin acceso a IAM general'}});
     const file = resolve(buildDir, path === '/' ? 'index.html' : `.${path}`);
     const body = await readFile(file);
     const contentType = file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.webp') ? 'image/webp' : 'text/html';
@@ -114,5 +116,8 @@ for (const existing of [false,true]) test(`QA login ${existing?'challenges exist
   await expect(page.getByRole('heading',{name:'Configura tu autenticador'})).toHaveCount(0);
   await expect(page.locator('#project-select')).toBeVisible();
   await expect(page.locator('#project-select')).toHaveValue('qa-a');
+  await expect(page.getByRole('button',{name:'Usuarios y permisos'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Auditoría histórica'})).toHaveCount(0);
+  await expect(page.locator('.user-chip small')).toContainText('Delegado');
   expect(protectedRequests[0]).toBe('/rest/v1/profiles');
 });
