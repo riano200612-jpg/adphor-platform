@@ -6,7 +6,7 @@ function setupFakeDom({reducedMotion=false,rejectPlay=false}={}){
   const created=[];
   class El{
     constructor(tag){
-      this.tag=tag; this.attrs={}; this.listeners={}; this.children=[];
+      this.tag=tag;this.attrs={};this.listeners={};this.children=[];
       this.hidden=false;this.readyState=1;this.playCount=0;
       const flags=new Set();
       this.classList={add:n=>flags.add(n),remove:n=>flags.delete(n),contains:n=>flags.has(n)};
@@ -15,7 +15,7 @@ function setupFakeDom({reducedMotion=false,rejectPlay=false}={}){
     setAttribute(k,v){this.attrs[k]=v;}
     getAttribute(k){return this.attrs[k]??null;}
     removeAttribute(k){delete this.attrs[k];}
-    append(...c){this.children.push(...c);}
+    append(...children){this.children.push(...children);}
     after(c){this.next=c;}
     addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);}
     fire(k){return Promise.all((this.listeners[k]||[]).map(fn=>fn()));}
@@ -28,80 +28,107 @@ function setupFakeDom({reducedMotion=false,rejectPlay=false}={}){
   portrait.setAttribute('src','/assets/branding/miss-adphor-qa-integral(4).webp');
   frame.querySelector=s=>s==='.client-avatar-image'?portrait:null;
   const root={querySelector:s=>s==='.client-avatar-frame'?frame:s==='#login-form'?form:null};
-  const prev={document:globalThis.document,matchMedia:globalThis.matchMedia,window:globalThis.window,sessionStorage:globalThis.sessionStorage};
+  const prev={document:globalThis.document,matchMedia:globalThis.matchMedia,sessionStorage:globalThis.sessionStorage};
   globalThis.document={createElement:tag=>new El(tag)};
   globalThis.matchMedia=()=>({matches:reducedMotion});
-  globalThis.window={matchMedia:globalThis.matchMedia};
   globalThis.sessionStorage={setItem(){}};
   return {root,frame,portrait,form,created,restore(){for(const [k,v] of Object.entries(prev)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}};
 }
 
-test('welcome autoplays muted, can activate audio, skip/replay, and never locks login',async()=>{
+test('autoplay is muted and only a single circular sound button is created',async()=>{
   const dom=setupFakeDom();
   try{
     const cleanup=mountMissAdphorWelcome(dom.root);
     const video=dom.created.find(e=>e.tag==='video');
-    const sound=dom.created.find(e=>e.textContent==='Activar sonido');
-    const skip=dom.created.find(e=>e.textContent==='Omitir presentación');
-    assert.ok(video && sound && skip);
+    const buttons=dom.created.filter(e=>e.tag==='button');
+    const sound=buttons[0];
+    assert.ok(video);
+    assert.equal(buttons.length,1);
+    assert.equal(sound.className,'miss-welcome-sound');
+    assert.equal(sound.attrs['aria-label'],'Activar sonido de Miss ADPHOR');
+    assert.equal(sound.attrs['aria-pressed'],'false');
+    assert.match(sound.innerHTML,/fa-volume-xmark/);
     assert.equal(video.autoplay,true);
     assert.equal(video.playsInline,true);
-    assert.equal(video.playCount,1);
+    assert.equal(video.loop,false);
     assert.equal(video.muted,true);
+    assert.equal(video.playCount,1);
     assert.equal(dom.portrait.hidden,true);
     assert.equal(dom.form.disabled,undefined);
-    assert.equal(skip.hidden,false);
+
+    // Visitor gesture enables audio and restarts the clip from its beginning.
     video.currentTime=3;
     await sound.fire('click');
     assert.equal(video.muted,false);
     assert.equal(video.currentTime,0);
-    assert.equal(sound.textContent,'Silenciar video');
-    await skip.fire('click');
-    assert.equal(dom.portrait.hidden,false);
-    assert.equal(dom.form.classList.contains('miss-welcome-ready'),true);
-    await sound.fire('click');
     assert.equal(video.playCount,2);
-    assert.equal(video.muted,false);
+    assert.equal(sound.attrs['aria-pressed'],'true');
+    assert.equal(sound.attrs['aria-label'],'Silenciar video de Miss ADPHOR');
+    assert.match(sound.innerHTML,/fa-volume-high/);
+    await sound.fire('click');
+    assert.equal(video.muted,true);
+    assert.equal(sound.attrs['aria-pressed'],'false');
+
     await video.fire('ended');
     assert.equal(dom.portrait.hidden,false);
+    assert.equal(dom.form.classList.contains('miss-welcome-ready'),true);
+    assert.equal(buttons.length,1);
+    // The same unobtrusive speaker button replays the clip after it ends.
+    await sound.fire('click');
+    assert.equal(video.playCount,3);
+    assert.equal(video.muted,false);
     cleanup();
     assert.equal(video.removed,true);
+    assert.equal(dom.portrait.hidden,false);
   }finally{dom.restore();}
 });
 
-test('reduced motion preference disables autoplay but allows visitor-initiated playback',async()=>{
+test('reduced-motion users receive a still portrait until they tap the sound icon',async()=>{
   const dom=setupFakeDom({reducedMotion:true});
   try{
     mountMissAdphorWelcome(dom.root);
     const video=dom.created.find(e=>e.tag==='video');
-    const play=dom.created.find(e=>e.textContent==='Reproducir presentación (opcional)');
-    assert.ok(play);
-    assert.equal(video.playCount,0);
+    const sound=dom.created.find(e=>e.className==='miss-welcome-sound');
     assert.equal(video.autoplay,false);
+    assert.equal(video.playCount,0);
     assert.equal(dom.portrait.hidden,false);
-    await play.fire('click');
+    await sound.fire('click');
     assert.equal(video.playCount,1);
     assert.equal(video.muted,false);
   }finally{dom.restore();}
 });
 
-test('blocked autoplay restores portrait and leaves manual play available',async()=>{
+test('autoplay rejection does not lock login and retains a manual sound button',async()=>{
   const dom=setupFakeDom({rejectPlay:true});
   try{
     mountMissAdphorWelcome(dom.root);
     await new Promise(resolve=>setImmediate(resolve));
     const video=dom.created.find(e=>e.tag==='video');
-    const button=dom.created.find(e=>e.textContent==='Volver a intentar bienvenida');
-    assert.ok(button);
+    const sound=dom.created.find(e=>e.className==='miss-welcome-sound');
     assert.equal(video.playCount,1);
-    assert.equal(dom.portrait.hidden,false);
     assert.equal(video.hidden,true);
+    assert.equal(dom.portrait.hidden,false);
+    assert.equal(dom.form.disabled,undefined);
+    assert.equal(sound.attrs['aria-label'],'Activar sonido de Miss ADPHOR');
+    await sound.fire('click');
+    assert.equal(video.playCount,2);
+    assert.equal(dom.portrait.hidden,false);
   }finally{dom.restore();}
 });
-test('rejects external or unapproved media paths',()=>{
+
+test('media error falls back to original portrait; external video paths are rejected',async()=>{
   const dom=setupFakeDom();
   try{
-    mountMissAdphorWelcome(dom.root,{videoPath:'https://flow-content.google/temporary.mp4'});
-    assert.equal(dom.created.some(e=>e.tag==='video'),false);
+    mountMissAdphorWelcome(dom.root);
+    const video=dom.created.find(e=>e.tag==='video');
+    await video.fire('error');
+    assert.equal(dom.portrait.hidden,false);
+    assert.equal(video.hidden,true);
+    assert.equal(dom.created.filter(e=>e.tag==='button').length,1);
   }finally{dom.restore();}
+  const other=setupFakeDom();
+  try{
+    mountMissAdphorWelcome(other.root,{videoPath:'https://flow-content.google/temporary.mp4'});
+    assert.equal(other.created.some(e=>e.tag==='video'),false);
+  }finally{other.restore();}
 });
