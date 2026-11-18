@@ -57,7 +57,7 @@ do $begin
  if (select count(*) from qa_identity_private.principals where application_role='technical_admin')<>3
  or (select count(*) from qa_identity_private.iam_admin_allowlist)<>3
  then raise exception 'IAM_REQUIRES_EXACTLY_THREE_ADMIN_SLOTS'; end if;
-end $;
+end; $;
 alter table qa_identity_private.iam_admin_allowlist enable row level security;
 revoke all on qa_identity_private.iam_admin_allowlist from public,anon,authenticated,service_role;
 
