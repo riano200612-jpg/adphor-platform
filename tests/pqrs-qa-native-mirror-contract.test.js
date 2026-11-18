@@ -20,7 +20,7 @@ test('outbox stays blocked and no mail provider send is invoked',()=>{
  assert.doesNotMatch(sql,/MailApp\.sendEmail|GmailApp\.sendEmail|fetch\(['"]https:\/\//);
 });
 test('the SQL snapshot has a complete function statement',()=>{
- assert.match(sql,/END \\$function\\$;/);
+ assert.ok(sql.includes('END $function$;'));
 });
 test('function has private schema and no public execution grant',()=>{
  assert.match(sql,/SECURITY DEFINER/);
