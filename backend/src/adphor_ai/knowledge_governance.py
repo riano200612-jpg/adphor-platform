@@ -59,7 +59,8 @@ def _validate_source(source, project_id):
         raise KnowledgeGovernanceRejected("Versión de origen inválida.")
     if not isinstance(source["sha256"], str) or not DIGEST.fullmatch(source["sha256"]):
         raise KnowledgeGovernanceRejected("La fuente no tiene huella SHA-256 válida.")
-    if source["source_kind"] not in SENSITIVE_KINDS or source["classification"] not in CLASSIFICATIONS:
+    if (not isinstance(source["source_kind"], str) or source["source_kind"] not in SENSITIVE_KINDS
+        or not isinstance(source["classification"], str) or source["classification"] not in CLASSIFICATIONS):
         raise KnowledgeGovernanceRejected("Categoría o clasificación desconocida.")
     if type(source["privacy_reviewed"]) is not bool or type(source["owner_approved"]) is not bool or type(source["legal_basis_attested"]) is not bool:
         raise KnowledgeGovernanceRejected("Estados de aprobación no verificables.")
