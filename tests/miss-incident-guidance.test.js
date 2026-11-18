@@ -11,6 +11,7 @@ test('reported elevator failure is a draft, not verified diagnosis or vendor',()
  assert.equal(missIncidentIntent('Se dañó el ascensor'),true);
  const report=classifyMissIncident('Se dañó el ascensor');
  assert.equal(report.category,'elevator');
+ assert.equal(classifyMissIncident('¿Qué proveedor repara ascensores?').category,'elevator');
  assert.equal(report.priority,'high');
  assert.equal(report.providerSelected,false);
  assert.equal(report.alarmSent,false);
