@@ -16,14 +16,14 @@ export function createPortoRepository(client, config) {
   };
   return {
     async listPendingRouteReviews(project) {
-      await assertProject(project);
+      const actor=await assertProject(project);
       const rows=checked(await client.from('qa_pqrs_recipient_review_requests')
-        .select('id,project_id,status,requested_at,source_reconciled_at')
+        .select('id,project_id,status,requested_by,requested_at,source_reconciled_at')
         .eq('project_id',project).eq('status','PENDING')
         .order('requested_at',{ascending:false}).limit(2));
       if(!Array.isArray(rows)||rows.length>1||rows.some(row=>row.project_id!==project))
         throw Error('La revisión de destinatario presenta información inconsistente.');
-      return rows;
+      return rows.map(({requested_by,...row})=>({...row,is_mine:requested_by===actor}));
     },
     async requestRouteReview(project) {
       const actor=await assertProject(project);
@@ -38,6 +38,24 @@ export function createPortoRepository(client, config) {
       if(row?.project_id!==project||row?.status!=='PENDING')
         throw Error('La solicitud de revisión no fue confirmada.');
       return row;
+    },
+    async decideRouteReview(project,decision) {
+      const actor=await assertProject(project);
+      if(decision!=='CANCELLED'&&decision!=='REJECTED')
+        throw Error('Esta pantalla no autoriza aprobaciones de correo.');
+      const requests=await this.listPendingRouteReviews(project);
+      if(requests.length!==1)throw Error('No existe una única solicitud pendiente para revisar.');
+      const request=requests[0];
+      if((decision==='CANCELLED'&&!request.is_mine)||(decision==='REJECTED'&&request.is_mine))
+        throw Error('La decisión debe ser confirmada por el administrador correspondiente.');
+      const result=checked(await client.from('qa_pqrs_recipient_review_requests')
+        .update({status:decision})
+        .eq('project_id',project).eq('id',request.id).eq('status','PENDING')
+        .select('id,project_id,status,reviewed_at').single());
+      if(result?.id!==request.id||result?.project_id!==project||result?.status!==decision||
+         !result.reviewed_at)
+        throw Error('No se confirmó el cierre de la revisión.');
+      return {id:result.id,project_id:result.project_id,status:result.status};
     },
     async routeReadiness(project) {
       await assertProject(project);

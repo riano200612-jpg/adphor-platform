@@ -1,0 +1,11 @@
+# PQRS QA Integral — Ciclo de revisión pendiente (2026-11-18)
+- Supabase QA instalado: `adphor_pqrs_qa_recipient_review_decisions_20261118`.
+- Una sesión MFA AAL2 del administrador técnico solicitante puede `CANCELLED`.
+- Un administrador técnico distinto, con sesión MFA AAL2 y rol admin de la misma copropiedad, puede `REJECTED`.
+- `APPROVED` **siempre se rechaza**: falta evidencia independiente de la titularidad del correo y autorización de entrega.
+- `adphor_pqrs_qa.recipient_review_audit` almacena eventos privados (alta/cierre) sin direcciones de correo, textos libres ni adjuntos.
+- Las columnas que los usuarios pueden actualizar se limitan a `status`; el trigger completa `reviewed_by` y `reviewed_at`, impide alterar identidad y rechaza la autoprobación.
+- Pruebas PostgreSQL: crear/cancelar, simular solicitud de otro actor y rechazar, intentar aprobar y comprobar denegación; 4 eventos en auditoría; `ROLLBACK`.
+- La UI solo ofrece cancelar/rechazar tras confirmar expresamente y recalcula autorización en el servidor.
+- Ningún original de José, Apps Script, Master_ADPHOR, Drive, Calendar ni producción se modifica.
+- No envía correo ni cambia `notification_delivery_gate` (OFF).
