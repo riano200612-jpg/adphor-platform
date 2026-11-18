@@ -15,6 +15,15 @@ export function createPortoRepository(client, config) {
     return actor;
   };
   return {
+    async weeklySummary(project,weekStart=null,slaHours=24) {
+      await assertProject(project);
+      const result=checked(await client.rpc('qa_pqrs_weekly_summary',{
+        p_project_id:project,p_week_start:weekStart,p_first_response_sla_hours:slaHours
+      }));
+      if(result?.project_id!==project||result?.data_source!=='public.pilot_pqrs')
+        throw Error('Informe semanal no coincide con la copropiedad.');
+      return result;
+    },
     async list(project,status='') {
       await assertProject(project);let q=client.from('pilot_pqrs').select('*').eq('project_id',project).order('created_at',{ascending:false}).limit(200);
       if(status)q=q.eq('status',status);return checked(await q);
