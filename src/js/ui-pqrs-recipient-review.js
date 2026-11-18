@@ -23,7 +23,7 @@ export function normalizeRecipientReview(route,requests,projectId) {
    readyForReview:route.readiness==='PENDING_APPROVAL'&&!request,
    pending:Boolean(request),
    canCancel:Boolean(request&&isMine),
-   canReject:Boolean(request&&!isMine),
+   canReject:Boolean(request&&request.is_mine===false),
    stale,
    deliveryAuthorized:false,
    statusText:request?(stale?'La información cambió después de solicitar revisión. Se requiere conciliación administrativa.':'Existe una solicitud pendiente de verificación. Aún no autoriza enviar correos.'):

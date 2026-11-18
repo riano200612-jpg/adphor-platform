@@ -59,3 +59,10 @@ test('no pending request means no cancellation or rejection',()=>{
 test('malformed identity marker fails closed',()=>{
  assert.throws(()=>normalizeRecipientReview(route,[{...pending,is_mine:'true'}],'source-1'));
 });
+
+test('missing ownership assertion fails closed for closure controls',()=>{
+ const state=normalizeRecipientReview(route,[pending],'source-1');
+ assert.equal(state.canCancel,false);
+ assert.equal(state.canReject,false);
+ assert.equal(state.deliveryAuthorized,false);
+});
