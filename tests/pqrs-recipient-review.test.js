@@ -41,3 +41,28 @@ test('dates and request identifiers must be valid',()=>{
  assert.throws(()=>normalizeRecipientReview(route,[{...pending,id:'not-a-uuid'}],'source-1'));
  assert.throws(()=>normalizeRecipientReview(route,[{...pending,source_reconciled_at:'bad'}],'source-1'));
 });
+
+test('requester can cancel but cannot reject their own pending review',()=>{
+ const result=normalizeRecipientReview(route,[{...pending,is_mine:true}],'source-1');
+ assert.equal(result.canCancel,true);assert.equal(result.canReject,false);
+ assert.equal(result.deliveryAuthorized,false);
+});
+test('different reviewer can reject but not cancel pending request',()=>{
+ const result=normalizeRecipientReview(route,[{...pending,is_mine:false}],'source-1');
+ assert.equal(result.canCancel,false);assert.equal(result.canReject,true);
+ assert.equal(result.deliveryAuthorized,false);
+});
+test('no pending request means no cancellation or rejection',()=>{
+ const result=normalizeRecipientReview(route,[],'source-1');
+ assert.equal(result.canCancel,false);assert.equal(result.canReject,false);
+});
+test('malformed identity marker fails closed',()=>{
+ assert.throws(()=>normalizeRecipientReview(route,[{...pending,is_mine:'true'}],'source-1'));
+});
+
+test('missing ownership assertion fails closed for closure controls',()=>{
+ const state=normalizeRecipientReview(route,[pending],'source-1');
+ assert.equal(state.canCancel,false);
+ assert.equal(state.canReject,false);
+ assert.equal(state.deliveryAuthorized,false);
+});
