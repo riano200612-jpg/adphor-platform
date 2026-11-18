@@ -36,6 +36,34 @@ test('QA Integral cover shows a full-height Miss ADPHOR portrait with one overla
   expect(button.width).toBeGreaterThanOrEqual(44);
   await expect(frame.locator('.miss-welcome-controls button')).toHaveCount(1);
 
+  // The palette is exclusive to QA Integral: blue-night gradients and
+  // champagne-gold edging, without image filters or a second toolbar.
+  const palette=await page.evaluate(()=>{
+    const story=getComputedStyle(document.querySelector('.miss-welcome-cover .login-story'));
+    const stage=getComputedStyle(document.querySelector('.miss-welcome-cover .client-avatar-frame'));
+    const speaker=getComputedStyle(document.querySelector('.miss-welcome-cover .miss-welcome-sound'));
+    const portrait=getComputedStyle(document.querySelector('.miss-welcome-cover .client-avatar-image'));
+    return {
+      background:story.backgroundImage,
+      storyBorder:story.borderTopWidth,
+      stageBackground:stage.backgroundImage,
+      stageBorder:stage.borderTopWidth,
+      stageShadow:stage.boxShadow,
+      speakerBackground:speaker.backgroundImage,
+      speakerBorder:speaker.borderTopStyle,
+      portraitFilter:portrait.filter
+    };
+  });
+  expect(palette.background).toContain('radial-gradient');
+  expect(palette.background).toContain('linear-gradient');
+  expect(palette.storyBorder).toBe('1px');
+  expect(palette.stageBackground).toContain('linear-gradient');
+  expect(palette.stageBorder).toBe('2px');
+  expect(palette.stageShadow).not.toBe('none');
+  expect(palette.speakerBackground).toContain('linear-gradient');
+  expect(palette.speakerBorder).toBe('solid');
+  expect(palette.portraitFilter).toBe('none');
+
   // The login must remain operable independently of multimedia.
   await expect(page.locator('#login-form')).toBeVisible();
   await expect(page.locator('#login-form button[type=submit], #login-form button.btn.primary')).toHaveCount(1);
