@@ -26,6 +26,12 @@ test('isolated IAM migration: only active admin with live session can invite, as
  create table public.profiles(id uuid primary key,name text);
  create table public.memberships(project_id text references public.projects(id),
    user_id uuid references public.profiles(id),role text,primary key(project_id,user_id));
+ create table public.tickets(project_id text,assignee uuid,
+   foreign key(project_id,assignee) references public.memberships(project_id,user_id));
+ create table public.qa_visits(project_id text,responsible_id uuid,
+   foreign key(project_id,responsible_id) references public.memberships(project_id,user_id));
+ create table public.pilot_pqrs(project_id text,assignee uuid,
+   foreign key(project_id,assignee) references public.memberships(project_id,user_id));
  create table qa_identity_private.principals(
   email text primary key,display_name text,application_role text,membership_role text,active boolean);
  insert into public.projects values ('qa-01'),('qa-02');
@@ -54,13 +60,16 @@ test('isolated IAM migration: only active admin with live session can invite, as
  assert.equal((await db.query('select qa_identity_private.current_principal() as role')).rows[0].role,null);
  await db.exec(`update auth.users set email_confirmed_at=now() where id='${STAFF}'`);
  assert.equal((await db.query('select qa_identity_private.current_principal() as role')).rows[0].role,'managed_staff');
+ await db.exec(`insert into public.tickets(project_id,assignee) values('qa-01','${STAFF}')`);
  await db.query(command(IDS[2],'suspend',TARGET));
- assert.equal((await db.query(`select count(*)::int as n from public.memberships where user_id='${STAFF}'`)).rows[0].n,0);
+ // Conserva referencias históricas en el DB; el principal revocado ya no puede operar.
+ assert.equal((await db.query(`select count(*)::int as n from public.memberships where user_id='${STAFF}'`)).rows[0].n,1);
  assert.equal((await db.query('select qa_identity_private.current_principal() as role')).rows[0].role,null);
  await db.query(command(IDS[3],'confirm_auth_ban',TARGET));
  const audit=(await db.query(`select public.qa_iam_snapshot('${OWNER}','${SESSION}') as details`)).rows[0].details;
  assert.equal(audit.accounts.length,1);
  assert.equal(audit.accounts[0].status,'suspended');
+ assert.equal(audit.audit.find(x=>x.action==='suspend').result.historical_assignments_to_reassign,1);
  assert.ok(audit.audit.length>=4);
  await db.exec(`update qa_identity_private.principals set active=false where email='owner@ejemplo.invalid'`);
  await assert.rejects(db.query(command('99999999-9999-4999-8999-999999999999','offboard')),/IAM_NOT_AUTHORIZED/);
