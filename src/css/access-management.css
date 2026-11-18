@@ -1,0 +1,12 @@
+.access-console .access-forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:1rem;margin-top:1rem}
+.access-console .access-workflow{display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.access-console .access-field{display:flex;flex-direction:column;gap:.35rem;margin:.6rem 0}
+.access-console .access-field input,.access-console .access-field select,.access-console .access-field textarea,
+.access-console .access-draft-output textarea{display:block;width:100%;box-sizing:border-box;padding:.7rem;border:1px solid #aebbc5;border-radius:.45rem;background:#fff;color:#17313d;font:inherit}
+.access-console .access-draft-output{width:100%;min-width:0}
+.access-console .access-draft-output textarea{white-space:pre;max-width:100%;font-size:.8rem}
+.access-console .access-action button{margin-top:auto}
+.access-console .access-table-wrap{overflow:auto}
+.access-console .access-table-wrap button{white-space:nowrap}
+.access-console .access-workflow button{align-self:flex-start}
+@media(max-width:620px){.access-console .access-forms{grid-template-columns:1fr}}
