@@ -335,7 +335,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    editing=null;form.reset();render();experience.reset();
   }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
  };
- experience=enhanceMeetings(root,{form,list,projectName,demo,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
+ experience=enhanceMeetings(root,{form,list,projectName,demo,role,isProjectCurrent,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
  if(!demo){
   const diagnostics=document.createElement('div');
   diagnostics.dataset.qaCalendarDiagnostics='';
