@@ -5,7 +5,7 @@ const kinds = Object.freeze([
  {id:'fire',pattern:/\b(incendio|fuego|humo|alarma de incendio)\b/,risk:'critical',specialty:'servicios oficiales de emergencia y personal de seguridad'},
  {id:'gas',pattern:/\b(gas|olor a gas|fuga de gas)\b/,risk:'critical',specialty:'servicios oficiales de emergencia y técnico de gas autorizado'},
  {id:'security',pattern:/\b(ciberataque|hackeo|phishing|cuenta comprometida|acceso no autorizado|intrusion|filtracion de datos)\b/,risk:'high',specialty:'responsable de seguridad digital'},
- {id:'elevator',pattern:/\b(ascensor|elevador|elevadores)\b/,risk:'high',specialty:'mantenimiento autorizado de ascensores'},
+ {id:'elevator',pattern:/\b(ascensor(?:es)?|elevador(?:es)?)\b/,risk:'high',specialty:'mantenimiento autorizado de ascensores'},
  {id:'electrical',pattern:/\b(electricidad|electrico|electrica|cortocircuito|cable pelado|tablero electrico|sin luz)\b/,risk:'high',specialty:'electricista autorizado'},
  {id:'water',pattern:/\b(fuga de agua|tuberia|plomeria|inundacion|bajante|alcantarillado|humedad)\b/,risk:'standard',specialty:'técnico hidráulico o plomero autorizado'},
  {id:'access',pattern:/\b(cerradura|porton|puerta automatica|control de acceso fisico|barrera vehicular)\b/,risk:'standard',specialty:'técnico autorizado de accesos físicos'},
@@ -14,7 +14,7 @@ const kinds = Object.freeze([
 export function missIncidentIntent(question){
  if(typeof question!=='string'||question.length>350)return false;
  const q=norm(question);
- return /\b(averia|dano|danado|se dano|roto|reparar|reparacion|proveedor|tecnico|emergencia|fuga|incendio|humo|fallo|falla|no funciona|no sirve|reportar incidente|reportar novedad)\b/.test(q)
+ return /\b(averia|dano|danado|se dano|rompio|roto|reparar|reparacion|proveedor|tecnico|emergencia|fuga|incendio|humo|fallo|falla|no funciona|no sirve|reportar incidente|reportar novedad)\b/.test(q)
     || (kinds.some(k=>k.pattern.test(q)) && /\b(ayuda|problema|quien|solucion|asistencia|arreglar)\b/.test(q));
 }
 export function classifyMissIncident(question){
