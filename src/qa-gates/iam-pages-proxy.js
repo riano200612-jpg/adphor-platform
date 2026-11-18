@@ -2,7 +2,7 @@
 // La ejecución real vive en una Supabase Edge Function protegida por JWT AAL2.
 const ORIGIN='https://qa-integral-claude-reviewed.adphor-platform.pages.dev';
 const SUPABASE='https://qfctnnnnltghepwujpdm.supabase.co';
-const URL=SUPABASE+'/functions/v1/adphor-iam';
+const EDGE_URL=SUPABASE+'/functions/v1/adphor-iam';
 const H={'Content-Type':'application/json; charset=utf-8',
   'Cache-Control':'no-store, max-age=0','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
 const response=(status,error='No fue posible atender la solicitud.')=>new Response(JSON.stringify({error}),{status,headers:H});
@@ -25,7 +25,7 @@ export async function iamPagesProxy({request,env},transport=fetch){
   if(body.length>12000)return response(413,'Solicitud demasiado extensa.');
  }
  try{
-  const r=await transport(URL,{method:request.method,
+  const r=await transport(EDGE_URL,{method:request.method,
     headers:{'Authorization':auth,'apikey':env.VITE_SUPABASE_ANON_KEY,'Origin':ORIGIN,
       'Content-Type':'application/json','Accept':'application/json'},
     body,redirect:'error',cache:'no-store'});
