@@ -20,6 +20,7 @@ test('isolated IAM migration: only active admin with live session can invite, as
  create schema auth;create schema qa_identity_private;
  create table auth.users(id uuid primary key,email text not null,email_confirmed_at timestamptz,banned_until timestamptz);
  create table auth.sessions(id uuid primary key,user_id uuid references auth.users(id));
+ create table auth.mfa_factors(id uuid primary key,user_id uuid references auth.users(id),status text);
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claims',true)::jsonb->>'sub','')::uuid$$;
  create function auth.jwt() returns jsonb language sql stable as $$select current_setting('request.jwt.claims',true)::jsonb$$;
  create table public.projects(id text primary key);
