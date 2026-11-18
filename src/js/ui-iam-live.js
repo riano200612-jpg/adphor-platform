@@ -69,6 +69,12 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
   section.append(status);
   status.textContent='Backend autorizado · control por cuenta, MFA y copropiedad';
   const metrics=node('div','','access-metrics');
+  const readiness=data.admin_state;
+  if(readiness){
+   for(const [label,value] of [['Administradores registrados',readiness.configured],['Administradores activos',readiness.active],['Correos admin confirmados',readiness.confirmed],['Admins con MFA',readiness.mfa_verified]]){
+    const metric=node('div');metric.append(node('span',label),node('strong',String(value??'—')));metrics.append(metric);
+   }
+  }
   for(const [label,value] of [['Cuentas laborales gestionadas',data.accounts.length],
     ['Habilitadas',data.accounts.filter(a=>a.status==='active').length],
     ['Suspendidas',data.accounts.filter(a=>a.status==='suspended').length],
