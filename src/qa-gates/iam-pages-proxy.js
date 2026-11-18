@@ -6,7 +6,7 @@ const URL=SUPABASE+'/functions/v1/adphor-iam';
 const H={'Content-Type':'application/json; charset=utf-8',
   'Cache-Control':'no-store, max-age=0','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
 const response=(status,error='No fue posible atender la solicitud.')=>new Response(JSON.stringify({error}),{status,headers:H});
-export async function iamPagesProxy({request,env}){
+export async function iamPagesProxy({request,env},transport=fetch){
  const url=new URL(request.url);
  if(url.origin!==ORIGIN||url.pathname!=='/api/iam'||url.search)return response(404,'Ruta no disponible.');
  if(!['GET','POST'].includes(request.method))return response(405,'Método no permitido.');
@@ -25,7 +25,7 @@ export async function iamPagesProxy({request,env}){
   if(body.length>12000)return response(413,'Solicitud demasiado extensa.');
  }
  try{
-  const r=await fetch(URL,{method:request.method,
+  const r=await transport(URL,{method:request.method,
     headers:{'Authorization':auth,'apikey':env.VITE_SUPABASE_ANON_KEY,'Origin':ORIGIN,
       'Content-Type':'application/json','Accept':'application/json'},
     body,redirect:'error',cache:'no-store'});
