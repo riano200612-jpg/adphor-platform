@@ -1,0 +1,46 @@
+/* Miss ADPHOR - printable, board-ready governance annex. */
+.executive-board-governance{
+  background:#fff;color:#173441;border-top:6px solid #c3a46c;
+}
+.executive-board-governance .executive-header{
+  border-bottom:1px solid #dfe9ed;padding-bottom:14px;margin-bottom:20px;
+}
+.executive-board-governance .executive-meta span:nth-child(2){
+  color:#735523;font-weight:700;overflow-wrap:anywhere;
+}
+.executive-board-governance .executive-section{
+  margin-bottom:20px;
+}
+.executive-board-governance .table-wrap{
+  overflow-x:auto;border:1px solid #d6e2e5;border-radius:9px;
+}
+.executive-board-governance table{
+  width:100%;border-collapse:collapse;table-layout:fixed;
+}
+.executive-board-governance th{
+  background:#14354a;color:#fff;font-size:11px;padding:9px 7px;text-align:left;
+  line-height:1.4;font-weight:650;
+}
+.executive-board-governance td{
+  padding:8px 7px;vertical-align:top;font-size:11px;line-height:1.4;
+  color:#25434c;border-bottom:1px solid #e3e9ed;overflow-wrap:anywhere;
+}
+.executive-board-governance tr:nth-child(even) td{background:#f6f9fa}
+.executive-board-governance th:first-child,
+.executive-board-governance td:first-child{width:10%}
+.executive-board-governance .executive-reconcile{margin-top:20px}
+.executive-board-governance .executive-notes{margin-top:18px}
+@media(max-width:720px){
+ .executive-board-governance .table-wrap{overflow-x:auto}
+ .executive-board-governance table{min-width:640px}
+}
+@media print{
+ .executive-board-governance{break-before:page;page-break-before:always}
+ .executive-board-governance .table-wrap{overflow:visible;border:0}
+ .executive-board-governance table{min-width:0!important;table-layout:fixed}
+ .executive-board-governance th{font-size:7pt;padding:5px 4px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ .executive-board-governance td{font-size:7pt;padding:5px 4px;line-height:1.2}
+ .executive-board-governance tr{break-inside:avoid;page-break-inside:avoid}
+ .executive-board-governance .executive-section{break-inside:auto}
+ .executive-board-governance .executive-notes{font-size:8pt}
+}
