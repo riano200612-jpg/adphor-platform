@@ -4,6 +4,8 @@ begin;
 create schema if not exists qa_identity_private;
 revoke all on schema qa_identity_private from public,anon,authenticated;
 grant usage on schema qa_identity_private to service_role,authenticated,supabase_auth_admin;
+-- USAGE para authenticated es requerido por las políticas RLS preexistentes;
+-- la tabla y funciones administrativas siguen sin grants a ese rol.
 
 create table if not exists qa_identity_private.iam_accounts (
   email text primary key check (email=lower(btrim(email)) and length(email) between 5 and 254),
