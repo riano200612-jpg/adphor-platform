@@ -77,7 +77,7 @@ test('non operators, AAL1 and forged identity are denied before any management c
 test('read path requires authorized technical admin and has no cache or secrets',async()=>{
  const f=fixture();
  const res=await f.handler({request:f.request(),env});
- assert.equal(res.status,200);assert.deepEqual(await res.json(),{enabled:true,accounts:[],audit:[]});
+ assert.equal(res.status,200);assert.deepEqual(await res.json(),{enabled:true,admin_state:null,accounts:[],audit:[]});
  assert.match(res.headers.get('Cache-Control'),/no-store/);
  assert.equal(res.headers.get('Set-Cookie'),null);
  assert.equal(res.headers.get('Access-Control-Allow-Origin'),null);
