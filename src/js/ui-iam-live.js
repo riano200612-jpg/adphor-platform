@@ -30,7 +30,7 @@ function roleAssignments(formHost,projects,grants){
  const search=control('input','search','Buscar por nombre de copropiedad');
  search.setAttribute('aria-label','Buscar copropiedad para asignar permiso');
  search.autocomplete='off';
- const counter=node('p','','access-grants-count');counter.setAttribute('role','status');
+ const counter=node('p','','access-grants-count');counter.setAttribute('aria-live','polite');counter.setAttribute('aria-atomic','true');
  const more=node('button','Ver todas las copropiedades','btn secondary');more.type='button';
  toolbar.append(field('Buscar copropiedad',search),counter,more,node('p','Marca solo las copropiedades autorizadas. La búsqueda no borra lo seleccionado.','access-grants-help'));
  const wrap=node('div','','access-grants-editor');
