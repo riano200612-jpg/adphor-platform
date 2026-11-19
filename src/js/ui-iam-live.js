@@ -12,25 +12,65 @@ function fillProjects(select,projects){select.append(new Option('Selecciona una 
 function fillRoles(select){for(const [id,label] of Object.entries(PROPERTY_ROLES))select.append(new Option(label,id));}
 function button(text){const n=node('button',text,'btn secondary');n.type='submit';return n;}
 function form(title){const f=node('form','','access-workflow panel adphor-simple-form');f.noValidate=true;f.append(node('h3',title));return f;}
+function showFieldError(form,message,target){
+ let error=form.querySelector('[data-access-form-error]');
+ if(!error){
+  error=node('p','','access-form-error');error.dataset.accessFormError='';
+  error.setAttribute('role','alert');error.setAttribute('aria-live','assertive');error.tabIndex=-1;
+  form.append(error);
+  const clear=e=>{if(e.target instanceof HTMLElement)e.target.removeAttribute('aria-invalid');error.textContent='';};
+  form.addEventListener('input',clear);form.addEventListener('change',clear);
+ }
+ error.textContent=message;
+ if(target){target.setAttribute('aria-invalid','true');target.focus();}else error.focus();
+}
 function roleAssignments(formHost,projects,grants){
  const selected=new Map((Array.isArray(grants)?grants:[]).map(g=>[g.project_id,g.role]));
+ const toolbar=node('div','','access-grants-toolbar');
+ const search=control('input','search','Buscar por nombre de copropiedad');
+ search.setAttribute('aria-label','Buscar copropiedad para asignar permiso');
+ search.autocomplete='off';
+ const counter=node('p','','access-grants-count');counter.setAttribute('aria-live','polite');counter.setAttribute('aria-atomic','true');
+ const more=node('button','Ver todas las copropiedades','btn secondary');more.type='button';
+ toolbar.append(field('Buscar copropiedad',search),counter,more,node('p','Marca solo las copropiedades autorizadas. La búsqueda no borra lo seleccionado.','access-grants-help'));
  const wrap=node('div','','access-grants-editor');
- const result=[];
+ const rows=[];
  for(const p of projects){
   if(!p?.id)continue;
+  const name=String(p.name||p.id);
   const line=node('div','','access-grant-row');
   const checkbox=control('input','checkbox');checkbox.checked=selected.has(p.id);
-  checkbox.setAttribute('aria-label','Permitir '+String(p.name||p.id));
+  checkbox.setAttribute('aria-label','Permitir '+name);
   const role=control('select');fillRoles(role);role.value=selected.get(p.id)||'viewer';
-  const label=node('label');label.append(checkbox,node('span',String(p.name||p.id)));
-  line.append(label,role);wrap.append(line);result.push({checkbox,role,project_id:p.id});
+  role.setAttribute('aria-label','Rol para '+name);
+  const label=node('label');label.append(checkbox,node('span',name));
+  line.append(label,role);wrap.append(line);
+  rows.push({checkbox,role,project_id:p.id,name,line});
  }
- formHost.replaceChildren(wrap);
- const getSelected=()=>result.filter(x=>x.checkbox.checked)
-   .map(x=>({project_id:x.project_id,role:x.role.value}));
- // A historical user must never inherit a prior invitee's assignments.
- getSelected.reset=()=>{for(const x of result){x.checkbox.checked=false;x.role.value='viewer';}};
- return getSelected;
+ const limit=8;let expanded=rows.length<=limit;
+ const update=()=>{
+  const term=search.value.trim().toLocaleLowerCase('es');let visible=0;
+  for(const row of rows){
+   const matches=!term||row.name.toLocaleLowerCase('es').includes(term)||row.project_id.toLocaleLowerCase('es').includes(term);
+   const show=matches&&(Boolean(term)||expanded||visible<limit);
+   row.line.hidden=!show;if(show)visible++;
+  }
+  const marked=rows.filter(row=>row.checkbox.checked).length;
+  counter.textContent=visible+' de '+rows.length+' copropiedades visibles · '+marked+' seleccionadas';
+  more.hidden=Boolean(term)||rows.length<=limit;
+  more.textContent=expanded?'Mostrar menos copropiedades':'Ver las '+rows.length+' copropiedades';
+ };
+ for(const row of rows)row.checkbox.addEventListener('change',update);
+ search.addEventListener('input',update);
+ more.addEventListener('click',()=>{expanded=!expanded;update();});
+ formHost.replaceChildren(toolbar,wrap);
+ const getSelected=()=>rows.filter(row=>row.checkbox.checked).map(row=>({project_id:row.project_id,role:row.role.value}));
+ getSelected.reset=()=>{
+  for(const row of rows){row.checkbox.checked=false;row.role.value='viewer';}
+  search.value='';expanded=rows.length<=limit;update();
+ };
+ getSelected.focusSearch=()=>search.focus();
+ update();return getSelected;
 }
 const statusText={
  active:'Habilitado (sujeto a MFA)',inviting:'Invitación en curso',
@@ -109,10 +149,14 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
   invite.addEventListener('submit',e=>{
    e.preventDefault();
    const assignments=selectedInviteGrants();
-   if(!inviteName.value.trim()||!inviteEmail.validity.valid||!inviteEmail.value.trim()||
-      assignments.length===0||assignments.length>100||inviteReason.value.trim().length<8){
-    status.textContent='Completa nombre, correo válido, al menos una copropiedad y motivo de autorización.';return;
+   if(!inviteName.value.trim()){showFieldError(invite,'Escribe el nombre completo de la persona.',inviteName);return;}
+   if(!inviteEmail.validity.valid||!inviteEmail.value.trim()){showFieldError(invite,'Introduce un correo electrónico válido.',inviteEmail);return;}
+   if(assignments.length===0||assignments.length>100){
+    status.textContent='Debes seleccionar al menos una copropiedad autorizada. Usa el buscador para encontrarla.';
+    showFieldError(invite,'Marca al menos una copropiedad autorizada. Usa el buscador si no aparece.',null);
+    selectedInviteGrants.focusSearch();return;
    }
+   if(inviteReason.value.trim().length<8){showFieldError(invite,'Describe la aprobación en al menos ocho caracteres.',inviteReason);return;}
    void run('invite',{name:inviteName.value.trim(),email:inviteEmail.value.trim(),
     assignments,reason:inviteReason.value.trim(),
     ...(selectedHistoricAlias?{historic_alias:selectedHistoricAlias}:{})},inviteButton);
@@ -132,8 +176,13 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
   const grantButton=button('Actualizar permisos reales');
   grants.append(field('Cuenta laboral',choose),grantHost,field('Motivo y aprobación',grantReason),grantButton);
   grants.addEventListener('submit',e=>{
-   e.preventDefault();if(!choose.value||grantReason.value.trim().length<8||selectedGrants().length===0){
-    status.textContent='Selecciona una cuenta, al menos una copropiedad y el motivo.';return;}
+   e.preventDefault();
+   if(!choose.value){showFieldError(grants,'Selecciona la cuenta laboral autorizada.',choose);return;}
+   if(selectedGrants().length===0){
+    showFieldError(grants,'Marca al menos una copropiedad autorizada.',null);
+    selectedGrants.focusSearch?.();return;
+   }
+   if(grantReason.value.trim().length<8){showFieldError(grants,'Explica el cambio en al menos ocho caracteres.',grantReason);return;}
    void run('grant',{email:choose.value,assignments:selectedGrants(),reason:grantReason.value.trim()},grantButton);
   });
   const removal=form('Suspender o desvincular');
@@ -151,8 +200,11 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
     field('Confirmación del correo',confirmation),field('Motivo',reason),removeButton);
   removal.addEventListener('submit',e=>{
    e.preventDefault();
-   if(!user.value||confirmation.value.trim().toLowerCase()!==user.value||reason.value.trim().length<8){
-    status.textContent='Debes escribir el correo exacto y documentar el motivo.';return;}
+   if(!user.value){showFieldError(removal,'Selecciona la cuenta laboral autorizada.',user);return;}
+   if(confirmation.value.trim().toLowerCase()!==user.value){
+    showFieldError(removal,'Escribe exactamente el correo seleccionado para confirmar.',confirmation);return;
+   }
+   if(reason.value.trim().length<8){showFieldError(removal,'Explica el motivo en al menos ocho caracteres.',reason);return;}
    void run(action.value,{email:user.value,reason:reason.value.trim()},removeButton);
   });
   forms.append(invite,grants,removal);section.append(forms);
