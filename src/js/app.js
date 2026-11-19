@@ -1,6 +1,7 @@
 import {mountAccessManagement} from './ui-access-management.js';
 import {mountVerifiedAgenda} from './ui-verified-agenda.js';
 import {mountQaTaskCatalog} from './ui-task-catalog.js';
+import {createQaIdleGuard,expiredStoredSession} from './services/qa-idle-session.js';
 import {renderEasyCaseForm} from './ui-easy-case-form.js';
 import {locateFormError} from './services/easy-form-options.js';
 import {renderOperationalAgenda} from './ui-operational-agenda.js';
@@ -69,6 +70,27 @@ const state = { user: null, projects: [], members: [], tickets: [], projectId: '
 let busy = false;
 let monthlyResult = null;
 let monthlyKey = '';
+// Only a fully authenticated QA session starts this clock. Demo/unauthenticated
+// pages are unaffected, and every authenticated navigation keeps its timestamp.
+const idleSession=createQaIdleGuard({
+  storage:sessionStorage,
+  onExpire:()=>{
+    if(!state.user)return;
+    state.user=null;state.corporateAdmin=false;state.projects=[];state.members=[];
+    state.tickets=[];state.projectId='';monthlyResult=null;monthlyKey='';
+    if(dialog.open)dialog.close();
+    loginScreen();
+    const note=$('login-error');
+    if(note)note.textContent='Por seguridad, tu sesión terminó tras 10 minutos sin actividad. Ingresa nuevamente.';
+    void repo.logout().catch(()=>{/* A persisted expired marker prevents automatic re-entry. */});
+  }
+});
+for(const name of ['pointerdown','keydown','input','touchstart']){
+  document.addEventListener(name,()=>{if(repo.mode==='cloud')idleSession.activity();},{passive:true});
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)idleSession.check();});
+window.addEventListener('focus',()=>idleSession.check());
+
 const currentReportKey = () => `${state.projectId}:${state.reportMonth}`;
 
 let toastTimer;
@@ -164,6 +186,7 @@ function selectWorkspaceProject(id) {
   projectPreference(sessionStorage,state.user?.id,id); shell();
 }
 function shell() {
+  if(repo.mode==='cloud'&&state.user&&!idleSession.start(state.user.id))return;
   const nav = [['dashboard','chart-simple','Resumen'],['unified','grip','Centro integrado'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
   nav.splice(1,0,['meetings','calendar','Reuniones'],['agenda','calendar-days','Agenda'],['visits','route','Visitas'],['pqrs','inbox','PQRS']);
@@ -394,9 +417,11 @@ async function submit(event) {
       const result = await repo.login(input);
       if(result.mfaRequired) {mfaScreen(result.enrollmentRequired);return;}
       state.user = result;
+      if(repo.mode==='cloud')idleSession.start(state.user.id,{fresh:true});
       await refresh(); state.page = 'dashboard'; state.filters = {}; state.sprintOffset=0;state.sprintScope='mine'; shell();
     } else if(form.id === 'mfa-form') {
       state.user=await repo.completeMfa(input.code);form.reset();
+      if(repo.mode==='cloud')idleSession.start(state.user.id,{fresh:true});
       await refresh();state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';shell();
     } else {
       const files = [...(form.elements.photos?.files || [])]; validateFiles(files);
@@ -444,7 +469,7 @@ document.addEventListener('click', async event => {
       case 'close-dialog': dialog.close(); break;
       case 'clear': state.filters = {}; renderPage(); break;
       case 'refresh': el.disabled = true; try { await refresh(); shell(); toast('Datos actualizados.'); } finally { el.disabled = false; } break;
-      case 'logout': monthlyResult=null; monthlyKey=''; state.sprintOffset=0;state.sprintScope='mine'; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
+      case 'logout': idleSession.stop({clearStorage:true}); monthlyResult=null; monthlyKey=''; state.sprintOffset=0;state.sprintScope='mine'; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
       case 'monthly-load':
       case 'monthly-finalize': {
         const projectId=state.projectId, month=state.reportMonth, requestKey=currentReportKey();
@@ -502,6 +527,13 @@ async function startPortal() {
     return;
   }
   if(recoveryHandled)return;
+  if(repo.mode==='cloud'&&expiredStoredSession(sessionStorage)){
+    try{await repo.logout();}catch{/* Do not restore an expired token. */}
+    loginScreen();
+    const note=$('login-error');
+    if(note)note.textContent='La sesión anterior terminó por inactividad. Ingresa nuevamente.';
+    return;
+  }
   try {
     // Do not render a protected page until remote identity, AAL2 and RLS
     // have all been revalidated by the QA-only repository.
