@@ -44,4 +44,6 @@ test('QA route is privileged and corporate Calendar untouched',()=>{
  assert.ok(app.includes('qaTaskCatalogEnabled'));
  assert.ok(app.includes('isManager(role())'));
  assert.ok(app.includes('mountVerifiedAgenda'));
+ assert.ok(app.includes('data-page="task-catalog"'));
+ assert.ok(!app.includes("nav.push(['task-catalog'"),'No extra Inicio circle for proposal workflow');
 });
