@@ -88,7 +88,13 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
   }section.append(metrics);
   const forms=node('div','','access-forms');
   const invite=form('Invitar personal (correo y contraseña propia)');
+  let selectedHistoricAlias='';
   const inviteName=control('input','text','Nombre completo');inviteName.maxLength=120;
+  // Editing the selected name invalidates the alias association, never silently reuses it.
+  inviteName.addEventListener('input',()=>{
+   if(selectedHistoricAlias){selectedHistoricAlias='';
+    status.textContent='Nombre modificado. La vinculación al alias histórico se canceló; vuelve a preseleccionarlo para asociarlo.';}
+  });
   const inviteEmail=control('input','email','persona@empresa.com');
   const inviteGrantsHost=node('div');
   const selectedInviteGrants=roleAssignments(inviteGrantsHost,projects,[]);
@@ -108,7 +114,8 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
     status.textContent='Completa nombre, correo válido, al menos una copropiedad y motivo de autorización.';return;
    }
    void run('invite',{name:inviteName.value.trim(),email:inviteEmail.value.trim(),
-    assignments,reason:inviteReason.value.trim()},inviteButton);
+    assignments,reason:inviteReason.value.trim(),
+    ...(selectedHistoricAlias?{historic_alias:selectedHistoricAlias}:{})},inviteButton);
   });
   const grants=form('Cambiar permisos por copropiedad');
   const choose=control('select');choose.append(new Option('Selecciona cuenta habilitada',''));
@@ -191,11 +198,12 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
         // Clearing all prior form data is mandatory: never accidentally send
         // another employee's email, property grants, or approval text.
         inviteName.value=draft.display_name;
+        selectedHistoricAlias=draft.historic_alias;
         inviteEmail.value='';
         selectedInviteGrants.reset();
         inviteReason.value='';
         status.textContent='Preseleccionado '+draft.historic_alias+
-          '. Alias aún no vinculado para iniciar sesión. Verifica identidad, correo personal, copropiedad y motivo antes de enviar una invitación.';
+          '. Se asociará a la invitación solo tras validación de servidor. Verifica identidad, correo personal, copropiedad y motivo; el usuario establecerá su propia contraseña y MFA.';
         invite.scrollIntoView?.({behavior:'smooth',block:'nearest'});
         inviteEmail.focus();
        }catch{status.textContent='No se pudo preparar esta identidad. Revisa su estado.';}
