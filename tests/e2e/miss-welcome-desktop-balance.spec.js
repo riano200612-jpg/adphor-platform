@@ -20,6 +20,10 @@ for(const [width,height] of [[1440,900],[1366,768],[1200,800],[1024,768],[920,70
   await page.setViewportSize({width,height});
   await page.goto('./');
   await enableQaWelcomeOnLocalHost(page);
+  await expect(page.locator('#login-form')).toBeHidden();
+  await expect(page.getByRole('button',{name:'Primera vez'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Ingresar al portal'})).toBeVisible();
+  await page.getByRole('button',{name:'Ingresar al portal'}).click();
   const story=await page.locator('.login-story').boundingBox();
   const portrait=await page.locator('.client-avatar-frame').boundingBox();
   const form=await page.locator('.login-form-wrap form').boundingBox();
@@ -61,6 +65,8 @@ for(const [width,height] of [[820,768],[760,620],[600,800]]){
   await page.setViewportSize({width,height});
   await page.goto('./');
   await enableQaWelcomeOnLocalHost(page);
+  await expect(page.locator('#login-form')).toBeHidden();
+  await page.getByRole('button',{name:'Ingresar al portal'}).click();
   const story=await page.locator('.login-story').boundingBox();
   const panel=await page.locator('.login-form-wrap').boundingBox();
   const portrait=await page.locator('.client-avatar-frame').boundingBox();
@@ -79,6 +85,10 @@ test('QA Integral: desktop login keeps keyboard navigation, semantic labels and 
  await page.setViewportSize({width:1366,height:768});
  await page.goto('./');
  await enableQaWelcomeOnLocalHost(page);
+ await expect(page.locator('#login-form')).toBeHidden();
+ const coverAccessibility=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
+ expect(coverAccessibility.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);
+ await page.getByRole('button',{name:'Ingresar al portal'}).click();
  const accessibility=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
  expect(accessibility.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);
  const submit=page.locator('#login-form button.btn.primary');
@@ -87,7 +97,7 @@ test('QA Integral: desktop login keeps keyboard navigation, semantic labels and 
  await expect(page.locator('#login-form label')).not.toHaveCount(0);
 });
 
-test('QA Integral: the original mobile login presentation is not modified',async({page})=>{
+test('QA Integral: original branding remains intact even when cover route is enabled',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto('./');
  await page.locator('.login-shell').evaluate(el=>el.classList.add('miss-welcome-cover'));

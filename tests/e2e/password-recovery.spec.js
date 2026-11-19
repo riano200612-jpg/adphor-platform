@@ -70,6 +70,8 @@ test('login password visibility toggles without submitting or changing its value
   let authRequests = 0;
   await page.route('https://qfctnnnnltghepwujpdm.supabase.co/**', async route => {authRequests++;await route.abort();});
   await page.goto(origin);
+  // Explicitly choose the corporate login after the introductory cover.
+  await page.getByRole('button',{name:'Ingresar al portal'}).click();
   const password = page.getByLabel('Contraseña', {exact:true});
   await password.fill('synthetic-visibility-only');
   await expect(password).toHaveAttribute('type', 'password');
@@ -105,6 +107,8 @@ for (const existing of [false,true]) test(`QA login ${existing?'challenges exist
     await route.abort();
   });
   await page.goto(origin);
+  // Explicitly choose the corporate login after the introductory cover.
+  await page.getByRole('button',{name:'Ingresar al portal'}).click();
   await page.getByLabel('Correo o usuario',{exact:true}).fill('synthetic@example.invalid');
   await page.getByLabel('Contraseña',{exact:true}).fill('synthetic-password');
   await page.getByRole('button',{name:'Ingresar',exact:true}).click();

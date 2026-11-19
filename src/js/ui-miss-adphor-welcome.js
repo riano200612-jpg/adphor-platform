@@ -12,8 +12,14 @@ export function shouldOfferMissWelcome({enabled,hostname}={}) {
 export function mountMissAdphorWelcome(root, options={}) {
   const frame=root?.querySelector?.('.client-avatar-frame');
   const portrait=frame?.querySelector?.('.client-avatar-image');
-  if(!frame || !portrait || typeof document==='undefined')return ()=>{};
+  const shell=root?.querySelector?.('.login-shell');
+  const loginPanel=root?.querySelector?.('.login-form-wrap');
+  if(!frame || !portrait || !shell || !loginPanel || typeof document==='undefined')return ()=>{};
+  // The existing form remains mounted. Recovery links may return directly to
+  // login, while normal visits always start with Miss ADPHOR's cover.
   if((options.videoPath ?? MISS_WELCOME_VIDEO_PATH)!==MISS_WELCOME_VIDEO_PATH)return ()=>{};
+  const initialLogin=options.initialView==='login';
+  shell.classList.add(initialLogin?'miss-entry-is-login':'miss-entry-is-cover');
 
   const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
   const video=document.createElement('video');
@@ -51,14 +57,13 @@ export function mountMissAdphorWelcome(root, options={}) {
   corporateLogo.loading='eager';corporateLogo.decoding='async';
   const motto=document.createElement('p');motto.textContent='Administramos sueños';
   identity.append(corporateLogo,motto);
-  const mobileIdentity=globalThis.matchMedia?.('(max-width:580px)')?.matches===true;
-  const mobileBrand=mobileIdentity?root.querySelector?.('.login-story > .brand'):null;
-  const originalMobileBrandMarkup=mobileBrand?.innerHTML;
-  const eyebrow=mobileBrand?null:root.querySelector?.('.login-form-wrap .eyebrow');
-  // Preserve the login-story child ordering used by the existing QA layout CSS.
-  if(mobileBrand)mobileBrand.replaceChildren(identity);
-  else if(eyebrow){eyebrow.hidden=true;eyebrow.after(identity);}
-  else root.querySelector?.('#login-form')?.append?.(identity);
+  const eyebrow=root.querySelector?.('.login-form-wrap .eyebrow');
+  const loginForm=root.querySelector?.('#login-form');
+  // Keep the official logo immediately above the original credential heading
+  // on desktop and mobile, without rebuilding/replacing the form or its inputs.
+  if(eyebrow){eyebrow.hidden=true;eyebrow.after(identity);}
+  else if(loginForm?.insertBefore)loginForm.insertBefore(identity,loginForm.firstChild);
+  else loginForm?.append?.(identity);
 
   // Two entry choices requested by José in the 18 November ADPHOR meeting.
   // The original corporate portrait, MP4 and login are deliberately untouched.
@@ -72,13 +77,24 @@ export function mountMissAdphorWelcome(root, options={}) {
   const enter=document.createElement('button');
   enter.type='button';enter.className='miss-entry-login';
   enter.textContent='Ingresar al portal';
+  enter.setAttribute('aria-controls','login-form');
+  enter.setAttribute('aria-expanded',String(initialLogin));
   actions.append(firstTime,enter);frame.after(actions);
+  const back=document.createElement('button');
+  back.type='button';
+  back.className='miss-entry-back';
+  back.textContent='Volver a la portada';
+  loginPanel.append(back);
   const guide=document.createElement('dialog');
   guide.className='miss-entry-guide';guide.id='miss-entry-guide';guide.hidden=true;
   guide.setAttribute('aria-modal','true');
   guide.setAttribute('aria-label','Guía de primer ingreso de Miss ADPHOR');
   guide.innerHTML=`<h2 tabindex="-1">Tu primera vez en ADPHOR</h2>
     <p>Miss ADPHOR te acompaña para comenzar con seguridad.</p>
+    <div class="miss-entry-tutorial-slot" role="status" aria-label="Video tutorial pendiente">
+      <strong>Video tutorial de ADPHOR</strong>
+      <p>El video explicativo se incorporará aquí más adelante. Mientras tanto, puedes seguir estos pasos.</p>
+    </div>
     <ol>
       <li>Ingresa el usuario y la contraseña temporal que te entregaron.</li>
       <li>Cuando la plataforma te lo solicite, crea tu contraseña personal.</li>
@@ -86,8 +102,11 @@ export function mountMissAdphorWelcome(root, options={}) {
       <li>Si tu cuenta tiene habilitada la opción de correo personal, solicita e ingresa el código recibido. Esta opción no está disponible para todas las cuentas.</li>
       <li>Si olvidaste tu contraseña, selecciona «¿Olvidaste tu contraseña?».</li>
     </ol>
-    <p>Este es un tutorial escrito de primer ingreso. El video existente es de bienvenida; el tutorial audiovisual completo sigue pendiente.</p>
-    <button class="miss-entry-guide-close" type="button">Cerrar guía</button>`;
+    <p>Este es un tutorial escrito de primer ingreso; el tutorial audiovisual completo sigue pendiente.</p>
+    <div class="miss-entry-guide-actions">
+      <button class="miss-entry-guide-close" type="button">Volver a portada</button>
+      <button class="miss-entry-guide-login" type="button">Continuar al ingreso</button>
+    </div>`;
   actions.after(guide);
   firstTime.setAttribute('aria-controls',guide.id);
   const closeGuide=()=>{
@@ -154,27 +173,43 @@ export function mountMissAdphorWelcome(root, options={}) {
     }else updateSound(true);
   });
 
+  const showCover=()=>{
+    if(disposed)return;
+    closeGuide();
+    shell.classList.remove('miss-entry-is-login');
+    shell.classList.add('miss-entry-is-cover');
+    enter.setAttribute('aria-expanded','false');
+    shell.scrollIntoView?.({behavior:'auto',block:'start'});
+    enter.focus?.({preventScroll:true});
+  };
+  const showLogin=()=>{
+    if(disposed)return;
+    closeGuide();
+    showPortrait();
+    shell.classList.remove('miss-entry-is-cover');
+    shell.classList.add('miss-entry-is-login');
+    enter.setAttribute('aria-expanded','true');
+    loginPanel.scrollIntoView?.({behavior:'auto',block:'start'});
+    const heading=loginPanel.querySelector?.('h2');
+    if(heading){
+      heading.setAttribute('tabindex','-1');
+      heading.focus?.({preventScroll:true});
+    }else loginForm?.focus?.({preventScroll:true});
+  };
   firstTime.addEventListener('click',()=>{
     if(disposed)return;
     guide.hidden=false;
     if(typeof guide.showModal==='function' && !guide.open)guide.showModal();
     firstTime.setAttribute('aria-expanded','true');
     guide.querySelector?.('h2')?.focus?.();
-    void play(true);
+    // Do not confuse the welcome video with the not-yet-produced tutorial.
   });
-  enter.addEventListener('click',()=>{
-    if(disposed)return;
-    closeGuide();
-    const field=root.querySelector('#login-form [name="email"]')
-      ?? root.querySelector('#login-form [name="profile"]')
-      ?? root.querySelector('#login-form input');
-    const form=root.querySelector('#login-form');
-    (field??form)?.scrollIntoView?.({behavior:reducedMotion?'instant':'smooth',block:'center'});
-    (field??form)?.focus?.({preventScroll:true});
-  });
+  enter.addEventListener('click',showLogin);
+  back.addEventListener('click',showCover);
+  guide.querySelector?.('.miss-entry-guide-login')?.addEventListener('click',showLogin);
   video.addEventListener('ended',showPortrait);
   video.addEventListener('error',showPortrait);
-  if(!reducedMotion)void play(false);
+  if(!reducedMotion && !initialLogin)void play(false);
   // With reduced motion enabled the original portrait stays visible; the
   // speaker button allows starting the presentation on an explicit tap.
   return ()=>{
@@ -183,9 +218,10 @@ export function mountMissAdphorWelcome(root, options={}) {
     video.removeAttribute('src');
     video.load();
     video.remove();
-    closeGuide();controls.remove();actions.remove();guide.remove();
-    identity.remove();if(mobileBrand)mobileBrand.innerHTML=originalMobileBrandMarkup;
-    if(eyebrow)eyebrow.hidden=false;
+    closeGuide();controls.remove();actions.remove();guide.remove();back.remove();
+    shell.classList.remove('miss-entry-is-cover');
+    shell.classList.remove('miss-entry-is-login');
+    identity.remove();if(eyebrow)eyebrow.hidden=false;
     portrait.hidden=false;
     frame.classList.remove('miss-welcome-playing');
   };

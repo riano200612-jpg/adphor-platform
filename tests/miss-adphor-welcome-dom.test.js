@@ -25,14 +25,15 @@ function setupFakeDom({reducedMotion=false,rejectPlay=false}={}){
     remove(){this.removed=true;}
   }
   const frame=new El('div'),portrait=new El('img'),form=new El('form');
-  portrait.setAttribute('src','/assets/branding/miss-adphor-qa-integral(4).webp');
+  const shell=new El('main'),loginPanel=new El('section');
+  portrait.setAttribute('src','/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp');
   frame.querySelector=s=>s==='.client-avatar-image'?portrait:null;
-  const root={querySelector:s=>s==='.client-avatar-frame'?frame:s==='#login-form'?form:null};
+  const root={querySelector:s=>s==='.client-avatar-frame'?frame:s==='#login-form'?form:s==='.login-shell'?shell:s==='.login-form-wrap'?loginPanel:null};
   const prev={document:globalThis.document,matchMedia:globalThis.matchMedia,sessionStorage:globalThis.sessionStorage};
   globalThis.document={createElement:tag=>new El(tag)};
   globalThis.matchMedia=()=>({matches:reducedMotion});
   globalThis.sessionStorage={setItem(){}};
-  return {root,frame,portrait,form,created,restore(){for(const [k,v] of Object.entries(prev)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}};
+  return {root,frame,portrait,form,shell,loginPanel,created,restore(){for(const [k,v] of Object.entries(prev)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}};
 }
 
 test('autoplay is muted and only a single circular sound button is created',async()=>{
@@ -43,7 +44,7 @@ test('autoplay is muted and only a single circular sound button is created',asyn
     const buttons=dom.created.filter(e=>e.tag==='button');
     const sound=buttons[0];
     assert.ok(video);
-    assert.equal(buttons.length,3);
+    assert.equal(buttons.length,4);
     assert.equal(sound.className,'miss-welcome-sound');
     assert.equal(sound.attrs['aria-label'],'Activar sonido de Miss ADPHOR');
     assert.equal(sound.attrs['aria-pressed'],'false');
@@ -72,7 +73,7 @@ test('autoplay is muted and only a single circular sound button is created',asyn
     await video.fire('ended');
     assert.equal(dom.portrait.hidden,false);
     assert.equal(dom.form.classList.contains('miss-welcome-ready'),true);
-    assert.equal(buttons.length,3);
+    assert.equal(buttons.length,4);
     // The same unobtrusive speaker button replays the clip after it ends.
     await sound.fire('click');
     assert.equal(video.playCount,3);
@@ -124,7 +125,7 @@ test('media error falls back to original portrait; external video paths are reje
     await video.fire('error');
     assert.equal(dom.portrait.hidden,false);
     assert.equal(video.hidden,true);
-    assert.equal(dom.created.filter(e=>e.tag==='button').length,3);
+    assert.equal(dom.created.filter(e=>e.tag==='button').length,4);
   }finally{dom.restore();}
   const other=setupFakeDom();
   try{
@@ -145,6 +146,9 @@ test('first-visit and existing-user choices preserve original login',async()=>{
     assert.equal(first.textContent,'Primera vez');
     assert.equal(enter.textContent,'Ingresar al portal');
     assert.equal(guide.hidden,true);
+    assert.equal(dom.shell.classList.contains('miss-entry-is-cover'),true);
+    assert.match(guide.innerHTML,/Video tutorial de ADPHOR/);
+    assert.match(guide.innerHTML,/El video explicativo se incorporará aquí más adelante/);
     assert.match(guide.innerHTML,/código QR/);
     assert.match(guide.innerHTML,/correo personal/);
     assert.match(guide.innerHTML,/no está disponible para todas las cuentas/);
@@ -155,8 +159,17 @@ test('first-visit and existing-user choices preserve original login',async()=>{
     await enter.fire('click');
     assert.equal(guide.hidden,true);
     assert.equal(first.attrs['aria-expanded'],'false');
+    assert.equal(dom.shell.classList.contains('miss-entry-is-cover'),false);
+    assert.equal(dom.shell.classList.contains('miss-entry-is-login'),true);
+    assert.equal(enter.attrs['aria-expanded'],'true');
     assert.equal(dom.form.disabled,undefined);
+    const back=dom.created.find(e=>e.className==='miss-entry-back');
+    assert.ok(back);
+    await back.fire('click');
+    assert.equal(dom.shell.classList.contains('miss-entry-is-cover'),true);
+    assert.equal(dom.shell.classList.contains('miss-entry-is-login'),false);
     cleanup();
+    assert.equal(dom.shell.classList.contains('miss-entry-is-cover'),false);
     assert.equal(guide.removed,true);
     assert.equal(first.removed,undefined);
   }finally{dom.restore();}
@@ -179,9 +192,26 @@ test('shows official ADPHOR identity without replacing the original portrait or 
     const slogan=dom.created.find(e=>e.tag==='p' && e.textContent==='Administramos sueños');
     assert.ok(image);assert.ok(slogan);
     assert.equal(image.src,'/assets/branding/adphor-logo-oficial-v3.png');
-    assert.equal(dom.portrait.getAttribute('src'),'/assets/branding/miss-adphor-qa-integral(4).webp');
+    assert.equal(dom.portrait.getAttribute('src'),'/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp');
     assert.equal(dom.form.disabled,undefined);
     const brand=dom.created.find(e=>e.className==='miss-qa-corporate-identity');
     stop();assert.equal(brand.removed,true);
+  }finally{dom.restore();}
+});
+
+test('a recovery return starts directly at credentials, not a hidden form',async()=>{
+  const dom=setupFakeDom({reducedMotion:true});
+  try{
+    const stop=mountMissAdphorWelcome(dom.root,{initialView:'login'});
+    assert.equal(dom.shell.classList.contains('miss-entry-is-cover'),false);
+    assert.equal(dom.shell.classList.contains('miss-entry-is-login'),true);
+    const video=dom.created.find(e=>e.tag==='video');
+    assert.equal(video.playCount,0);
+    const enter=dom.created.find(e=>e.className==='miss-entry-login');
+    assert.equal(enter.attrs['aria-expanded'],'true');
+    const back=dom.created.find(e=>e.className==='miss-entry-back');
+    await back.fire('click');
+    assert.equal(dom.shell.classList.contains('miss-entry-is-cover'),true);
+    stop();
   }finally{dom.restore();}
 });

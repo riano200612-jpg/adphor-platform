@@ -359,3 +359,102 @@
  .miss-welcome-cover .miss-qa-corporate-identity img{flex:none;width:76px;max-height:43px;}
  .miss-welcome-cover .miss-qa-corporate-identity p{font-size:12px;line-height:1.25;text-align:left}
 }
+
+
+/* QA Integral two-stage welcome: the initial cover contains Miss ADPHOR and
+   two choices; credentials appear only on explicit request. Existing company
+   blue/gold colors and original logo, portrait and video are unchanged. */
+.miss-welcome-cover.miss-entry-is-cover .login-form-wrap {display:none!important}
+.miss-welcome-cover.miss-entry-is-cover.login-shell{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-sizing:border-box;width:min(100%,660px);max-width:660px;
+  min-height:100svh;margin-inline:auto;padding:clamp(12px,2vw,24px);gap:0;
+}
+.miss-welcome-cover.miss-entry-is-cover .login-story{
+  box-sizing:border-box;display:flex;flex:0 1 auto;
+  align-self:center;align-items:center;justify-content:center;
+  width:min(100%,510px);height:auto;min-height:0;max-height:none;
+  padding:clamp(18px,2.5vw,30px);gap:0;border-radius:24px;
+  overflow:visible;
+}
+.miss-welcome-cover.miss-entry-is-cover .login-story>div:nth-child(2){
+  display:flex;flex:0 1 auto;align-items:center;justify-content:center;
+  min-width:0;width:100%;gap:0;
+}
+.miss-welcome-cover.miss-entry-is-cover .client-avatar-frame:has(.client-avatar-image){
+  flex:none;width:min(100%,315px,43svh);height:auto;max-height:66svh;
+  aspect-ratio:9/16;margin:0 auto;
+}
+.miss-welcome-cover .login-story>.brand{display:none!important}
+.miss-welcome-cover.miss-entry-is-login .miss-entry-actions {display:none!important}
+.miss-welcome-cover .login-form-wrap {position:relative}
+.miss-welcome-cover .miss-entry-back{
+  position:absolute;z-index:2;top:8px;right:clamp(14px,2vw,24px);
+  padding:6px 10px;border:1px solid #d2b578;border-radius:10px;
+  background:#f7ead2;color:#173854;font-size:12px;font-weight:600;
+  cursor:pointer;min-height:35px;
+}
+.miss-welcome-cover .miss-entry-back:focus-visible,
+.miss-welcome-cover .miss-entry-guide-login:focus-visible{
+  outline:3px solid #f5cf67;outline-offset:3px;
+}
+.miss-welcome-cover .miss-entry-guide-actions{
+  display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;
+  gap:10px;margin-top:12px;
+}
+.miss-welcome-cover .miss-entry-guide-login{
+  border:1px solid #d2b578;border-radius:12px;
+  background:#1d4966;color:#fff;padding:10px 18px;min-height:44px;
+  font-weight:600;cursor:pointer;
+}
+.miss-welcome-cover .miss-entry-tutorial-slot{
+  margin:12px 0;padding:14px;border:1px dashed #d2b578;
+  background:#f7ead2;border-radius:12px;color:#173854;
+}
+.miss-welcome-cover .miss-entry-tutorial-slot p{margin:6px 0 0;font-size:13px}
+@media(min-width:581px) and (max-width:839px){
+  .miss-welcome-cover.miss-entry-is-cover .client-avatar-frame:has(.client-avatar-image){
+    width:min(100%,290px,40svh);max-height:66svh;aspect-ratio:9/16;
+  }
+}
+@media(max-width:580px){
+  .miss-welcome-cover.miss-entry-is-cover.login-shell{
+    display:flex;padding:12px 9px;min-height:100svh;width:100%;max-width:100%;
+  }
+  .miss-welcome-cover.miss-entry-is-cover .login-story{
+    box-sizing:border-box;width:min(100%,380px);padding:clamp(14px,3vw,22px);
+    gap:0;border-radius:22px;
+  }
+  .miss-welcome-cover.miss-entry-is-cover .client-avatar-frame:has(.client-avatar-image){
+    width:min(100%,300px,38svh);max-height:60svh;
+    aspect-ratio:9/14;
+  }
+  .miss-welcome-cover.miss-entry-is-login .login-story{display:none!important}
+  .miss-welcome-cover.miss-entry-is-login .login-form-wrap{
+    box-sizing:border-box;display:block!important;width:100%;padding:42px 0 0;
+  }
+  .miss-welcome-cover.miss-entry-is-login .login-form-wrap form{padding:14px 18px 20px}
+  .miss-welcome-cover.miss-entry-is-login .miss-qa-corporate-identity{
+    width:min(100%,210px);max-width:210px;flex-direction:column;
+    background:#0c2743;border:1px solid rgba(218,183,110,.74);
+    padding:5px 9px 7px;gap:1px;
+  }
+  .miss-welcome-cover.miss-entry-is-login .miss-qa-corporate-identity img{
+    width:min(100%,167px);max-height:94px;
+  }
+  .miss-welcome-cover.miss-entry-is-login .miss-qa-corporate-identity p{
+    text-align:center;font-size:13px;line-height:1.3;
+  }
+  .miss-welcome-cover .miss-entry-guide-actions{flex-direction:column-reverse;align-items:stretch}
+  .miss-welcome-cover .miss-entry-guide-actions button{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  .miss-welcome-cover .miss-entry-back,
+  .miss-welcome-cover .miss-entry-guide-login{transition:none}
+}
+
+/* The mobile app's global .login-story p:not(.eyebrow) rule hides paragraphs.
+   Tutorial text is meaningful content inside a modal, never a decorative caption. */
+.miss-welcome-cover .miss-entry-guide p:not(.eyebrow){
+  display:block!important;color:#183b52;line-height:1.5;
+}
