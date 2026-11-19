@@ -194,3 +194,59 @@
   #login-form.miss-welcome-ready{animation:miss-welcome-reveal .24s ease-out both}
   @keyframes miss-welcome-reveal{from{opacity:.9;transform:translateY(3px)}to{opacity:1;transform:none}}
 }
+
+
+/* Balanced desktop welcome: presentation video remains the original asset;
+   only the QA Integral panel dimensions change. Mobile cover is unchanged. */
+@media(min-width:581px){
+  body:has(.miss-welcome-cover){background:#edf1f4}
+  .miss-welcome-cover.login-shell{
+    width:100%;max-width:1140px;min-height:100svh;
+    margin-inline:auto;padding:clamp(14px,2.1vw,28px);
+    display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+    align-items:center;gap:clamp(14px,2vw,28px);
+  }
+  .miss-welcome-cover .login-story{
+    min-width:0;min-height:0;height:auto;max-height:none;
+    align-self:center;padding:clamp(18px,2vw,29px);
+    gap:13px;border-radius:23px;
+  }
+  .miss-welcome-cover .login-story>div:nth-child(2){
+    flex:0 0 auto;min-width:0;justify-content:center;
+  }
+  .miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){
+    box-sizing:border-box;width:min(100%,228px,27.56svh);
+    max-width:100%;max-height:49svh;aspect-ratio:9/16;
+    margin-inline:auto;border-radius:17px;
+  }
+  .miss-welcome-cover .login-form-wrap{
+    box-sizing:border-box;min-width:0;width:100%;padding:12px clamp(6px,1.6vw,25px);
+    align-self:center;
+  }
+  .miss-welcome-cover .login-form-wrap form{
+    box-sizing:border-box;width:100%;max-width:440px;
+    gap:clamp(12px,1.2vw,19px);padding:clamp(20px,2.2vw,30px);
+  }
+  .miss-welcome-cover .miss-welcome-sound{
+    width:44px;height:44px;min-width:44px;min-height:44px;font-size:17px;
+  }
+}
+@media(min-width:581px) and (max-width:899px){
+  .miss-welcome-cover.login-shell{
+    grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);
+    gap:12px;padding:14px;
+  }
+  .miss-welcome-cover .login-story{padding:17px 15px;gap:10px}
+  .miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){
+    width:min(100%,184px,24.75svh);max-height:44svh;
+  }
+  .miss-welcome-cover .login-form-wrap{padding:8px 0}
+  .miss-welcome-cover .login-form-wrap form{padding:18px;gap:12px}
+}
+@media(min-width:581px) and (max-height:700px){
+  .miss-welcome-cover.login-shell{padding-block:9px}
+  .miss-welcome-cover .client-avatar-frame:has(.client-avatar-image){
+    width:min(100%,185px,24.19svh);max-height:43svh;
+  }
+  .miss-welcome-cover .login-story{padding-block:14px;gap:8px}
+}
