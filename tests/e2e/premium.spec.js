@@ -30,7 +30,7 @@ test('premium meetings: guided booking, timezone, reschedule, cancellation and l
 });
 test('premium PQRS: visible submit, receipt, persisted local case, response disclosure and error without fake success',async({page})=>{
  await login(page);await page.getByRole('button',{name:'PQRS',exact:true}).click();await expect(page.getByRole('button',{name:'+ Nueva PQRS'})).toBeVisible();
- await page.locator('[name=subject]').fill('Solicitud sintética');await page.locator('textarea[name=description]').fill('Descripción de prueba sin datos personales');await page.locator('[name=tower]').fill('Torre QA');
+ await page.locator('[name=subject]').fill('Solicitud sintética');await page.locator('textarea[name=description]').fill('Descripción de prueba sin datos personales');await page.getByText('Agregar torre, apartamento o nombre (opcional)').click();await page.locator('[name=tower]').fill('Torre QA');
  await page.getByRole('button',{name:'Enviar solicitud PQRS'}).click();await expect(page.locator('.pqrs-message')).toContainText('Radicado:');await expect(page.locator('.pqrs-message')).toContainText('No se modificó PostgreSQL');await expect(page.locator('.pqrs-cases')).toContainText('Solicitud sintética');
  await page.getByText('Responder y gestionar caso',{exact:true}).click();await page.getByLabel('Respuesta',{exact:true}).fill('Respuesta sintética');await page.getByRole('button',{name:'Guardar respuesta',exact:true}).click();await capture(page,'pqrs-saved');await a11y(page,'pqrs-saved');
  await page.reload();await page.getByRole('button',{name:'Explorar demostración'}).click();await page.getByRole('button',{name:'PQRS',exact:true}).click();await expect(page.locator('.pqrs-cases')).toContainText('Solicitud sintética');
