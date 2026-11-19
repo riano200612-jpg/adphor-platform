@@ -54,7 +54,7 @@ test('historical onboarding preselects ONLY name and wipes stale invitation cred
  await expect(invite.locator('.access-grant-row').first().locator('select')).toHaveValue('viewer');
  await expect(invite.locator('.access-grant-row').last().locator('select')).toHaveValue('viewer');
  await expect(invite.locator('textarea')).toHaveValue('');
- await expect(page.getByRole('status')).toContainText('Alias aún no vinculado para iniciar sesión');
+ await expect(page.getByRole('status')).toContainText('Se asociará a la invitación solo tras validación de servidor');
  expect(await page.evaluate(()=>window.__legacyCommands)).toBe(0);
 });
 test('blocked, deactivated, linked and ambiguous legacy staff never expose a preparation button',async({page})=>{
@@ -105,4 +105,32 @@ test('without property selection no invitation command can be sent',async({page}
  await invite.getByRole('button',{name:'Enviar invitación real'}).click();
  await expect(page.getByRole('status')).toContainText('al menos una copropiedad');
  expect(await page.evaluate(()=>window.__legacyCommands)).toBe(0);
+});
+
+test('preselected historical user carries exact alias to backend but no legacy PIN or permissions',async({page})=>{
+ await mount(page,true,true);
+ const invite=page.locator('form.access-workflow').first();
+ await page.evaluate(()=>{window.confirm=()=>true;});
+ await page.getByRole('button',{name:'Preseleccionar j.guzman para invitación'}).click();
+ await invite.locator('input[type=email]').fill('personal@example.invalid');
+ await invite.getByLabel('Permitir Edificio sintético QA').check();
+ await invite.locator('textarea').fill('Identidad confirmada por administrador QA');
+ await invite.getByRole('button',{name:'Enviar invitación real'}).click();
+ await expect.poll(()=>page.evaluate(()=>window.__legacyCommands)).toBe(1);
+ const command=(await page.evaluate(()=>window.__legacyPayloads))[0];
+ expect(command.historic_alias).toBe('j.guzman');
+ expect(command.assignments).toEqual([{project_id:'qa-a',role:'viewer'}]);
+ expect(JSON.stringify(command)).not.toContain('pin');
+});
+test('editing a preselected name invalidates stale alias binding',async({page})=>{
+ await mount(page,true,true);await page.evaluate(()=>{window.confirm=()=>true;});
+ const invite=page.locator('form.access-workflow').first();
+ await page.getByRole('button',{name:'Preseleccionar j.guzman para invitación'}).click();
+ await invite.locator('input[type=text]').fill('Persona distinta QA');
+ await invite.locator('input[type=email]').fill('persona@example.invalid');
+ await invite.getByLabel('Permitir Edificio sintético QA').check();
+ await invite.locator('textarea').fill('Autorización verificada de alta QA');
+ await invite.getByRole('button',{name:'Enviar invitación real'}).click();
+ await expect.poll(()=>page.evaluate(()=>window.__legacyCommands)).toBe(1);
+ expect((await page.evaluate(()=>window.__legacyPayloads))[0].historic_alias).toBeUndefined();
 });

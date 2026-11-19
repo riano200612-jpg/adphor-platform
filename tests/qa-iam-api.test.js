@@ -12,7 +12,8 @@ const input={action:'invite',email:'persona@ejemplo.co',name:'Persona de prueba'
  assignments:[{project_id:'qa-01',role:'viewer'}],reason:'Alta autorizada para prueba',requestId:REQUEST};
 
 function fixture({allowed=true,aal='aal2',userId=ACTOR,claimsSub=ACTOR,
- inviteError=false,banError=false,operatorError=false,legacyReview=null}={}){
+ inviteError=false,banError=false,operatorError=false,legacyReview=null,
+ legacyEligible=true,legacyLinkError=false}={}){
  const calls=[];
  const client={
   auth:{
@@ -30,7 +31,15 @@ function fixture({allowed=true,aal='aal2',userId=ACTOR,claimsSub=ACTOR,
    if(name==='qa_iam_is_operator')return{data:allowed,error:null};
    if(name==='qa_iam_snapshot')return{data:{accounts:[],audit:[]},error:null};
    if(name==='qa_iam_legacy_review')return legacyReview?{data:legacyReview,error:null}:{data:null,error:{message:'not yet installed'}};
-   if(name==='qa_iam_command')return{data:{user_id:TARGET,status:'database_applied'},error:null};
+   if(name==='qa_iam_legacy_eligible')return {data:legacyEligible,error:null};
+   if(name==='qa_iam_legacy_link_invite')return legacyLinkError?
+    {data:null,error:{message:'synthetic alias rejected'}}:
+    {data:{status:'legacy_invited',auth_linked:true,active:false},error:null};
+   if(name==='qa_iam_command'){
+    if(args.p_action==='suspend')return{data:{user_id:TARGET,status:'restricted_pending_auth_ban'},error:null};
+    if(args.p_action==='confirm_auth_ban')return{data:{user_id:TARGET,status:'ban_verified'},error:null};
+    return{data:{user_id:TARGET,status:'database_applied'},error:null};
+   }
    return{data:null,error:{message:'unexpected'}};
   }
  };
@@ -155,4 +164,75 @@ test('invalid legacy-review data fails closed without impacting current IAM',asy
  const res=await f.handler({request:f.request(),env});
  assert.equal(res.status,200);
  assert.equal((await res.json()).legacy_review,undefined);
+});
+
+test('matched legacy alias requires operator-AAL2 preflight and exact invited user linkage',async()=>{
+ const f=fixture();
+ const res=await f.handler({request:f.request('POST',{...input,historic_alias:'j.guzman'}),env});
+ assert.equal(res.status,201);const data=await res.json();
+ assert.equal(data.historic_alias,'j.guzman');assert.equal(data.alias_state,'INVITED');
+ const methods=f.calls.filter(x=>x[0]==='rpc').map(x=>x[1]);
+ assert.deepEqual(methods,[
+ 'qa_iam_is_operator','qa_iam_legacy_eligible','qa_iam_command',
+ 'qa_iam_command','qa_iam_legacy_link_invite'
+ ]);
+ const binding=f.calls.find(x=>x[1]==='qa_iam_legacy_link_invite')[2];
+ assert.deepEqual([binding.p_actor,binding.p_session,binding.p_alias,binding.p_email,
+  binding.p_user,binding.p_name],[ACTOR,SESSION,'j.guzman',input.email,TARGET,input.name]);
+});
+test('blocked or unmatched legacy aliases are denied before any IAM or email mutation',async()=>{
+ for(const opts of [{legacyEligible:false},{allowed:false},{aal:'aal1'}]){
+  const f=fixture(opts);
+  const result=await f.handler({request:f.request('POST',{...input,historic_alias:'j.guzman'}),env});
+  assert.equal(result.status,403);
+  assert.equal(f.calls.some(x=>x[0]==='invite'||x[1]==='qa_iam_command'),false);
+ }
+});
+test('malformed legacy alias and alias in non-invite actions fail before Auth mutation',async()=>{
+ const f=fixture();
+ for(const command of [
+  {...input,historic_alias:'<script>'},
+  {...input,historic_alias:'J.Guzman'},
+  {...input,historic_alias:'j.guzman',action:'grant'}
+ ]){
+  const res=await f.handler({request:f.request('POST',command),env});
+  assert.equal(res.status,400);
+ }
+ assert.equal(f.calls.some(x=>x[0]==='invite'||x[1]==='qa_iam_command'),false);
+});
+test('email invitation without alias remains unchanged; alias reconciliation failure is explicitly partial',async()=>{
+ const noAlias=fixture();const regular=await noAlias.handler({request:noAlias.request('POST'),env});
+ assert.equal(regular.status,201);
+ assert.equal(noAlias.calls.some(x=>x[1]==='qa_iam_legacy_eligible'||x[1]==='qa_iam_legacy_link_invite'),false);
+ const failed=fixture({legacyLinkError:true});
+ const res=await failed.handler({request:failed.request('POST',{...input,historic_alias:'j.guzman'}),env});
+ assert.equal(res.status,202);const body=await res.json();
+ assert.equal(body.status,'pending_reconciliation');
+ assert.deepEqual([body.database_restricted,body.auth_banned,body.audit_confirmed],[true,true,true]);
+ assert.equal(failed.calls.some(x=>x[0]==='invite'),true);
+ const actions=failed.calls.filter(x=>x[1]==='qa_iam_command').map(x=>x[2].p_action);
+ assert.deepEqual(actions,['prepare_invite','link_invite','suspend','confirm_auth_ban']);
+ const banned=failed.calls.find(x=>x[0]==='ban');
+ assert.equal(banned[1],TARGET);
+ assert.equal(banned[2].ban_duration,'876000h');
+});
+test('failed provider invitation cannot create alias link and cancels prepared IAM request',async()=>{
+ const failed=fixture({inviteError:true});
+ const res=await failed.handler({request:failed.request('POST',{...input,historic_alias:'j.guzman'}),env});
+ assert.equal(res.status,503);
+ const called=failed.calls.map(x=>x[1]);
+ assert.equal(called.includes('qa_iam_legacy_link_invite'),false);
+ assert.equal(called.filter(x=>x==='qa_iam_command').length,2);
+});
+
+test('if Auth ban provider fails after alias linking, IAM is still restricted and result is partial',async()=>{
+ const f=fixture({legacyLinkError:true,banError:true});
+ const res=await f.handler({request:f.request('POST',{...input,historic_alias:'j.guzman'}),env});
+ assert.equal(res.status,202);
+ const body=await res.json();
+ assert.equal(body.database_restricted,true);
+ assert.equal(body.auth_banned,false);
+ assert.equal(body.audit_confirmed,false);
+ assert.deepEqual(f.calls.filter(x=>x[1]==='qa_iam_command').map(x=>x[2].p_action),
+  ['prepare_invite','link_invite','suspend']);
 });

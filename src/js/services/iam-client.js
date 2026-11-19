@@ -28,10 +28,11 @@ export function createIamClient(auth, request=globalThis.fetch){
  }
  return {
    read(){return call('GET');},
-   command({action,email,name='',assignments=[],reason,requestId}){
+   command({action,email,name='',assignments=[],reason,requestId,historic_alias=''}){
      const id=requestId || globalThis.crypto?.randomUUID?.();
      if(!id)throw Error('No se pudo generar el identificador de operación segura.');
-     return call('POST',{action,email,name,assignments,reason,requestId:id});
+     return call('POST',{action,email,name,assignments,reason,requestId:id,
+       ...(action==='invite'&&historic_alias?{historic_alias}:{})});
    }
  };
 }

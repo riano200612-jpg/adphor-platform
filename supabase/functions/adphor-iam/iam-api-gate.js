@@ -26,9 +26,12 @@ function validateCommand(x){
  if(!['invite','grant','suspend','offboard'].includes(action)||
    email.length>254||!EMAIL.test(email)||reason.length<8||reason.length>500||!UUID.test(requestId))throw Error('Invalid command');
  const name=safe(x.name);
+ const historic_alias=safe(x.historic_alias);
+ if(historic_alias && (action!=='invite'||historic_alias.length>80||
+    !/^[a-z0-9._-]{2,80}$/.test(historic_alias)))throw Error('Invalid historical alias');
  const assignments=action==='invite'||action==='grant'?validateAssignments(x.assignments):[];
  if(action==='invite' && (!name||name.length>120))throw Error('Invalid name');
- return {action,email,reason,requestId,name,assignments};
+ return {action,email,reason,requestId,name,assignments,historic_alias};
 }
 async function rpc(client,name,args){
  const {data,error}=await client.rpc(name,args);
@@ -109,6 +112,14 @@ export function createIamQaHandler(makeClient){
    try{command=validateCommand(JSON.parse(raw));}catch{return deny(400);}
    const c=command;
    if(c.action==='invite'){
+     // A legacy alias is verified on the server before touching IAM or Auth.
+     if(c.historic_alias){
+       const eligible=await rpc(client,'qa_iam_legacy_eligible',{
+         p_actor:identity.userId,p_session:identity.sessionId,
+         p_alias:c.historic_alias,p_name:c.name
+       });
+       if(eligible!==true)return deny(403);
+     }
      // Hook permits creation for a short window only after the private DB preparation.
      await rpc(client,'qa_iam_command',params(identity,c,{action:'prepare_invite'}));
      let invited;
@@ -124,10 +135,50 @@ export function createIamQaHandler(makeClient){
      try {
        await rpc(client,'qa_iam_command',params(identity,c,
         {action:'link_invite',requestId:crypto.randomUUID(),userId:invited.id}));
-       return json(201,{status:'invited',email:c.email});
+       if(c.historic_alias){
+         try{
+           const linked=await rpc(client,'qa_iam_legacy_link_invite',{
+             p_actor:identity.userId,p_session:identity.sessionId,
+             p_request:crypto.randomUUID(),p_alias:c.historic_alias,
+             p_email:c.email,p_user:invited.id,p_name:c.name,p_reason:c.reason
+           });
+           if(linked?.status!=='legacy_invited')throw Error('LEGACY_LINK_NOT_CONFIRMED');
+         }catch{
+           // A legacy alias failure happens AFTER an Auth invitation and IAM linking.
+           // Restrict IAM first to deny RLS, then ban the exact invited Auth UUID.
+           // Never report a completed invitation or silently create a usable account.
+           let databaseRestricted=false,authBanned=false,auditConfirmed=false;
+           try{
+             const restricted=await rpc(client,'qa_iam_command',params(identity,c,{
+               action:'suspend',requestId:crypto.randomUUID()
+             }));
+             databaseRestricted=restricted?.status==='restricted_pending_auth_ban';
+           }catch{}
+           try{
+             const ban=await client.auth.admin.updateUserById(invited.id,{ban_duration:'876000h'});
+             authBanned=!ban.error;
+           }catch{}
+           if(databaseRestricted&&authBanned){
+             try{
+               await rpc(client,'qa_iam_command',params(identity,c,{
+                 action:'confirm_auth_ban',requestId:crypto.randomUUID()
+               }));
+               auditConfirmed=true;
+             }catch{}
+           }
+           return json(202,{status:'pending_reconciliation',
+             database_restricted:databaseRestricted,
+             auth_banned:authBanned,audit_confirmed:auditConfirmed,
+             message:'La vinculación histórica no se completó. Revisa la conciliación y el estado de bloqueo antes de reintentar.'});
+         }
+       }
+       return json(201,{status:'invited',email:c.email,
+         ...(c.historic_alias?{historic_alias:c.historic_alias,alias_state:'INVITED'}:{})});
      } catch {
-       // Do not delete an Auth user automatically; reconciliation must identify the exact record.
-       return json(202,{status:'pending_reconciliation',message:'Invitación emitida; falta vincular permisos.'});
+       // The Auth invitation may exist while IAM permission linking is incomplete.
+       // Never delete or reuse the newly created Auth user without a separate audit.
+       return json(202,{status:'pending_reconciliation',
+        message:'Invitación emitida; revisa la conciliación de permisos y del alias antes de reintentar.'});
      }
    }
    const result=await rpc(client,'qa_iam_command',params(identity,c));
