@@ -199,7 +199,7 @@ function card(t) {
   return `<button class="ticket-card" data-ticket="${esc(t.id)}"><div class="card-top">${priority(t)}<span class="ticket-id">${esc(t.id.slice(0,8))}</span></div><h3>${esc(t.title)}</h3><p class="card-area">${esc(t.area)}</p><p class="card-location">${icon('location-dot')} ${esc(t.location)}</p><div class="card-bottom"><span class="mini-user" title="${esc(person(t.assignee))}"><span class="avatar small">${esc(initials(person(t.assignee)))}</span>${esc(person(t.assignee).split(' ')[0])}</span><span class="due ${overdue(t) ? 'late' : ''}">${icon('calendar-day')} ${fmt(t.due_date)}</span></div></button>`;
 }
 function operationalAgenda(compact=false) { return renderOperationalAgenda(state.tickets,{projectId:state.projectId,userId:state.user.id,compact}); }
-function sprintBoard() { return renderSprintBoard(state.tickets,{projectId:state.projectId,userId:state.user.id,role:role(),offset:state.sprintOffset,scope:state.sprintScope}); }
+function sprintBoard() { return renderSprintBoard(state.tickets,{projectId:state.projectId,userId:state.user.id,role:role(),offset:state.sprintOffset,scope:isManager(role())?state.sprintScope:'mine'}); }
 function dashboard() {
   const list = rows();
   const urgent = list.filter(t => overdue(t) || (t.priority === 'Urgente' && t.status !== 'Cerrada')).sort((a,b) => a.due_date.localeCompare(b.due_date));
@@ -239,7 +239,7 @@ function renderPage() {
   if(state.page==='corporate-staff' && repo.staffDirectoryEnabled){mountCorporateStaff($('page-content'),{repo});return;}
   if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) { mountClientSourceReview($('page-content'));return; }
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
-  if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
+  if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   if (state.page === 'agenda') {
     mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
@@ -381,10 +381,10 @@ async function submit(event) {
       const result = await repo.login(input);
       if(result.mfaRequired) {mfaScreen(result.enrollmentRequired);return;}
       state.user = result;
-      await refresh(); state.page = 'dashboard'; state.filters = {}; shell();
+      await refresh(); state.page = 'dashboard'; state.filters = {}; state.sprintOffset=0;state.sprintScope='mine'; shell();
     } else if(form.id === 'mfa-form') {
       state.user=await repo.completeMfa(input.code);form.reset();
-      await refresh();state.page='dashboard';state.filters={};shell();
+      await refresh();state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';shell();
     } else {
       const files = [...(form.elements.photos?.files || [])]; validateFiles(files);
       const action = form.id === 'new-case' ? 'create' : input.action;
@@ -420,7 +420,7 @@ document.addEventListener('click', async event => {
       case 'close-dialog': dialog.close(); break;
       case 'clear': state.filters = {}; renderPage(); break;
       case 'refresh': el.disabled = true; try { await refresh(); shell(); toast('Datos actualizados.'); } finally { el.disabled = false; } break;
-      case 'logout': monthlyResult=null; monthlyKey=''; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
+      case 'logout': monthlyResult=null; monthlyKey=''; state.sprintOffset=0;state.sprintScope='mine'; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
       case 'monthly-load':
       case 'monthly-finalize': {
         const projectId=state.projectId, month=state.reportMonth, requestKey=currentReportKey();
@@ -485,7 +485,7 @@ async function startPortal() {
     if(resumed){
       state.user=resumed;
       await refresh();
-      state.page='dashboard';state.filters={};
+      state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';
       shell();
       return;
     }
