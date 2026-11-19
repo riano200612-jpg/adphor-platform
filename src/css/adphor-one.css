@@ -290,3 +290,26 @@
  }
  .adphor-one-shell .adphor-one-home .adphor-one-grid{gap:12px}
 }
+
+
+/* ADPHOR ONE QA Integral · launcher-only home.
+   No legacy summary/metrics markup remains after the visual-layer mount.
+   Retain a compact H1 for accessibility, plus every authorized feature circle. */
+.adphor-one-shell .adphor-one-home .adphor-one-hero{
+  width:100%;max-width:1180px;min-height:0;display:block;
+  padding:8px 6px 0;margin:0 auto 8px;border:0;
+  background:transparent;box-shadow:none;border-radius:0;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-hero::after{display:none}
+.adphor-one-shell .adphor-one-home .adphor-one-hero h1{
+  font-size:clamp(20px,2.1vw,27px);font-weight:680;
+  line-height:1.25;letter-spacing:-.5px;color:#142d43;margin:0;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-grid{
+  margin:0 auto 12px;padding-bottom:8px;
+}
+@media(max-width:520px){
+  .adphor-one-shell .adphor-one-home .adphor-one-hero{
+    padding:4px 2px 0;margin-bottom:9px;
+  }
+}

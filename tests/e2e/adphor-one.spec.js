@@ -21,13 +21,17 @@ test('ADPHOR ONE: circular dashboard preserves authorized existing navigation',a
   const tiles=grid.locator('.adphor-one-tile');
   await expect(grid).toBeVisible();
   const allowed = await page.locator('.sidebar nav button[data-page]').count();
-  await expect(tiles).toHaveCount(allowed);
+  await expect(tiles).toHaveCount(allowed-1); // dashboard is Inicio, not a task
   expect(allowed).toBeGreaterThanOrEqual(13);
   for(const id of ['agenda','pqrs','visits','properties','reports','meetings','agent-history']){
     await expect(grid.locator('[data-page="'+id+'"]')).toHaveCount(1);
   }
   await expect(grid.locator('[data-page="pqrs"] small')).not.toBeEmpty();
-  await expect(page.locator('.dashboard-grid')).toBeVisible();
+  await expect(page.locator('.dashboard-grid')).toHaveCount(0);
+  await expect(page.locator('.dashboard-intro')).toHaveCount(0);
+  await expect(page.locator('#page-content .stats')).toHaveCount(0);
+  await expect(page.locator('#page-content .page-heading')).toHaveCount(0);
+  await expect(page.locator('#page-content h1')).toHaveText('¿Qué deseas gestionar?');
   // No duplicate tile is introduced on rerenders or observer callbacks.
   expect(await activateQaVisualInLocalTest(page)).toBe(false);
   await grid.locator('[data-page="agenda"]').click();
@@ -65,11 +69,11 @@ test('ADPHOR ONE: complete desktop menu exposes every authorized feature as a ci
  await expect(page.locator('.adphor-one-topbrand')).toBeVisible();
  const allowed=await page.locator('.sidebar nav button[data-page]').evaluateAll(nodes=>nodes.map(n=>n.dataset.page));
  const actual=await page.locator('.adphor-one-grid .adphor-one-tile').evaluateAll(nodes=>nodes.map(n=>n.dataset.page));
- expect(new Set(actual)).toEqual(new Set(allowed));
- expect(actual.length).toBe(allowed.length);
+ expect(new Set(actual)).toEqual(new Set(allowed.filter(id=>id!=='dashboard')));
+ expect(actual.length).toBe(allowed.length-1);
  await expect(page.locator('.adphor-one-more')).toHaveCount(0);
  await expect(page.locator('.adphor-one-module-section')).toHaveCount(3);
- for(const id of ['dashboard','unified','tickets','recorridos','mine','areas','agenda','meetings','pqrs','visits','reports','agent-history']){
+ for(const id of ['unified','tickets','recorridos','mine','areas','agenda','meetings','pqrs','visits','reports','agent-history']){
   await expect(page.locator('.adphor-one-grid [data-page="'+id+'"]')).toHaveCount(1);
  }
  await page.locator('.adphor-one-grid [data-page="tickets"]').click();
@@ -89,7 +93,7 @@ test('ADPHOR ONE: full mobile menu has circles without hidden navigation or over
  expect(await activateFullWidth(page)).toBe(true);
  await expect(page.locator('.sidebar')).toBeHidden();
  const allowed=await page.locator('.sidebar nav button[data-page]').count();
- await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed);
+ await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed-1);
  await expect(page.locator('.adphor-one-more')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  const axe=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
@@ -99,7 +103,7 @@ test('ADPHOR ONE: full mobile menu has circles without hidden navigation or over
  expect(await activateFullWidth(page)).toBe(true);
  await page.getByRole('button',{name:'Volver a la pantalla de inicio'}).click();
  expect(await activateFullWidth(page)).toBe(true);
- await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed);
+ await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed-1);
 });
 
 
@@ -109,7 +113,7 @@ test('ADPHOR ONE: balanced six-tool desktop rows without asymmetric oversized ci
  expect(await activateFullWidth(page)).toBe(true);
  const grid=page.locator('.adphor-one-group-grid');
  const counts=await grid.evaluateAll(elements=>elements.map(x=>x.querySelectorAll('.adphor-one-tile').length));
- expect(counts.slice(0,2)).toEqual([6,6]);
+ expect(counts.slice(0,2)).toEqual([6,5]);
  for(let i=0;i<2;i++){
   const metrics=await grid.nth(i).locator('.adphor-one-tile').evaluateAll(nodes=>nodes.map(el=>{
     const box=el.getBoundingClientRect();
@@ -123,7 +127,7 @@ test('ADPHOR ONE: balanced six-tool desktop rows without asymmetric oversized ci
  }
  const actual=await page.locator('.adphor-one-tile').evaluateAll(nodes=>nodes.map(x=>x.dataset.page));
  const authorized=await page.locator('.sidebar nav button[data-page]').evaluateAll(nodes=>nodes.map(x=>x.dataset.page));
- expect(new Set(actual)).toEqual(new Set(authorized));
+ expect(new Set(actual)).toEqual(new Set(authorized.filter(id=>id!=='dashboard')));
 });
 test('ADPHOR ONE: responsive tablet and mobile keep regular circular columns',async({page})=>{
  await enterDemo(page);
@@ -139,4 +143,26 @@ test('ADPHOR ONE: responsive tablet and mobile keep regular circular columns',as
   expect(Math.max(...first.map(x=>x.w))-Math.min(...first.map(x=>x.w))).toBeLessThan(2);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  }
+});
+
+test('ADPHOR ONE: choosing a copropiedad still presents only the complete authorized launcher',async({page})=>{
+ await enterDemo(page);
+ expect(await activateFullWidth(page)).toBe(true);
+ const select=page.locator('#project-select');
+ const values=await select.locator('option').evaluateAll(nodes=>nodes.map(n=>n.value).filter(Boolean));
+ expect(values.length).toBeGreaterThan(1);
+ const current=await select.inputValue();
+ const next=values.find(id=>id!==current);
+ await select.selectOption(next);
+ expect(await activateFullWidth(page)).toBe(true);
+ await expect(page.locator('#page-content > .adphor-one-hero')).toBeVisible();
+ await expect(page.locator('#page-content > .adphor-one-grid')).toBeVisible();
+ await expect(page.locator('#page-content > *')).toHaveCount(2);
+ await expect(page.locator('.dashboard-intro,.stats,.dashboard-grid,.recent-grid,.page-heading')).toHaveCount(0);
+ const allowed=await page.locator('.sidebar nav button[data-page]').count();
+ await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed-1);
+ await expect(page.locator('.adphor-one-grid [data-page="meetings"]')).toBeVisible();
+ await expect(page.locator('.adphor-one-grid [data-page="visits"]')).toBeVisible();
+ await page.locator('.adphor-one-grid [data-page="visits"]').click();
+ await expect(page.locator('.sidebar nav button[data-page="visits"]')).toHaveAttribute('aria-current','page');
 });

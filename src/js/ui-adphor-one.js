@@ -38,7 +38,7 @@ export function isIntegralQaHost(hostname) {
 // Kept as a public pure helper for permission-isolation tests.
 export function visibleAdphorOneModules(availablePages) {
   const allowed = new Set(Array.isArray(availablePages) ? availablePages : []);
-  return ADPHOR_ONE_MODULES.filter(module => allowed.has(module.id));
+  return ADPHOR_ONE_MODULES.filter(module => allowed.has(module.id) && module.id !== 'dashboard');
 }
 
 // Catalog exactly matches the allowed menu: do not infer roles from names or e-mails.
@@ -47,7 +47,7 @@ export function completeAdphorOneCatalog(navItems) {
   if (!Array.isArray(navItems)) return [];
   const source = new Map();
   for (const item of navItems) {
-    if (!item || typeof item.id !== 'string' || !item.id.trim() || source.has(item.id)) continue;
+    if (!item || typeof item.id !== 'string' || !item.id.trim() || item.id === 'dashboard' || source.has(item.id)) continue;
     source.set(item.id, {
       label: typeof item.label === 'string' ? item.label : item.id,
       icon: typeof item.icon === 'string' ? item.icon : 'fa-solid fa-circle'
@@ -79,30 +79,26 @@ function createOrb(doc,module) {
   return button;
 }
 function createHero(doc) {
-  const hero = doc.createElement('section');
+  // A concise, accessible title, not another operations summary.
+  const hero = doc.createElement('header');
   hero.className = 'adphor-one-hero';
-  hero.setAttribute('aria-label','Todas las herramientas disponibles de ADPHOR');
-  const eyebrow = doc.createElement('p');
-  eyebrow.className = 'eyebrow';
-  eyebrow.textContent = 'ADPHOR ONE · MI ESPACIO DIGITAL';
-  const title = doc.createElement('h2');
-  title.textContent = 'Todas tus herramientas, en un solo lugar.';
-  const subtitle = doc.createElement('p');
-  subtitle.className = 'adphor-one-hero-subtitle';
-  subtitle.textContent = 'Accede directamente a cada módulo habilitado para tu sesión.';
-  hero.append(eyebrow,title,subtitle);
+  const title = doc.createElement('h1');
+  title.textContent = '¿Qué deseas gestionar?';
+  hero.append(title);
   return hero;
 }
 export function enhanceAdphorOneDashboard(doc) {
   const page = doc?.querySelector?.('#page-content');
   if (!page) return false;
-  const intro = page.querySelector('.dashboard-intro');
   const grid = page.querySelector('.module-grid');
+  // The live QA panel has already been reduced to a menu; do not remove
+  // its styling when MutationObserver sees our own DOM replacement.
+  if (grid?.dataset.adphorOneReady === 'true') return false;
+  const intro = page.querySelector('.dashboard-intro');
   if (!intro || !grid) {
     page.classList.remove('adphor-one-home');
     return false;
   }
-  if (grid.dataset.adphorOneReady === 'true') return false;
   const source = [...doc.querySelectorAll('.sidebar nav button[data-page]')].map(button=>({
     id:button.dataset.page,
     label:button.getAttribute('aria-label') || button.textContent.trim(),
@@ -146,8 +142,10 @@ export function enhanceAdphorOneDashboard(doc) {
   grid.classList.add('adphor-one-grid');
   grid.dataset.adphorOneReady = 'true';
   page.classList.add('adphor-one-home');
-  // All navigation first; original dashboard, statistics, and history follow below.
-  page.prepend(createHero(doc),grid);
+  // Menu-only home: remove the old summary, charts, alerts and recent
+  // ticket widgets from THIS rendered view, never from the app or its data.
+  // The underlying views and permission-filtered routes remain unchanged.
+  page.replaceChildren(createHero(doc), grid);
   return true;
 }
 export function enhanceAdphorOneShell(doc) {
