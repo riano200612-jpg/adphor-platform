@@ -9,6 +9,7 @@ import {createQaVisitEvidenceRepository} from './qa-visit-evidence.js';
 import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
 import { createCloudAuthentication } from './cloud-authentication.js';
+import {createQaAccountAvatarRepository} from './qa-account-avatar.js';
 import { qaAuthPolicy,qaSessionResumePolicy,QA_SESSION_STORAGE_KEY } from './qa-auth-policy.js';
 import { createStaffDirectory } from './staff-directory.js';
 import {createCorporateStaff} from './corporate-staff.js';
@@ -61,6 +62,9 @@ export function createCloudRepository(url, key) {
      import.meta.env.VITE_QA_VISIT_EVIDENCE_ENABLED==='true'){
     visits.evidence=createQaVisitEvidenceRepository(client,{url});
   }
+  const accountAvatar=createQaAccountAvatarRepository(client,{
+    url,hostname:globalThis.location?.hostname,getActor:()=>user
+  });
   const authPolicy=qaAuthPolicy({url,requireMfa:import.meta.env.VITE_REQUIRE_MFA,hostname:globalThis.location?.hostname});
   const authentication=createCloudAuthentication(client,{required:authPolicy.required,
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
@@ -82,6 +86,7 @@ export function createCloudRepository(url, key) {
   return {
     porto,
     visits,
+    accountAvatar,
     iam:authPolicy.isolatedQa?createIamClient(client.auth):null,
     qaTaskCatalogEnabled,
     async listQaTaskCandidates(projectId){
