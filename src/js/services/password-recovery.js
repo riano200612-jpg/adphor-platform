@@ -19,12 +19,15 @@ export function readQaRecovery(location, history, supabaseUrl) {
   if (!passwordSetup || !hash.get('access_token') || !hash.get('refresh_token')) {
     return {error: 'El enlace no contiene una invitación o recuperación válida. Contacta al administrador de ADPHOR QA.'};
   }
-  return {access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token')};
+  return {access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token'), purpose: type};
 }
 
 export async function createPasswordRecovery(auth, credentials) {
   let ready = false;
-  const {error} = await auth.setSession(credentials);
+  const {error} = await auth.setSession({
+    access_token:credentials.access_token,
+    refresh_token:credentials.refresh_token
+  });
   if (error) throw new Error('El enlace es inválido o ha expirado. Solicita un nuevo correo de recuperación.');
   const checked = await auth.getUser();
   if (checked.error || !checked.data?.user) {
