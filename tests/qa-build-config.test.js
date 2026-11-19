@@ -22,12 +22,15 @@ test('consolidated QA branch requires both staging and Access verification flags
   assert.match(config, /!productionPages && !protectedStaging && !consolidatedQa/);
 });
 
-test('approved QA workflow forwards Access verification to the Vite build', () => {
+test('only QA Integral is monitored by GitHub CI; no historic QA deployment path remains', () => {
   const workflow = readFileSync(new URL('../.github/workflows/checks.yml', import.meta.url), 'utf8');
-  const buildStep = workflow.split('      - name: Build the approved preview SHA')[1]?.split('      - name: Publish only the configured QA branch')[0];
-  assert.ok(buildStep, 'approved QA build step must exist');
-  assert.ok(buildStep.includes("ADPHOR_PROTECTED_STAGING_QA: 'true'"));
-  assert.ok(buildStep.includes('ADPHOR_QA_ACCESS_VERIFIED: ' + '$' + '{{ vars.ADPHOR_QA_ACCESS_VERIFIED }}'));
-  assert.ok(workflow.includes('--project-name=adphor-platform'));
-  assert.ok(workflow.includes('--branch=qa/pqrs-carrusel-integracion-20261104'));
+  assert.match(workflow, /branches: \[main, qa\/integral-claude-reviewed-20261111\]/);
+  assert.doesNotMatch(workflow, /qa\/pqrs-carrusel-integracion-20261104/);
+  assert.doesNotMatch(workflow, /deploy-approved-qa:/);
+  assert.doesNotMatch(workflow, /wrangler pages deploy dist/);
+  for (const job of ['test', 'python-tests', 'qa-python-worker-package', 'bootstrap-private-qa-worker']) {
+    assert.ok(workflow.includes('  ' + job + ':'), 'retains required job ' + job);
+  }
+  assert.match(config, /ADPHOR_PROTECTED_STAGING_QA === 'true'/);
+  assert.match(config, /ADPHOR_QA_ACCESS_VERIFIED === 'true'/);
 });
