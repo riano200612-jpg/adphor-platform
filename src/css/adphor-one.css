@@ -1,0 +1,77 @@
+/* ADPHOR ONE · QA Integral only: activated solely by ui-adphor-one.js.
+   Scoped to the authenticated dashboard. No login, authorization, data or José asset changes. */
+.adphor-one-home .adphor-one-hero{
+  position:relative; isolation:isolate; overflow:hidden;
+  background:linear-gradient(130deg,#fff 0%,#f7f9fb 64%,#f3f0e7 100%);
+  border:1px solid #dce5eb; border-radius:24px; padding:26px 30px;
+  margin:12px 0 8px; box-shadow:0 10px 28px rgba(31,60,83,.06);
+}
+.adphor-one-home .adphor-one-hero:after{
+  content:""; position:absolute; width:190px; height:190px; border-radius:50%;
+  border:1px solid rgba(181,156,33,.21); box-shadow:0 0 0 36px rgba(181,156,33,.045);
+  right:-70px; top:-90px; z-index:-1; pointer-events:none;
+}
+.adphor-one-home .adphor-one-hero .eyebrow{font-size:11px;letter-spacing:1.5px;color:#756211;margin:0 0 9px}
+.adphor-one-home .adphor-one-hero h2{font-size:clamp(20px,2.6vw,31px);line-height:1.18;color:#142d43;font-weight:680;letter-spacing:-.7px}
+.adphor-one-home .adphor-one-hero-subtitle{color:#536575;font-size:13px;margin-top:9px;max-width:660px;line-height:1.65}
+.adphor-one-home .adphor-one-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(125px,1fr));
+  gap:18px 10px; padding:18px 10px 26px; margin-bottom:15px;
+  align-items:start;
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile{
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  background:transparent; border:1px solid transparent; border-radius:22px;
+  box-shadow:none; min-width:0; min-height:170px; padding:10px 6px 12px;
+  text-align:center; gap:10px; color:#264b6b; transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile > i{
+  display:grid; place-items:center; width:94px; height:94px; flex:none;
+  border-radius:50%; font-size:29px; color:#fff;
+  background:linear-gradient(145deg,#365f82,#1b3b58);
+  box-shadow:inset 0 2px 1px rgba(255,255,255,.17),0 9px 19px rgba(31,60,83,.15);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="champagne"] > i{
+  color:#6c5512; background:linear-gradient(145deg,#f8edc7,#d8c27e); box-shadow:0 9px 19px rgba(113,86,28,.14);
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="sage"] > i{color:#1b615a;background:linear-gradient(145deg,#e4f2ed,#a7d4c6)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="sky"] > i{color:#224c73;background:linear-gradient(145deg,#e8f2f9,#afcde3)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="slate"] > i{color:#f7fafc;background:linear-gradient(145deg,#487080,#24435c)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="pearl"] > i{color:#65531b;background:linear-gradient(145deg,#f7f5ed,#e7ddb6)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="steel"] > i{color:#fff;background:linear-gradient(145deg,#4c779a,#2b4b6a)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile[data-ui-tone="indigo"] > i{color:#fff;background:linear-gradient(145deg,#64759a,#3b4c72)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile > span{display:block;min-width:0;width:100%}
+.adphor-one-home .adphor-one-grid .adphor-one-tile strong{
+  display:block;font-size:14px;font-weight:700;line-height:1.35;letter-spacing:-.1px;color:#1d3b54
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile small{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; font-size:11px; line-height:1.45; margin:6px auto 0; max-width:158px;
+  color:#536575; overflow-wrap:anywhere;
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile:hover{background:rgba(226,233,240,.45);transform:translateY(-2px)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile:hover > i{
+  transform:translateY(-2px) scale(1.035);box-shadow:0 14px 25px rgba(31,60,83,.18)
+}
+.adphor-one-home .adphor-one-grid .adphor-one-tile:active{transform:translateY(0)}
+.adphor-one-home .adphor-one-grid .adphor-one-tile:focus-visible{
+  outline:3px solid #927725; outline-offset:3px; background:#f6f3e8;
+}
+.adphor-one-home .dashboard-intro{border-radius:22px}
+.adphor-one-home .panel,.adphor-one-home .stat{border-radius:20px}
+@media(max-width:680px){
+ .adphor-one-home .adphor-one-hero{padding:21px 19px;border-radius:19px}
+ .adphor-one-home .adphor-one-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 4px;padding:15px 0 20px}
+ .adphor-one-home .adphor-one-grid .adphor-one-tile{min-height:150px;padding:9px 2px 12px}
+ .adphor-one-home .adphor-one-grid .adphor-one-tile > i{width:clamp(65px,19vw,84px);height:clamp(65px,19vw,84px);font-size:25px}
+ .adphor-one-home .adphor-one-grid .adphor-one-tile strong{font-size:12px}
+ .adphor-one-home .adphor-one-grid .adphor-one-tile small{font-size:10px}
+}
+@media(max-width:360px){
+ .adphor-one-home .adphor-one-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+ .adphor-one-home .adphor-one-grid .adphor-one-tile,
+ .adphor-one-home .adphor-one-grid .adphor-one-tile > i{transition:none!important;transform:none!important}
+}
