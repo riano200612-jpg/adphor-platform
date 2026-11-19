@@ -71,6 +71,7 @@ test('Visitas: el campo alternativo de fecha es editable y conserva validación 
  await page.route('**/qa-visit-typed-datetime',route=>route.fulfill({contentType:'text/html',body:html}));
  await page.goto('./qa-visit-typed-datetime');
  const native=page.locator('input[name=start]');
+ await page.getByText('Prefiero escribir la fecha y hora').click();
  const alternate=page.getByRole('textbox',{name:'Escribir fecha y hora (alternativa accesible)'});
  const review=page.getByRole('button',{name:'Revisar visita'});
  await page.locator('input[name=kind]').fill('Prueba de accesibilidad QA — SIN VISITA REAL');
