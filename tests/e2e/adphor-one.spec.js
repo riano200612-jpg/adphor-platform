@@ -166,3 +166,45 @@ test('ADPHOR ONE: choosing a copropiedad still presents only the complete author
  await page.locator('.adphor-one-grid [data-page="visits"]').click();
  await expect(page.locator('.sidebar nav button[data-page="visits"]')).toHaveAttribute('aria-current','page');
 });
+
+
+test('ADPHOR ONE: centered, uniform rows at laptop, desktop and mobile sizes',async({page})=>{
+ await enterDemo(page);
+ expect(await activateFullWidth(page)).toBe(true);
+ for(const [width,expectedDaily,expectedOperations] of [
+  [1440,[6],[5]],
+  [1024,[3,3],[3,2]],
+  [768,[3,3],[3,2]],
+  [390,[2,2,2],[2,2,1]]
+ ]){
+  await page.setViewportSize({width,height:900});
+  const metrics=await page.locator('.adphor-one-group-grid').evaluateAll(groups=>groups.slice(0,2).map(group=>{
+    const rect=group.getBoundingClientRect();
+    const buttons=[...group.querySelectorAll('.adphor-one-tile')].map(el=>{
+      const r=el.getBoundingClientRect();
+      return {x:r.x,y:r.y,width:r.width,height:r.height};
+    });
+    const rows=[];
+    for(const item of buttons){
+      const row=rows.find(row=>Math.abs(row[0].y-item.y)<2);
+      if(row)row.push(item);else rows.push([item]);
+    }
+    return {
+      counts:rows.map(row=>row.length),
+      widths:buttons.map(x=>x.width),
+      rowCenters:rows.map(row=>(row[0].x+row.at(-1).x+row.at(-1).width)/2),
+      gridCenter:rect.x+rect.width/2
+    };
+  }));
+  expect(metrics[0].counts).toEqual(expectedDaily);
+  expect(metrics[1].counts).toEqual(expectedOperations);
+  for(const group of metrics){
+    expect(Math.max(...group.widths)-Math.min(...group.widths)).toBeLessThan(2);
+    for(const rowCenter of group.rowCenters)expect(Math.abs(rowCenter-group.gridCenter)).toBeLessThan(3);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ }
+ const allowed=await page.locator('.sidebar nav button[data-page]').evaluateAll(nodes=>nodes.map(n=>n.dataset.page).filter(x=>x!=='dashboard'));
+ const tiles=await page.locator('.adphor-one-grid .adphor-one-tile').evaluateAll(nodes=>nodes.map(n=>n.dataset.page));
+ expect(new Set(tiles)).toEqual(new Set(allowed));
+});

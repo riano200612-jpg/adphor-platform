@@ -223,74 +223,88 @@
 }
 
 
-/* ADPHOR ONE · proportional layout, scoped to the existing authenticated QA Integral shell.
-   Six everyday and six operational tools form balanced rows; authorized tools stay visible. */
+/* ADPHOR ONE · harmonious, predictable launcher layout in QA Integral.
+   One complete centered row for each enabled group on wide desktops; smaller
+   viewports use balanced rows, with trailing items centered, never a 4+2 orphan.
+   Authorization source, colors, labels, counters and route handlers unchanged. */
 .adphor-one-shell .adphor-one-home .adphor-one-grid{
-  width:100%;max-width:1180px;gap:15px;margin:4px auto 24px;padding:0 0 16px;
+  width:100%;max-width:1180px;gap:16px;margin:4px auto 20px;padding:0 0 12px;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-hero{
-  width:100%;max-width:1180px;margin:0 auto 18px;padding:19px 26px;
+  width:100%;max-width:1180px;margin:0 auto 16px;padding:19px 26px;
   box-shadow:0 7px 20px rgba(31,60,83,.04);
 }
 .adphor-one-shell .adphor-one-home .adphor-one-module-section{
-  box-sizing:border-box;width:100%;min-width:0;padding:16px clamp(12px,2vw,22px) 12px;
+  box-sizing:border-box;width:100%;min-width:0;
+  padding:16px clamp(12px,2vw,22px) 13px;
   border:1px solid #dfe7ed;border-radius:20px;background:#fff;
   box-shadow:0 5px 18px rgba(21,48,69,.035);
 }
 .adphor-one-shell .adphor-one-home .adphor-one-module-heading{
-  margin:0 0 12px 8px;font-size:11px;font-weight:750;line-height:1.4;
+  margin:0 0 13px 8px;font-size:11px;font-weight:750;line-height:1.4;
   letter-spacing:1.2px;color:#486176;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-group-grid{
-  --one-gap:clamp(7px,1vw,13px);
-  display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;
-  gap:var(--one-gap);
+  --one-gap:clamp(12px,1.3vw,18px);
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;
+  gap:14px var(--one-gap);
+  width:100%;max-width:1110px;margin-inline:auto;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
-  box-sizing:border-box;flex:0 1 calc((100% - 5 * var(--one-gap)) / 6);
-  max-width:178px;min-width:0;min-height:145px;height:auto;
-  margin:0;padding:9px 6px 12px;gap:9px;
-  align-self:stretch;justify-content:flex-start;
+  box-sizing:border-box;flex:0 0 170px;width:170px;max-width:170px;
+  min-width:0;min-height:147px;height:auto;align-self:stretch;
+  margin:0;padding:8px 5px 12px;gap:8px;border-radius:20px;
+  justify-content:flex-start;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile > i{
-  width:clamp(68px,6.4vw,78px);height:clamp(68px,6.4vw,78px);
-  font-size:25px;flex-shrink:0;
+  width:76px;height:76px;font-size:25px;flex-shrink:0;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile > span{
   display:flex;flex-direction:column;align-items:center;gap:4px;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile strong{
-  font-size:12px;line-height:1.35;min-height:33px;
+  font-size:12px;line-height:1.35;min-height:32px;
   display:flex;align-items:center;justify-content:center;text-wrap:balance;
 }
 .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile small{
-  font-size:10px;line-height:1.35;margin:0;max-width:150px;
+  font-size:10px;line-height:1.35;margin:0;max-width:154px;
 }
-@media(max-width:1100px){
- .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
-   flex-basis:calc((100% - 3 * var(--one-gap)) / 4);max-width:192px;
- }
+/* At laptop zoom/medium widths: 6 daily tools become 3+3, not 4+2.
+   A five-tool group becomes 3+2, with the final two automatically centered. */
+@media(max-width:1130px){
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid{max-width:545px}
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
+    flex:0 0 168px;width:168px;max-width:168px;
+  }
 }
-@media(max-width:760px){
- .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
-   flex-basis:calc((100% - 2 * var(--one-gap)) / 3);max-width:200px;
- }
- .adphor-one-shell .adphor-one-home .adphor-one-module-section{padding:14px 10px 9px}
+@media(max-width:800px){
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid{max-width:525px}
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
+    flex:0 0 160px;width:160px;max-width:160px;
+  }
+  .adphor-one-shell .adphor-one-home .adphor-one-module-section{padding:14px 11px 11px}
 }
-@media(max-width:520px){
- .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
-   flex-basis:calc((100% - var(--one-gap)) / 2);max-width:210px;
-   min-height:147px;padding:8px 4px 11px;
- }
- .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile > i{
-   width:clamp(64px,19vw,76px);height:clamp(64px,19vw,76px);font-size:23px;
- }
- .adphor-one-shell .adphor-one-home .adphor-one-hero{
-   padding:17px 16px;margin-bottom:12px;
- }
- .adphor-one-shell .adphor-one-home .adphor-one-grid{gap:12px}
+@media(max-width:620px){
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid{
+    --one-gap:12px;max-width:330px;gap:12px var(--one-gap);
+  }
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
+    flex:0 0 156px;width:156px;max-width:156px;
+    min-height:145px;padding:8px 4px 11px;
+  }
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile > i{
+    width:clamp(64px,19vw,76px);height:clamp(64px,19vw,76px);font-size:23px;
+  }
+  .adphor-one-shell .adphor-one-home .adphor-one-module-heading{margin-left:5px;font-size:11px}
+  .adphor-one-shell .adphor-one-home .adphor-one-grid{gap:12px}
+  .adphor-one-shell .adphor-one-home .adphor-one-hero{padding:16px 17px}
 }
-
+@media(max-width:365px){
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid{max-width:268px}
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
+    flex:0 0 128px;width:128px;max-width:128px;
+  }
+}
 
 /* ADPHOR ONE QA Integral · launcher-only home.
    No legacy summary/metrics markup remains after the visual-layer mount.
