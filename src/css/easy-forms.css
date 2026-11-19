@@ -1,0 +1,22 @@
+/* Clear, touch-friendly forms for ADPHOR users of varied digital familiarity. */
+.adphor-simple-form label{font-size:14px;font-weight:650;line-height:1.5;gap:7px}
+.adphor-simple-form label small,.adphor-simple-form .simple-form-hint{font-size:13px;line-height:1.5;color:#49616e;font-weight:400}
+.adphor-simple-form :is(input:not([type=file]):not([type=checkbox]),select,textarea){font-size:16px;min-height:50px;padding:12px 13px;border:1.5px solid #a4b7c1;background:#fff;color:#173c4b}
+.adphor-simple-form textarea{min-height:92px;line-height:1.55}
+.adphor-simple-form :is(input,select,textarea):focus-visible{outline:3px solid #167ba0;outline-offset:2px}
+.adphor-simple-form .simple-form-required{color:#9a231e;font-size:14px;font-weight:800}
+.adphor-simple-form [aria-invalid=true]{border-color:#a12a20!important;box-shadow:0 0 0 2px #e8a09b44}
+.adphor-simple-form .simple-form-error:not(:empty){padding:12px 15px;border-radius:10px;background:#fff0ee;border:1px solid #e9aaa1;color:#812b22;font-size:14px;line-height:1.6}
+.adphor-simple-form .simple-form-help{grid-column:1/-1;font-size:13px;line-height:1.65;color:#465d69}
+.adphor-simple-form .simple-form-step{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:4px 0 0;padding:12px 0 4px;border-bottom:1px solid #dde6eb}
+.adphor-simple-form .simple-form-step strong{font-size:15px;color:var(--ink)}
+.adphor-simple-form .simple-form-step span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#e7eff6;color:#264b6b;font-weight:750;font-size:14px}
+.adphor-simple-form .simple-form-step small{font-size:12px;color:#4a5e6b;font-weight:400}
+.adphor-simple-form .simple-form-extra{grid-column:1/-1;padding:12px;border-radius:10px;border:1px solid #d5e0e5}
+.adphor-simple-form .simple-form-extra summary{cursor:pointer;font-size:14px;font-weight:700;color:#264b6b;padding:7px;min-height:44px;display:flex;align-items:center}
+.adphor-simple-form .simple-form-extra>div{margin-top:10px}
+dialog .adphor-simple-form .dialog-footer{position:sticky;bottom:0;background:#fffffffa;z-index:1;display:flex;flex-wrap:wrap;gap:10px}
+dialog .adphor-simple-form .dialog-footer .btn{min-height:50px;font-size:15px;padding:13px 20px}
+.qa-task-catalog .adphor-simple-form :is(input,select,textarea){font-size:16px;min-height:50px}
+.qa-task-catalog .adphor-simple-form button{min-height:48px;font-size:14px}
+@media(max-width:580px){dialog .adphor-simple-form .dialog-footer .btn{flex:1;min-width:120px}.adphor-simple-form .simple-form-extra{padding:10px}}
