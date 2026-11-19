@@ -24,3 +24,20 @@ test('original corporate portrait is a real bundled WebP asset',async()=>{
  assert.equal(bundled.subarray(0,4).toString(),'RIFF');
  assert.equal(bundled.subarray(8,12).toString(),'WEBP');
 });
+
+
+test('QA integral uses original-preserving corporate embroidery portrait in both entrances',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const {createHash}=await import('node:crypto');
+  const edited=readFileSync(new URL('../public/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp',import.meta.url));
+  const original=readFileSync(new URL('../public/assets/branding/miss-adphor-qa-integral(4).webp',import.meta.url));
+  assert.equal(edited.subarray(0,4).toString(),'RIFF');
+  assert.equal(edited.subarray(8,12).toString(),'WEBP');
+  assert.ok(edited.length>100_000,'Corrected portrait must be a real asset, not a placeholder');
+  assert.notEqual(createHash('sha256').update(edited).digest('hex'),createHash('sha256').update(original).digest('hex'));
+  const app=readFileSync(new URL('../src/js/app.js',import.meta.url),'utf8');
+  const chat=readFileSync(new URL('../src/js/ui-miss-adphor-chat.js',import.meta.url),'utf8');
+  assert.ok(app.includes("VITE_ADPHOR_AVATAR_PATH || '/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp'"));
+  assert.ok(chat.includes("const img='/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp'"));
+  assert.equal(approvedAvatarPath('/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp'),'/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp');
+});

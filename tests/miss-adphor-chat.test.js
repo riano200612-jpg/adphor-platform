@@ -24,7 +24,7 @@ test('assistant mounted in signed-in portal and uses approved QA portrait',()=>{
  const app=readFileSync(new URL('../src/js/app.js',import.meta.url),'utf8');
  assert.match(app,/mountMissAdphorChat/);assert.match(app,/miss-adphor-chat-root/);
  const ui=readFileSync(new URL('../src/js/ui-miss-adphor-chat.js',import.meta.url),'utf8');
- assert.match(ui,/assets\/branding\/miss-adphor-qa-integral\(4\)\.webp/);
+ assert.ok(ui.includes("/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp"));
  assert.match(ui,/textContent=text/);
 });
 

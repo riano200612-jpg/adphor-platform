@@ -107,7 +107,7 @@ const priority = t => `<span class="priority p-${PRIORITIES.indexOf(t.priority)}
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
 function reportError(error) { toast(error.message || 'No se pudo completar la operación.'); }
 function loginScreen() {
-  const corporateAvatar=import.meta.env.VITE_ADPHOR_AVATAR_PATH || '/assets/branding/miss-adphor-qa-integral(4).webp';
+  const corporateAvatar=import.meta.env.VITE_ADPHOR_AVATAR_PATH || '/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp';
   const welcomeCoverEnabled=shouldOfferMissWelcome({
     enabled:import.meta.env.VITE_MISS_ADPHOR_WELCOME_ENABLED!=='false',
     hostname:globalThis.location?.hostname
