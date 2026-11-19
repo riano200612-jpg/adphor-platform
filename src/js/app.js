@@ -1,5 +1,6 @@
 import {mountAccessManagement} from './ui-access-management.js';
 import {mountVerifiedAgenda} from './ui-verified-agenda.js';
+import {mountQaTaskCatalog} from './ui-task-catalog.js';
 import {renderOperationalAgenda} from './ui-operational-agenda.js';
 import {renderSprintBoard} from './ui-sprint-board.js';
 import {mountVisitPreparation} from './ui-visit-preparation.js';
@@ -35,6 +36,7 @@ import '../css/visits.css';
 import '../css/corporate-staff.css';
 import '../css/operational-agenda.css';
 import '../css/sprint-board.css';
+import '../css/task-catalog.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -216,7 +218,7 @@ function ticketResults() {
   if (state.view === 'list') return count + `<div tabindex="0" role="region" aria-label="Tabla de novedades" class="table-wrap panel"><table><thead><tr><th>Novedad</th><th>Responsable</th><th>Prioridad</th><th>Estado</th><th>Plazo</th></tr></thead><tbody>${filtered.map(t => `<tr><td><button class="table-title" data-ticket="${esc(t.id)}">${esc(t.title)}</button><small>${esc(t.area)}</small></td><td>${esc(person(t.assignee))}</td><td>${priority(t)}</td><td>${badge(t)}</td><td class="${overdue(t) ? 'late' : ''}">${fmt(t.due_date)}</td></tr>`).join('')}</tbody></table></div>`;
   return count + `<div class="kanban">${STATES.map((s,i) => { const items = filtered.filter(t => t.status === s); return `<section class="kanban-column"><h2><span class="state-dot dot-${i}"></span>${s}<span>${items.length}</span></h2><div class="kanban-cards">${items.map(card).join('') || '<p class="column-empty">Sin novedades</p>'}</div></section>`; }).join('')}</div>`;
 }
-function ticketsPage() { return heading(state.page === 'mine' ? 'Mis tareas' : 'Bitácora de mantenimiento', state.page === 'mine' ? 'Tu trabajo asignado, sus plazos y próximos pasos.' : 'Cada caso con responsable, evidencia y seguimiento.', newButton()) + (state.page === 'mine' ? operationalAgenda(false) + sprintBoard() : '') + `<section class="qa-guided-workflow" aria-label="Cómo funciona una novedad"><h2>De la novedad a la solución</h2><p>Un proceso claro, con responsable y evidencia en cada etapa.</p><ol><li><strong>1. Registra</strong><span>Describe el problema y añade una fotografía.</span></li><li><strong>2. Asigna</strong><span>Selecciona el área y el responsable.</span></li><li><strong>3. Haz seguimiento</strong><span>Consulta plazos, comentarios y evidencias.</span></li><li><strong>4. Verifica</strong><span>El coordinador confirma y cierra el caso.</span></li></ol></section><div class="toolbar"><p>Selecciona una novedad para ver su detalle y avanzar.</p><div class="segmented"><button data-view="board" aria-pressed="${state.view === 'board'}">${icon('table-columns')} Tablero</button><button data-view="list" aria-pressed="${state.view === 'list'}">${icon('list')} Lista</button></div></div>` + filters() + `<div id="ticket-results">${ticketResults()}</div>`; }
+function ticketsPage() { return heading(state.page === 'mine' ? 'Mis tareas' : 'Bitácora de mantenimiento', state.page === 'mine' ? 'Tu trabajo asignado, sus plazos y próximos pasos.' : 'Cada caso con responsable, evidencia y seguimiento.', newButton() + (state.page === 'mine' && repo.qaTaskCatalogEnabled && isManager(role()) ? '<button type="button" class="btn secondary" data-page="task-catalog">Propuestas recurrentes</button>' : '')) + (state.page === 'mine' ? operationalAgenda(false) + sprintBoard() : '') + `<section class="qa-guided-workflow" aria-label="Cómo funciona una novedad"><h2>De la novedad a la solución</h2><p>Un proceso claro, con responsable y evidencia en cada etapa.</p><ol><li><strong>1. Registra</strong><span>Describe el problema y añade una fotografía.</span></li><li><strong>2. Asigna</strong><span>Selecciona el área y el responsable.</span></li><li><strong>3. Haz seguimiento</strong><span>Consulta plazos, comentarios y evidencias.</span></li><li><strong>4. Verifica</strong><span>El coordinador confirma y cierra el caso.</span></li></ol></section><div class="toolbar"><p>Selecciona una novedad para ver su detalle y avanzar.</p><div class="segmented"><button data-view="board" aria-pressed="${state.view === 'board'}">${icon('table-columns')} Tablero</button><button data-view="list" aria-pressed="${state.view === 'list'}">${icon('list')} Lista</button></div></div>` + filters() + `<div id="ticket-results">${ticketResults()}</div>`; }
 function areasPage() { return heading('Áreas de trabajo', 'Prioriza el mantenimiento según los pendientes de cada área.') + `<div class="areas-grid">${project().areas.map((area,i) => { const m = metrics(rows().filter(t => t.area === area)); return `<button class="area-card" data-area="${esc(area)}"><span class="area-number">${String(i+1).padStart(2,'0')}</span><h2>${esc(area)}</h2><div><span><strong>${m.pending}</strong> pendientes</span><span class="${m.overdue ? 'late' : ''}"><strong>${m.overdue}</strong> fuera de plazo</span></div><p>Consultar bitácora ${icon('arrow-right')}</p></button>`; }).join('')}</div>`; }
 function reportPage() {
   if(repo.mode === 'cloud') {
@@ -241,6 +243,10 @@ function renderPage() {
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if(state.page==='task-catalog'){
+    if(!repo.qaTaskCatalogEnabled||!isManager(role())){state.page='mine';renderPage();return;}
+    mountQaTaskCatalog($('page-content'),{repo,projectId:state.projectId,projectName:project().name,userId:state.user.id});return;
+  }
   if (state.page === 'agenda') {
     mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
   }
