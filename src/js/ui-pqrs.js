@@ -57,6 +57,7 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   optional.after(fieldError);
   form.addEventListener('invalid',event=>{
     const target=event.target;
+    if(target!==form.querySelector(':invalid'))return; // Announce first missing field, not the last.
     if(target?.name==='subject')fieldError.textContent='Escribe un asunto de al menos tres caracteres.';
     else if(target?.name==='description')fieldError.textContent='Explica qué ocurrió y qué solución necesitas (mínimo tres caracteres).';
     else fieldError.textContent='Revisa el campo requerido señalado por el navegador.';
