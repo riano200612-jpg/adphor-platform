@@ -73,7 +73,7 @@ let monthlyKey = '';
 // Only a fully authenticated QA session starts this clock. Demo/unauthenticated
 // pages are unaffected, and every authenticated navigation keeps its timestamp.
 const idleSession=createQaIdleGuard({
-  storage:sessionStorage,
+  storage:localStorage,
   onExpire:()=>{
     if(!state.user)return;
     state.user=null;state.corporateAdmin=false;state.projects=[];state.members=[];
@@ -527,7 +527,7 @@ async function startPortal() {
     return;
   }
   if(recoveryHandled)return;
-  if(repo.mode==='cloud'&&expiredStoredSession(sessionStorage)){
+  if(repo.mode==='cloud'&&expiredStoredSession(localStorage)){
     try{await repo.logout();}catch{/* Do not restore an expired token. */}
     loginScreen();
     const note=$('login-error');
