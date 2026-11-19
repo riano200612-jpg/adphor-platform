@@ -18,3 +18,7 @@
 .operational-agenda-window .muted{font-size:12px}
 .operational-agenda-foot{margin:15px 0 0;line-height:1.65;font-size:11px}
 @media(max-width:680px){.operational-agenda-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.operational-agenda-windows{grid-template-columns:1fr}.operational-agenda-window{padding:13px}.operational-agenda .section-heading .btn{width:100%}}
+
+/* Home remains a concise overview; detail cards live in Mis tareas. */
+.operational-agenda-compact .operational-agenda-windows{display:none}
+.operational-agenda-compact .operational-agenda-foot{margin-top:8px}

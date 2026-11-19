@@ -30,7 +30,8 @@ export function renderOperationalAgenda(tickets,{projectId,userId,asOf,compact=f
   '<h2>Mis compromisos por plazo</h2><p>Tareas de mantenimiento asignadas a ti en esta copropiedad.</p></div>'+
   '<button type="button" class="btn secondary" data-page="mine">Abrir Mis tareas</button></div>'+
   '<div class="operational-agenda-stats" aria-label="Resumen de vencimientos">'+highlight+'</div>'+
-  '<div class="operational-agenda-windows">'+columns+'</div>'+
+  '<div class="operational-agenda-windows">'+(snapshot.total?columns:
+    '<p class="muted">Sin pendientes registrados en la bitácora de esta copropiedad.</p>')+'</div>'+
   '<p class="muted operational-agenda-foot">'+later+' tareas posteriores a 15 días. '+
   (snapshot.unclassified?snapshot.unclassified+' registros no verificables se omitieron. ':'')+
   'Fuente: bitácora persistente; no incluye aún actividades recurrentes, '+
