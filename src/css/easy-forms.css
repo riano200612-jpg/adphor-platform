@@ -33,3 +33,7 @@ dialog .adphor-simple-form .dialog-footer .btn{min-height:50px;font-size:15px;pa
 .visit-editor .simple-form-hint{font-size:14px;line-height:1.65;margin:8px 0 17px;color:#355365}
 .visit-editor .visit-fields label{font-size:14px}
 @media(max-width:680px){.pqrs-optional-grid{grid-template-columns:1fr}.pqrs-form.adphor-simple-form .pqrs-submit{width:100%}}
+
+
+.pqrs-form .pqrs-form-error:not(:empty){padding:12px 14px;border:1px solid #dfaba4;background:#fff1ef;color:#842a22;font-size:14px;line-height:1.5;border-radius:9px}
+.pqrs-form [aria-invalid=true]{outline:2px solid #b23b32;outline-offset:2px}
