@@ -20,8 +20,9 @@ test('ADPHOR ONE: circular dashboard preserves authorized existing navigation',a
   const grid=page.locator('.adphor-one-grid');
   const tiles=grid.locator('.adphor-one-tile');
   await expect(grid).toBeVisible();
-  expect(await tiles.count()).toBeGreaterThanOrEqual(7);
-  expect(await tiles.count()).toBeLessThanOrEqual(8);
+  const allowed = await page.locator('.sidebar nav button[data-page]').count();
+  await expect(tiles).toHaveCount(allowed);
+  expect(allowed).toBeGreaterThanOrEqual(13);
   for(const id of ['agenda','pqrs','visits','properties','reports','meetings','agent-history']){
     await expect(grid.locator('[data-page="'+id+'"]')).toHaveCount(1);
   }
@@ -57,18 +58,21 @@ async function activateFullWidth(page){
    return shell;
  });
 }
-test('ADPHOR ONE: immersive desktop home has no duplicate side navigation',async({page})=>{
+test('ADPHOR ONE: complete desktop menu exposes every authorized feature as a circle',async({page})=>{
  await enterDemo(page);
  expect(await activateFullWidth(page)).toBe(true);
  await expect(page.locator('.sidebar')).toBeHidden();
  await expect(page.locator('.adphor-one-topbrand')).toBeVisible();
- const count=await page.locator('.adphor-one-grid .adphor-one-tile').count();
- expect(count).toBeGreaterThanOrEqual(7);
- expect(count).toBeLessThanOrEqual(8);
- await expect(page.locator('.adphor-one-more-list [data-page="pqrs"]')).toHaveCount(0);
- await page.locator('.adphor-one-more summary').click();
- await expect(page.locator('.adphor-one-more-list button[data-page="tickets"]')).toBeVisible();
- await page.locator('.adphor-one-more-list button[data-page="tickets"]').click();
+ const allowed=await page.locator('.sidebar nav button[data-page]').evaluateAll(nodes=>nodes.map(n=>n.dataset.page));
+ const actual=await page.locator('.adphor-one-grid .adphor-one-tile').evaluateAll(nodes=>nodes.map(n=>n.dataset.page));
+ expect(new Set(actual)).toEqual(new Set(allowed));
+ expect(actual.length).toBe(allowed.length);
+ await expect(page.locator('.adphor-one-more')).toHaveCount(0);
+ await expect(page.locator('.adphor-one-module-section')).toHaveCount(3);
+ for(const id of ['dashboard','unified','tickets','recorridos','mine','areas','agenda','meetings','pqrs','visits','reports','agent-history']){
+  await expect(page.locator('.adphor-one-grid [data-page="'+id+'"]')).toHaveCount(1);
+ }
+ await page.locator('.adphor-one-grid [data-page="tickets"]').click();
  await expect(page.locator('.sidebar nav button[data-page="tickets"]')).toHaveAttribute('aria-current','page');
  expect(await activateFullWidth(page)).toBe(true);
  await expect(page.locator('.sidebar')).toBeHidden();
@@ -78,18 +82,22 @@ test('ADPHOR ONE: immersive desktop home has no duplicate side navigation',async
  await page.locator('.adphor-one-grid [data-page="pqrs"]').click();
  await expect(page.locator('.sidebar nav button[data-page="pqrs"]')).toHaveAttribute('aria-current','page');
 });
-test('ADPHOR ONE: compact mobile home avoids overflow and keeps accessible actions',async({page})=>{
+test('ADPHOR ONE: full mobile menu has circles without hidden navigation or overflow',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.emulateMedia({reducedMotion:'reduce'});
  await enterDemo(page);
  expect(await activateFullWidth(page)).toBe(true);
  await expect(page.locator('.sidebar')).toBeHidden();
- const count=await page.locator('.adphor-one-grid .adphor-one-tile').count();
- expect(count).toBeGreaterThanOrEqual(7);
- expect(count).toBeLessThanOrEqual(8);
+ const allowed=await page.locator('.sidebar nav button[data-page]').count();
+ await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed);
+ await expect(page.locator('.adphor-one-more')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  const axe=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
  expect(axe.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);
- await page.locator('.adphor-one-more summary').click();
- await expect(page.locator('.adphor-one-more-list [data-page="tickets"]')).toBeVisible();
+ await page.locator('.adphor-one-grid [data-page="mine"]').click();
+ await expect(page.locator('.sidebar nav button[data-page="mine"]')).toHaveAttribute('aria-current','page');
+ expect(await activateFullWidth(page)).toBe(true);
+ await page.getByRole('button',{name:'Volver a la pantalla de inicio'}).click();
+ expect(await activateFullWidth(page)).toBe(true);
+ await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed);
 });

@@ -168,3 +168,56 @@
 @media(prefers-reduced-motion:reduce){
  .adphor-one-shell .adphor-one-topbrand,.adphor-one-shell .adphor-one-menu-item{transition:none!important}
 }
+
+/* Complete-menu edition: every authorized route is one visible circular action.
+   Legacy compact-menu selectors above remain inert; no dropdown is created. */
+.adphor-one-shell .adphor-one-home .adphor-one-grid{
+  display:flex;flex-direction:column;gap:20px;
+  max-width:1240px;margin:0 auto 28px;padding:8px 0 12px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-module-section{
+  display:block;width:100%;padding:0;border:0;background:transparent;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-module-heading{
+  color:#4e6273;font-size:12px;font-weight:750;
+  letter-spacing:1.2px;text-transform:uppercase;
+  margin:12px 0 10px 13px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-group-grid{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:8px 8px;align-items:start;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{
+  min-height:137px;padding:8px 3px;gap:7px;border-radius:20px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile > i{
+  width:80px;height:80px;font-size:25px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile strong{
+  font-size:13px;line-height:1.3;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile small{
+  font-size:10px;max-width:190px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-hero{
+  max-width:1240px;margin:2px auto 12px;padding:20px 26px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-hero h2{
+  font-size:clamp(20px,2.5vw,28px);
+}
+.adphor-one-shell .adphor-one-home .adphor-one-hero-subtitle{margin-top:5px}
+@media(max-width:1110px){
+ .adphor-one-shell .adphor-one-home .adphor-one-group-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:850px){
+ .adphor-one-shell .adphor-one-home .adphor-one-group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:610px){
+ .adphor-one-shell .adphor-one-home .adphor-one-group-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 3px}
+ .adphor-one-shell .adphor-one-home .adphor-one-module-heading{margin-left:5px;font-size:11px}
+ .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile{min-height:138px}
+ .adphor-one-shell .adphor-one-home .adphor-one-group-grid .adphor-one-tile > i{
+   width:clamp(65px,20vw,80px);height:clamp(65px,20vw,80px);font-size:23px;
+ }
+ .adphor-one-shell .adphor-one-home .adphor-one-hero{padding:16px 17px}
+}

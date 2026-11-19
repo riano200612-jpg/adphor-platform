@@ -1,26 +1,67 @@
-// ADPHOR ONE · presentation-only enhancement for the single approved QA Integral.
-// No credentials, API writes, synthetic records, permission changes or navigation overrides.
+// ADPHOR ONE · QA Integral presentation layer. No permission elevation or backend writes.
+// The existing app's authorization-filtered navigation is the ONLY source of menu entries.
 export const QA_INTEGRAL_HOST = 'qa-integral-claude-reviewed.adphor-platform.pages.dev';
+
+export const ADPHOR_ONE_GROUPS = Object.freeze([
+  Object.freeze({id:'daily',title:'Gestión diaria'}),
+  Object.freeze({id:'operations',title:'Operación y seguimiento'}),
+  Object.freeze({id:'people',title:'Equipo e inteligencia'}),
+  Object.freeze({id:'administration',title:'Administración y control'}),
+  Object.freeze({id:'other',title:'Otras herramientas autorizadas'})
+]);
+
 export const ADPHOR_ONE_MODULES = Object.freeze([
-  Object.freeze({id:'agenda',title:'Calendario',icon:'calendar-days',tone:'navy',hint:'Agenda verificada'}),
-  Object.freeze({id:'pqrs',title:'PQRS',icon:'message',tone:'champagne',hint:'Solicitudes y seguimiento'}),
-  Object.freeze({id:'visits',title:'Visitas',icon:'clipboard-check',tone:'sage',hint:'Visitas y evidencias'}),
-  Object.freeze({id:'corporate-staff',title:'Equipo',icon:'people-group',tone:'sky',hint:'Personal autorizado'}),
-  Object.freeze({id:'properties',title:'Copropiedades',icon:'building',tone:'slate',hint:'Tus comunidades'}),
-  Object.freeze({id:'reports',title:'Informes',icon:'chart-column',tone:'pearl',hint:'Indicadores e informes'}),
-  Object.freeze({id:'meetings',title:'Reuniones',icon:'video',tone:'steel',hint:'Gestión de reuniones'}),
-  Object.freeze({id:'agent-history',title:'Agentes IA',icon:'wand-magic-sparkles',tone:'indigo',hint:'Borradores auditables'})
+  Object.freeze({id:'agenda',title:'Calendario',icon:'calendar-days',tone:'navy',hint:'Agenda verificada',group:'daily'}),
+  Object.freeze({id:'pqrs',title:'PQRS',icon:'message',tone:'champagne',hint:'Solicitudes y seguimiento',group:'daily'}),
+  Object.freeze({id:'visits',title:'Visitas',icon:'clipboard-check',tone:'sage',hint:'Visitas y evidencias',group:'daily'}),
+  Object.freeze({id:'meetings',title:'Reuniones',icon:'video',tone:'steel',hint:'Gestión de reuniones',group:'daily'}),
+  Object.freeze({id:'tickets',title:'Bitácora',icon:'clipboard-list',tone:'slate',hint:'Novedades y evidencias',group:'daily'}),
+  Object.freeze({id:'recorridos',title:'Recorridos',icon:'route',tone:'sage',hint:'Hallazgos y seguimiento',group:'daily'}),
+  Object.freeze({id:'mine',title:'Mis tareas',icon:'list-check',tone:'sky',hint:'Actividades asignadas',group:'daily'}),
+  Object.freeze({id:'dashboard',title:'Resumen',icon:'chart-simple',tone:'pearl',hint:'Panorama de la operación',group:'operations'}),
+  Object.freeze({id:'unified',title:'Centro integrado',icon:'grip',tone:'navy',hint:'Operación conectada',group:'operations'}),
+  Object.freeze({id:'properties',title:'Copropiedades',icon:'building',tone:'slate',hint:'Tus comunidades',group:'operations'}),
+  Object.freeze({id:'areas',title:'Áreas',icon:'layer-group',tone:'sky',hint:'Consulta por área',group:'operations'}),
+  Object.freeze({id:'reports',title:'Informes',icon:'chart-column',tone:'pearl',hint:'Indicadores e informes',group:'operations'}),
+  Object.freeze({id:'staff',title:'Equipo administrativo',icon:'users',tone:'sky',hint:'Directorio autorizado',group:'people'}),
+  Object.freeze({id:'corporate-staff',title:'Equipo corporativo',icon:'people-group',tone:'sage',hint:'Personal autorizado',group:'people'}),
+  Object.freeze({id:'agent-history',title:'Agentes IA',icon:'wand-magic-sparkles',tone:'indigo',hint:'Borradores sujetos a revisión',group:'people'}),
+  Object.freeze({id:'qa-source',title:'Auditoría histórica',icon:'file-shield',tone:'slate',hint:'Origen y trazabilidad',group:'administration'}),
+  Object.freeze({id:'access-audit',title:'Usuarios y permisos',icon:'user-shield',tone:'navy',hint:'Administración autorizada',group:'administration'}),
+  Object.freeze({id:'consultation',title:'Consulta de datos',icon:'database',tone:'indigo',hint:'Lectura autorizada',group:'administration'})
 ]);
 
 export function isIntegralQaHost(hostname) {
   return hostname === QA_INTEGRAL_HOST ||
     /^[a-f0-9]{8}\.adphor-platform\.pages\.dev$/.test(String(hostname || ''));
 }
+// Kept as a public pure helper for permission-isolation tests.
 export function visibleAdphorOneModules(availablePages) {
   const allowed = new Set(Array.isArray(availablePages) ? availablePages : []);
   return ADPHOR_ONE_MODULES.filter(module => allowed.has(module.id));
 }
-function createOrb(doc, module) {
+
+// Catalog exactly matches the allowed menu: do not infer roles from names or e-mails.
+// Future pages already permitted by the app are also included as circular buttons.
+export function completeAdphorOneCatalog(navItems) {
+  if (!Array.isArray(navItems)) return [];
+  const source = new Map();
+  for (const item of navItems) {
+    if (!item || typeof item.id !== 'string' || !item.id.trim() || source.has(item.id)) continue;
+    source.set(item.id, {
+      label: typeof item.label === 'string' ? item.label : item.id,
+      icon: typeof item.icon === 'string' ? item.icon : 'fa-solid fa-circle'
+    });
+  }
+  const known = ADPHOR_ONE_MODULES.filter(module => source.has(module.id));
+  const unknown = [...source.entries()]
+    .filter(([id]) => !ADPHOR_ONE_MODULES.some(module => module.id === id))
+    .map(([id,item]) => ({
+      id,title:item.label,icon:item.icon,tone:'steel',hint:'Abrir herramienta',group:'other'
+    }));
+  return [...known,...unknown];
+}
+function createOrb(doc,module) {
   const button = doc.createElement('button');
   button.type = 'button';
   button.className = 'module-card adphor-one-orb';
@@ -40,15 +81,15 @@ function createOrb(doc, module) {
 function createHero(doc) {
   const hero = doc.createElement('section');
   hero.className = 'adphor-one-hero';
-  hero.setAttribute('aria-label','Accesos a los módulos de ADPHOR');
+  hero.setAttribute('aria-label','Todas las herramientas disponibles de ADPHOR');
   const eyebrow = doc.createElement('p');
   eyebrow.className = 'eyebrow';
   eyebrow.textContent = 'ADPHOR ONE · MI ESPACIO DIGITAL';
   const title = doc.createElement('h2');
-  title.textContent = 'Todo lo que necesitas, a un toque.';
+  title.textContent = 'Todas tus herramientas, en un solo lugar.';
   const subtitle = doc.createElement('p');
   subtitle.className = 'adphor-one-hero-subtitle';
-  subtitle.textContent = 'Elige una herramienta. Tus datos, permisos e historial se mantienen.';
+  subtitle.textContent = 'Accede directamente a cada módulo habilitado para tu sesión.';
   hero.append(eyebrow,title,subtitle);
   return hero;
 }
@@ -62,49 +103,52 @@ export function enhanceAdphorOneDashboard(doc) {
     return false;
   }
   if (grid.dataset.adphorOneReady === 'true') return false;
-  const availablePages = Array.from(doc.querySelectorAll('.sidebar nav [data-page]'), button => button.dataset.page);
-  const modules = visibleAdphorOneModules(availablePages);
-  if (!modules.length) return false; // fail closed when the authorization-derived nav is absent
-  const existing = new Map(Array.from(grid.querySelectorAll('.module-card[data-page]'), button => [button.dataset.page,button]));
-  for (const module of modules) {
-    const button = existing.get(module.id) || createOrb(doc,module);
-    button.dataset.uiTone = module.tone;
-    button.classList.add('adphor-one-tile');
-    const icon = button.querySelector('i');
-    if (icon) icon.className = 'fa-solid fa-' + module.icon;
-    const label = button.querySelector('strong');
-    if (label) label.textContent = module.title; // display label only, leave live status <small> intact
-    grid.append(button); // reorders existing buttons without recreating their listeners or live status
+  const source = [...doc.querySelectorAll('.sidebar nav button[data-page]')].map(button=>({
+    id:button.dataset.page,
+    label:button.getAttribute('aria-label') || button.textContent.trim(),
+    icon:button.querySelector('i')?.className || 'fa-solid fa-circle'
+  }));
+  const catalog = completeAdphorOneCatalog(source);
+  if (!catalog.length) return false; // no authorized menu: no enhancement
+  const existing = new Map([...grid.querySelectorAll('.module-card[data-page]')].map(button=>[button.dataset.page,button]));
+  const sections = [];
+  for (const group of ADPHOR_ONE_GROUPS) {
+    const modules = catalog.filter(module=>module.group===group.id);
+    if (!modules.length) continue;
+    const section = doc.createElement('section');
+    section.className = 'adphor-one-module-section';
+    section.setAttribute('aria-label',group.title);
+    const title = doc.createElement('h3');
+    title.className = 'adphor-one-module-heading';
+    title.textContent = group.title;
+    const orbs = doc.createElement('div');
+    orbs.className = 'adphor-one-group-grid';
+    for(const module of modules) {
+      const button = existing.get(module.id) || createOrb(doc,module);
+      button.dataset.uiTone = module.tone;
+      button.classList.add('adphor-one-tile');
+      const icon = button.querySelector('i');
+      if(icon) {
+        // Unknown future routes inherit the icon from the existing authorized nav.
+        icon.className = group.id==='other' ? module.icon : 'fa-solid fa-'+module.icon;
+        icon.setAttribute('aria-hidden','true');
+      }
+      const label = button.querySelector('strong');
+      if(label) label.textContent = module.title;
+      // Keep original live PQRS/meeting <small> counters and async updates intact.
+      orbs.append(button);
+    }
+    section.append(title,orbs);
+    sections.push(section);
   }
-  page.classList.add('adphor-one-home');
+  if (!sections.length) return false;
+  grid.replaceChildren(...sections);
   grid.classList.add('adphor-one-grid');
   grid.dataset.adphorOneReady = 'true';
-  intro.after(createHero(doc),grid);
+  page.classList.add('adphor-one-home');
+  // All navigation first; original dashboard, statistics, and history follow below.
+  page.prepend(createHero(doc),grid);
   return true;
-}
-
-/** Build a compact list from the application's *already permitted* navigation.
- * The circular dashboard remains the primary navigation, not the sidebar. */
-export function secondaryAdphorOnePages(navItems, isHome = true) {
-  const primary = new Set(ADPHOR_ONE_MODULES.map(item => item.id));
-  return (Array.isArray(navItems) ? navItems : []).filter(item =>
-    item && item.id && item.id !== 'dashboard' &&
-    (!isHome || !primary.has(item.id))
-  );
-}
-function navigationLink(doc, item, active) {
-  const button = doc.createElement('button');
-  button.type = 'button';
-  button.className = 'adphor-one-menu-item';
-  button.dataset.page = item.id; // use native app handler and existing authorization
-  if (item.id === active) button.setAttribute('aria-current','page');
-  const icon = doc.createElement('i');
-  icon.className = item.icon || 'fa-solid fa-circle';
-  icon.setAttribute('aria-hidden','true');
-  const label = doc.createElement('span');
-  label.textContent = item.label;
-  button.append(icon,label);
-  return button;
 }
 export function enhanceAdphorOneShell(doc) {
   const shell = doc?.querySelector?.('.app-shell');
@@ -113,16 +157,9 @@ export function enhanceAdphorOneShell(doc) {
   const actions = topbar?.querySelector?.('.topbar-actions');
   if (!shell || !sidebar || !topbar || !actions) return false;
   if (shell.dataset.adphorOneLayout === 'ready') return false;
-  // Copy only pages that the original, role-filtered navigation has authorized.
   const buttons = [...sidebar.querySelectorAll('nav button[data-page]')];
   if (!buttons.length) return false;
-  const navigation = buttons.map(button => ({
-    id: button.dataset.page,
-    label: button.getAttribute('aria-label') || button.textContent.trim(),
-    icon: button.querySelector('i')?.className || 'fa-solid fa-circle'
-  }));
   const active = buttons.find(button => button.getAttribute('aria-current') === 'page')?.dataset.page || 'dashboard';
-  const home = active === 'dashboard';
   const brand = doc.createElement('a');
   brand.href = '#';
   brand.className = 'adphor-one-topbrand';
@@ -137,7 +174,7 @@ export function enhanceAdphorOneShell(doc) {
   brandLegal.textContent = 'S.A.S.';
   brand.append(brandIcon,brandName,brandLegal);
   topbar.insertBefore(brand,topbar.firstChild);
-  if (!home) {
+  if (active !== 'dashboard') {
     const goHome = doc.createElement('button');
     goHome.type = 'button';
     goHome.className = 'adphor-one-go-home';
@@ -146,30 +183,11 @@ export function enhanceAdphorOneShell(doc) {
     goHome.setAttribute('aria-label','Volver a la pantalla de inicio');
     actions.prepend(goHome);
   }
-  const more = secondaryAdphorOnePages(navigation, home);
-  if (more.length) {
-    const details = doc.createElement('details');
-    details.className = 'adphor-one-more';
-    const summary = doc.createElement('summary');
-    summary.setAttribute('aria-label',home ? 'Otras funciones autorizadas' : 'Herramientas autorizadas');
-    const summaryIcon = doc.createElement('i');
-    summaryIcon.className = 'fa-solid fa-grip';
-    summaryIcon.setAttribute('aria-hidden','true');
-    const summaryLabel = doc.createElement('span');
-    summaryLabel.textContent = home ? 'Otras funciones' : 'Herramientas';
-    summary.append(summaryIcon,summaryLabel);
-    const list = doc.createElement('nav');
-    list.className = 'adphor-one-more-list';
-    list.setAttribute('aria-label','Herramientas autorizadas');
-    for (const item of more) list.append(navigationLink(doc,item,active));
-    details.append(summary,list);
-    actions.prepend(details);
-  }
+  // No sidebar or overflow menu: the entire permitted navigation appears as circles on Inicio.
   shell.classList.add('adphor-one-shell');
   shell.dataset.adphorOneLayout = 'ready';
   return true;
 }
-
 function startAdphorOne() {
   if (!isIntegralQaHost(globalThis.location?.hostname)) return;
   const root = document.getElementById('root');
