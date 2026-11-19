@@ -208,3 +208,26 @@ test('ADPHOR ONE: centered, uniform rows at laptop, desktop and mobile sizes',as
  const tiles=await page.locator('.adphor-one-grid .adphor-one-tile').evaluateAll(nodes=>nodes.map(n=>n.dataset.page));
  expect(new Set(tiles)).toEqual(new Set(allowed));
 });
+
+
+test('ADPHOR ONE: Mis tareas is the first circle and opens the existing authorized task route',async({page})=>{
+ await page.setViewportSize({width:1366,height:768});
+ await enterDemo(page);
+ expect(await activateFullWidth(page)).toBe(true);
+ const daily=page.locator('.adphor-one-module-section').first();
+ await expect(daily.locator('.adphor-one-module-heading')).toHaveText('Gestión diaria');
+ await expect(daily.locator('.adphor-one-tile')).toHaveCount(6);
+ await expect(daily.locator('.adphor-one-tile').first()).toHaveAttribute('data-page','mine');
+ const second=page.locator('.adphor-one-module-section').nth(1);
+ await expect(second.locator('.adphor-one-tile')).toHaveCount(5);
+ await expect(second.locator('[data-page="recorridos"]')).toHaveCount(1);
+ await expect(page.locator('.adphor-one-grid [data-page="mine"]')).toHaveCount(1);
+ await daily.locator('[data-page="mine"]').click();
+ await expect(page.locator('.sidebar nav button[data-page="mine"]')).toHaveAttribute('aria-current','page');
+ await page.locator('.sidebar nav button[data-page="dashboard"]').click();
+ expect(await activateFullWidth(page)).toBe(true);
+ await expect(page.locator('.adphor-one-module-section').first().locator('.adphor-one-tile').first()).toHaveAttribute('data-page','mine');
+ const allowed=await page.locator('.sidebar nav button[data-page]').evaluateAll(nodes=>nodes.map(node=>node.dataset.page).filter(id=>id!=='dashboard'));
+ const displayed=await page.locator('.adphor-one-grid .adphor-one-tile').evaluateAll(nodes=>nodes.map(node=>node.dataset.page));
+ expect(new Set(displayed)).toEqual(new Set(allowed));
+});

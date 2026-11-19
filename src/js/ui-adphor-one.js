@@ -11,13 +11,13 @@ export const ADPHOR_ONE_GROUPS = Object.freeze([
 ]);
 
 export const ADPHOR_ONE_MODULES = Object.freeze([
+  Object.freeze({id:'mine',title:'Mis tareas',icon:'list-check',tone:'sky',hint:'Actividades asignadas',group:'daily'}),
   Object.freeze({id:'agenda',title:'Calendario',icon:'calendar-days',tone:'navy',hint:'Agenda verificada',group:'daily'}),
   Object.freeze({id:'pqrs',title:'PQRS',icon:'message',tone:'champagne',hint:'Solicitudes y seguimiento',group:'daily'}),
   Object.freeze({id:'visits',title:'Visitas',icon:'clipboard-check',tone:'sage',hint:'Visitas y evidencias',group:'daily'}),
   Object.freeze({id:'meetings',title:'Reuniones',icon:'video',tone:'steel',hint:'Gestión de reuniones',group:'daily'}),
   Object.freeze({id:'tickets',title:'Bitácora',icon:'clipboard-list',tone:'slate',hint:'Novedades y evidencias',group:'daily'}),
-  Object.freeze({id:'recorridos',title:'Recorridos',icon:'route',tone:'sage',hint:'Hallazgos y seguimiento',group:'daily'}),
-  Object.freeze({id:'mine',title:'Mis tareas',icon:'list-check',tone:'sky',hint:'Actividades asignadas',group:'operations'}),
+  Object.freeze({id:'recorridos',title:'Recorridos',icon:'route',tone:'sage',hint:'Hallazgos y seguimiento',group:'operations'}),
   Object.freeze({id:'dashboard',title:'Resumen',icon:'chart-simple',tone:'pearl',hint:'Panorama de la operación',group:'operations'}),
   Object.freeze({id:'unified',title:'Centro integrado',icon:'grip',tone:'navy',hint:'Operación conectada',group:'operations'}),
   Object.freeze({id:'properties',title:'Copropiedades',icon:'building',tone:'slate',hint:'Tus comunidades',group:'operations'}),

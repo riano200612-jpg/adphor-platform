@@ -64,3 +64,20 @@ test('Resumen is only a return-to-Inicio control and not a visible task tile',as
  assert.deepEqual(completeAdphorOneCatalog(nav).map(x=>x.id),['pqrs','visits']);
  assert.equal(visibleAdphorOneModules(['dashboard','pqrs']).some(x=>x.id==='dashboard'),false);
 });
+
+
+test('Mis tareas is the first authorized daily launcher, without duplication or permission changes',async()=>{
+ const {completeAdphorOneCatalog}=await import('../src/js/ui-adphor-one.js');
+ const daily=ADPHOR_ONE_MODULES.filter(module=>module.group==='daily');
+ const operations=ADPHOR_ONE_MODULES.filter(module=>module.group==='operations'&&module.id!=='dashboard');
+ assert.deepEqual(daily.map(module=>module.id),['mine','agenda','pqrs','visits','meetings','tickets']);
+ assert.equal(daily.length,6);
+ assert.equal(operations.length,5);
+ assert.ok(operations.some(module=>module.id==='recorridos'));
+ const allowed=['agenda','pqrs','visits','mine','recorridos'];
+ const catalog=completeAdphorOneCatalog(allowed.map(id=>({id,label:id,icon:'fa-solid fa-circle'})));
+ assert.equal(catalog[0].id,'mine');
+ assert.equal(catalog.filter(module=>module.id==='mine').length,1);
+ assert.equal(visibleAdphorOneModules(['agenda','pqrs']).some(module=>module.id==='mine'),false);
+ assert.deepEqual(new Set(catalog.map(module=>module.id)),new Set(allowed));
+});
