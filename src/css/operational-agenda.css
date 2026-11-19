@@ -1,0 +1,24 @@
+/* QA Integral: compact, read-only agenda over authorized maintenance assignments. */
+.operational-agenda{margin-bottom:24px}
+.operational-agenda .section-heading{align-items:center;flex-wrap:wrap}
+.operational-agenda .section-heading .eyebrow{margin-bottom:7px}
+.operational-agenda .section-heading p:not(.eyebrow){color:var(--muted);font-size:12px}
+.operational-agenda-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.operational-agenda-stat{background:#f5f8fa;border:1px solid #e4edf0;border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:5px}
+.operational-agenda-stat span{font-size:11px;color:#4f6570}
+.operational-agenda-stat strong{font-size:25px;color:#133d50;font-variant-numeric:tabular-nums}
+.operational-agenda-windows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.operational-agenda-window{border:1px solid #e4edf0;border-radius:12px;padding:16px;min-width:0}
+.operational-agenda-window h3{display:flex;justify-content:space-between;gap:8px;margin:0 0 12px;font-size:14px;color:#123a4b}
+.operational-agenda-window h3 span{color:#4d7c87;font-variant-numeric:tabular-nums}
+.operational-agenda-window ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.operational-agenda-window li button{border:1px solid #e8eef0;border-radius:9px;padding:10px 12px;width:100%;text-align:left;background:#fff;color:#133d50;display:grid;gap:5px;overflow-wrap:anywhere}
+.operational-agenda-window li button:hover,.operational-agenda-window li button:focus-visible{border-color:#388593;box-shadow:0 0 0 2px #38859322}
+.operational-agenda-window li small{font-size:11px;color:#5a707b;line-height:1.45}
+.operational-agenda-window .muted{font-size:12px}
+.operational-agenda-foot{margin:15px 0 0;line-height:1.65;font-size:11px}
+@media(max-width:680px){.operational-agenda-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.operational-agenda-windows{grid-template-columns:1fr}.operational-agenda-window{padding:13px}.operational-agenda .section-heading .btn{width:100%}}
+
+/* Home remains a concise overview; detail cards live in Mis tareas. */
+.operational-agenda-compact .operational-agenda-windows{display:none}
+.operational-agenda-compact .operational-agenda-foot{margin-top:8px}
