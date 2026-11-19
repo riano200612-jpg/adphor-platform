@@ -1,4 +1,5 @@
 import {PROPERTY_ROLES} from './services/access-governance.js';
+import {classifyLegacyCandidate,prepareLegacyInviteDraft} from './services/legacy-onboarding.js';
 
 // Se monta únicamente después de verificación real por backend; nunca confía en role='admin' del inmueble.
 const node=(tag,text='',cls='')=>{
@@ -152,7 +153,7 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
    const wrap=node('div','','access-table-wrap');
    const table=node('table');
    const hdr=node('tr');
-   for(const label of ['Usuario','Persona','Estado original','Conciliación','Personal QA'])
+   for(const label of ['Usuario','Persona','Estado original','Conciliación','Personal QA','Preparación'])
     hdr.append(node('th',label));
    const th=node('thead');th.append(hdr);table.append(th);
    const tb=node('tbody');table.append(tb);wrap.append(table);
@@ -168,10 +169,37 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
        candidate.staff_matched?'Encontrado':'Pendiente']){
       tr.append(node('td',String(val)));
      }
+     const readiness=classifyLegacyCandidate(candidate);
+     const actionCell=node('td');
+     if(readiness.canPrepare){
+      const preselect=node('button','Preseleccionar','btn secondary');
+      preselect.type='button';
+      preselect.setAttribute('aria-label','Preseleccionar '+candidate.username+' para invitación');
+      preselect.addEventListener('click',()=>{
+       try{
+        const draft=prepareLegacyInviteDraft(candidate);
+        // Clearing all prior form data is mandatory: never accidentally send
+        // another employee's email, property grants, or approval text.
+        inviteName.value=draft.display_name;
+        inviteEmail.value='';
+        inviteProject.value='';
+        inviteRole.value='viewer';
+        inviteReason.value='';
+        status.textContent='Preseleccionado '+draft.historic_alias+
+          '. Alias aún no vinculado para iniciar sesión. Verifica identidad, correo personal, copropiedad y motivo antes de enviar una invitación.';
+        invite.scrollIntoView?.({behavior:'smooth',block:'nearest'});
+        inviteEmail.focus();
+       }catch{status.textContent='No se pudo preparar esta identidad. Revisa su estado.';}
+      });
+      actionCell.append(preselect);
+     }else{
+      actionCell.append(node('span',readiness.reason,'muted'));
+     }
+     tr.append(actionCell);
      tb.append(tr);
     }
     if(!found.length){const tr=node('tr');const td=node('td','Sin coincidencias.');
-      td.colSpan=5;tr.append(td);tb.append(tr);}
+      td.colSpan=6;tr.append(td);tb.append(tr);}
    };
    lookup.addEventListener('input',drawCandidates);
    section.append(lookup,wrap);drawCandidates();
