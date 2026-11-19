@@ -11,6 +11,7 @@ import {renderMfaScreen} from './ui-mfa.js';
 import {mountStaffDirectory} from './ui-staff-directory.js';
 import {mountCorporateStaff} from './ui-corporate-staff.js';
 import {mountQaPasswordRecovery} from './ui-password-recovery.js';
+import {mountQaAccountAvatar} from './ui-qa-user-avatar.js';
 import {createClient} from '@supabase/supabase-js';
 import {loginAvatarMarkup} from './services/branding.js';
 import {ADPHOR_DEPLOY_LABEL} from './services/deployment-version.js';
@@ -31,6 +32,7 @@ import { mountAgentHistory } from './ui-agent-history.js';
 import { mountTenantConsultation } from './ui-tenant-consultation.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
+import '../css/qa-user-avatar.css';
 import '../css/client-source-review.css';
 import '../css/premium.css';
 import '../css/miss-adphor-welcome.css';
@@ -67,6 +69,7 @@ const icon = name => `<i class="fa-solid fa-${name}" aria-hidden="true"></i>`;
 const fmt = date => date && !Number.isNaN(new Date(date).getTime()) ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' }).format(new Date(date.length === 10 ? `${date}T12:00:00-05:00` : date)) : '—';
 const stamp = date => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(date));
 const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false, sprintOffset: 0, sprintScope: 'mine' };
+let disposeQaAccountAvatar=()=>{};
 let busy = false;
 let monthlyResult = null;
 let monthlyKey = '';
@@ -107,6 +110,7 @@ const priority = t => `<span class="priority p-${PRIORITIES.indexOf(t.priority)}
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 6500); }
 function reportError(error) { toast(error.message || 'No se pudo completar la operación.'); }
 function loginScreen() {
+  disposeQaAccountAvatar();disposeQaAccountAvatar=()=>{};
   const corporateAvatar=import.meta.env.VITE_ADPHOR_AVATAR_PATH || '/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp';
   const welcomeCoverEnabled=shouldOfferMissWelcome({
     enabled:import.meta.env.VITE_MISS_ADPHOR_WELCOME_ENABLED!=='false',
@@ -194,7 +198,11 @@ function shell() {
   if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['qa-source','users','Auditoría histórica']);
   if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['access-audit','user-shield','Usuarios y permisos']);
   if (import.meta.env.VITE_QA_CONSULTATION_ENABLED === 'true') nav.push(['consultation','database','Consulta de datos']);
+  disposeQaAccountAvatar();disposeQaAccountAvatar=()=>{};
   root.innerHTML = `<div class="app-shell"><aside class="sidebar"><a class="brand" href="#" data-page="dashboard">${icon('building')} ADPHOR<span>S.A.S.</span></a><p class="sidebar-caption">CENTRO DE OPERACIONES</p><nav aria-label="Navegación principal">${nav.map(([id, i, label]) => `<button aria-label="${label}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span>${id === 'mine' ? `<span class="nav-count">${rows().filter(t => t.assignee === state.user.id && t.status !== 'Cerrada').length}</span>` : ''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="status-dot"></div><span>${repo.mode === 'demo' || project()?.id === 'demo-01' ? 'Entorno de prueba · origen histórico disponible' : 'Datos compartidos'}</span><small>Gestión con trazabilidad</small><small class="adphor-version" data-build-version aria-label="Versión del despliegue">${ADPHOR_DEPLOY_LABEL}</small></div></aside><div class="workspace"><header class="topbar"><div class="project-control" id="project-control"></div><div class="topbar-actions"><button class="icon-btn" data-action="refresh" aria-label="Actualizar datos" title="Actualizar datos">${icon('rotate')}</button><div class="user-chip"><span class="avatar">${esc(initials(state.user.name))}</span><div><strong>${esc(state.user.name)}</strong><small>${role()==='admin' ? delegateAdminLabel(state.corporateAdmin) : ROLES[role()]}</small></div></div><button class="icon-btn" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">${icon('arrow-right-from-bracket')}</button></div></header>${repo.mode === 'demo' ? '<div class="demo-banner">Modo demostración · Datos guardados en este navegador · Usa información de prueba</div>' : (project()?.is_demo || project()?.id === 'demo-01') ? '<div class="demo-banner">Entorno de demostración · Nombres reales de copropiedades · Casos, áreas y responsables de ejemplo. Los registros no corresponden a la operación real.</div>' : ''}<main id="main" tabindex="-1"><div id="page-content"></div></main><footer>ADPHOR · Seguimiento de mantenimiento <span>Última lectura: ${state.lastSync?.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) || '—'}</span></footer></div></div><div id="miss-adphor-chat-root"></div>`;
+  disposeQaAccountAvatar=mountQaAccountAvatar(root.querySelector('.topbar .user-chip'),{
+    store:repo.accountAvatar,userId:state.user?.id
+  });
   mountProjectSelector($('project-control'), {projects:state.projects, selected:state.projectId, onChange(id) {
     selectWorkspaceProject(id);
   }});
