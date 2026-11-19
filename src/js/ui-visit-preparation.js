@@ -46,19 +46,19 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       <div class="panel"><span>${shared?'Visitas consultadas':'Borradores consultados'}</span><strong data-visit-count>—</strong></div>
     </div>
     <div class="visit-columns">
-      <section class="panel visit-editor" aria-labelledby="visit-editor-title">
-        <h2 id="visit-editor-title">Preparar visita</h2>
+      <section class="panel visit-editor adphor-simple-form" aria-labelledby="visit-editor-title">
+        <h2 id="visit-editor-title">Preparar visita</h2><p class="simple-form-hint">Para registrar una visita: selecciona el motivo, la fecha y la persona responsable; revisa y confirma. Las evidencias se agregan después en Seguimiento.</p>
         <p class="muted">${repository?.lifecycleEnabled?'Programa la visita y registra su ingreso, seguimiento y salida desde la lista.':'Programada no significa realizada ni cerrada. La ejecución y el cierre requieren un contrato de seguimiento aprobado.'}</p>
         <p class="muted">Completa los datos y revisa el borrador. Si cambias de copropiedad, se descarta la preparación actual.</p>
         <div data-visit-project></div>
         <fieldset><legend>1. Datos de la visita</legend><div class="visit-fields">
-          <label>Tipo o motivo<input name="kind" maxlength="200" required placeholder="Ej. Inspección de zonas comunes"></label>
+          <label>Tipo o motivo<input name="kind" list="visit-kind-suggestions" maxlength="200" required placeholder="Ej. Inspección de zonas comunes"><small>Puedes elegir una sugerencia o escribir el motivo.</small></label><datalist id="visit-kind-suggestions"><option value="Inspección de zonas comunes"><option value="Revisión de mantenimiento"><option value="Visita administrativa"><option value="Seguimiento a proveedor"><option value="Recorrido de seguridad"></datalist>
           <label>Fecha y hora (Colombia)<input name="start" type="datetime-local" required></label>
           <label>Escribir fecha y hora (alternativa accesible)
             <input name="startText" type="text" maxlength="16" autocomplete="off" placeholder="AAAA-MM-DD HH:mm" aria-describedby="visit-date-text-help">
             <small id="visit-date-text-help">Si el calendario no responde, introduce la fecha como AAAA-MM-DD HH:mm. Se reflejará en el campo anterior.</small>
           </label>
-          <label>Responsable<select name="responsible" required><option value="">Seleccionar</option></select></label>
+          <label>Responsable<select name="responsible" required><option value="">Seleccionar del equipo autorizado</option></select><small>Solo aparecen personas de la copropiedad seleccionada.</small></label>
         </div></fieldset>
         <details><summary>Observaciones, seguimiento y resultado</summary><p class="muted">${repository?.lifecycleEnabled?'Abre Seguimiento en la visita registrada para consultar su estado y documentar los resultados.':'Estos datos corresponden al ciclo posterior de la visita. Se habilitarán cuando se apruebe el contrato de registro e historial.'}</p></details>
         <div class="visit-actions"><button class="btn primary" type="button" data-review disabled>${shared?'Revisar visita':'Revisar borrador'}</button></div>
@@ -87,6 +87,12 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     mountProjectSelector(root.querySelector('[data-visit-project]'), {
       projects, selected: projectId, selectId:'visit-project-select', onChange:onProjectChange
     });
+  }
+  if(shared&&!canCreate){
+    const note=document.createElement('p');
+    note.className='notice';note.setAttribute('role','status');
+    note.textContent='Puedes consultar visitas. Para programar una nueva se requiere habilitación de escritura y rol autorizado.';
+    root.querySelector('.visit-editor .visit-actions')?.before(note);
   }
   const fields = root.querySelector('fieldset');
   const nativeStart=fields.querySelector('[name=start]');

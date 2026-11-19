@@ -20,3 +20,16 @@ dialog .adphor-simple-form .dialog-footer .btn{min-height:50px;font-size:15px;pa
 .qa-task-catalog .adphor-simple-form :is(input,select,textarea){font-size:16px;min-height:50px}
 .qa-task-catalog .adphor-simple-form button{min-height:48px;font-size:14px}
 @media(max-width:580px){dialog .adphor-simple-form .dialog-footer .btn{flex:1;min-width:120px}.adphor-simple-form .simple-form-extra{padding:10px}}
+
+/* Saturday real-test forms: use existing accessible control primitives. */
+.pqrs-form.adphor-simple-form .pqrs-form-short-help{font-size:14px;line-height:1.65;color:#355365;margin:12px 0 16px}
+.pqrs-optional-fields{margin:14px 0}
+.pqrs-optional-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:8px}
+.pqrs-optional-grid label{font-size:14px}
+.pqrs-optional-fields summary{font-size:14px}
+.pqrs-form.adphor-simple-form .pqrs-submit{min-height:52px;font-size:16px}
+.pqrs-evidence input:disabled{opacity:.6;cursor:not-allowed}
+.visit-editor.adphor-simple-form input,.visit-editor.adphor-simple-form select{font-size:16px;min-height:50px}
+.visit-editor .simple-form-hint{font-size:14px;line-height:1.65;margin:8px 0 17px;color:#355365}
+.visit-editor .visit-fields label{font-size:14px}
+@media(max-width:680px){.pqrs-optional-grid{grid-template-columns:1fr}.pqrs-form.adphor-simple-form .pqrs-submit{width:100%}}

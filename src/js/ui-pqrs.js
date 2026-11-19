@@ -29,6 +29,26 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
     mountWeeklyPqrs(weeklyRoot,{repository,projectId});
   }
   const form=root.querySelector('form');
+  // Keep the persisted payload and server checks unchanged. Show the three
+  // optional identity/location details only when the user asks for them.
+  form.classList.add('adphor-simple-form');
+  const primary=form.querySelector('.pqrs-fields');
+  const optional=document.createElement('details');
+  optional.className='pqrs-optional-fields simple-form-extra';
+  const optionalTitle=document.createElement('summary');
+  optionalTitle.textContent='Agregar torre, apartamento o nombre (opcional)';
+  const optionalBody=document.createElement('div');
+  optionalBody.className='pqrs-optional-grid';
+  for(const name of ['tower','apartment','owner']){
+    const label=primary.querySelector('[name="'+name+'"]')?.closest('label');
+    if(label)optionalBody.append(label);
+  }
+  optional.append(optionalTitle,optionalBody);
+  primary.after(optional);
+  const summaryHelp=document.createElement('p');
+  summaryHelp.className='muted pqrs-form-short-help';
+  summaryHelp.textContent='Solo necesitas elegir el tipo, escribir el asunto y explicar lo ocurrido. Los demás datos son opcionales.';
+  primary.before(summaryHelp);
   const guide=document.createElement('details');
   guide.innerHTML='<summary>Miss ADPHOR · Guía de PQRS</summary><p>Filtra por estado para localizar pendientes. Abre «Ver historial» para revisar el radicado. Cuando tu rol lo permita, revisa la respuesta y los cambios antes de guardarlos.</p><p aria-live="polite"></p>';
   const draftGuide=guide.lastElementChild;
@@ -38,6 +58,14 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   form.addEventListener('input',updateGuide);
   form.addEventListener('reset',()=>queueMicrotask(updateGuide));
   const evidenceInput=root.querySelector('#pqrs-evidence-files');
+  // The selector must not invite an upload that the QA repository cannot store.
+  const evidenceLabel=root.querySelector('.pqrs-evidence-label');
+  if(evidenceLabel)evidenceLabel.textContent='Adjuntar fotos, videos o documentos (opcional)';
+  if(typeof repository.uploadEvidence!=='function'){
+    evidenceInput.disabled=true;
+    const note=root.querySelector('.pqrs-upload-note');
+    if(note)note.textContent='Los adjuntos todavía no están disponibles en esta QA. Puedes enviar la PQRS sin archivos y consultar su radicado.';
+  }
   const evidenceList=root.querySelector('.pqrs-evidence-list');
   const clearEvidence=root.querySelector('[data-clear-evidence]');
   const evidencePreview=root.querySelector('.pqrs-evidence-preview');

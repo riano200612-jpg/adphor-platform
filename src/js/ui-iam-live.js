@@ -11,7 +11,7 @@ function fillProjects(select,projects){select.append(new Option('Selecciona una 
  for(const p of projects){if(p?.id)select.append(new Option(String(p.name||p.id),p.id));}}
 function fillRoles(select){for(const [id,label] of Object.entries(PROPERTY_ROLES))select.append(new Option(label,id));}
 function button(text){const n=node('button',text,'btn secondary');n.type='submit';return n;}
-function form(title){const f=node('form','','access-workflow panel');f.noValidate=true;f.append(node('h3',title));return f;}
+function form(title){const f=node('form','','access-workflow panel adphor-simple-form');f.noValidate=true;f.append(node('h3',title));return f;}
 function roleAssignments(formHost,projects,grants){
  const selected=new Map((Array.isArray(grants)?grants:[]).map(g=>[g.project_id,g.role]));
  const wrap=node('div','','access-grants-editor');
