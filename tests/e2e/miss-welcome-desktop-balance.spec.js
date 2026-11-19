@@ -21,26 +21,29 @@ for(const [width,height] of [[1440,900],[1366,768],[1200,800],[1024,768],[920,70
   await page.goto('./');
   await enableQaWelcomeOnLocalHost(page);
   const story=await page.locator('.login-story').boundingBox();
-  const brand=await page.locator('.login-story > .brand').boundingBox();
   const portrait=await page.locator('.client-avatar-frame').boundingBox();
   const form=await page.locator('.login-form-wrap form').boundingBox();
   const panel=await page.locator('.login-form-wrap').boundingBox();
-  for(const box of [story,brand,portrait,form,panel]) expect(box).not.toBeNull();
+  for(const box of [story,portrait,form,panel]) expect(box).not.toBeNull();
   // First impression: two clear and aligned panels, not a full-screen video or a thumbnail.
   expect(story.x+story.width).toBeLessThan(panel.x);
   expect(Math.abs(story.y-panel.y)).toBeLessThan(2);
   expect(Math.abs(story.height-panel.height)).toBeLessThan(2);
-  expect(story.width).toBeGreaterThanOrEqual(290);
+  expect(story.width).toBeGreaterThanOrEqual(260);
   expect(panel.width).toBeGreaterThanOrEqual(350);
-  expect(story.width/panel.width).toBeGreaterThan(.66);
-  expect(story.width/panel.width).toBeLessThan(.94);
+  expect(story.width/panel.width).toBeGreaterThan(.52);
+  expect(story.width/panel.width).toBeLessThan(.76);
   expect(Math.abs(centerY(story)-centerY(portrait))).toBeLessThan(75);
-  expect(portrait.width).toBeGreaterThanOrEqual(125);
-  expect(portrait.width).toBeLessThanOrEqual(194);
+  expect(portrait.width).toBeGreaterThanOrEqual(195);
+  expect(portrait.width).toBeLessThanOrEqual(310);
   expect(portrait.height/portrait.width).toBeGreaterThan(1.70);
   expect(portrait.height/portrait.width).toBeLessThan(1.88);
-  expect(portrait.height).toBeLessThan(height*.48);
-  await expect(page.locator('.login-story > .brand')).toBeVisible();
+  expect(portrait.height).toBeLessThan(height*.69);
+  await expect(page.locator('.login-story > .brand')).toBeHidden();
+  // Miss herself fills most of the narrowed presentation card.
+  expect(portrait.width/story.width).toBeGreaterThan(.66);
+  expect(portrait.height/story.height).toBeGreaterThan(.68);
+  expect(story.width).toBeLessThan(panel.width);
   await expect(page.locator('#login-form')).toBeVisible();
   await expect(page.locator('#login-form button.btn.primary')).toBeEnabled();
   await expect(page.getByRole('button',{name:'Activar sonido de Miss ADPHOR'})).toBeVisible();
@@ -65,8 +68,9 @@ for(const [width,height] of [[820,768],[760,620],[600,800]]){
   expect(Math.abs(story.x-panel.x)).toBeLessThan(2);
   expect(Math.abs(story.width-panel.width)).toBeLessThan(2);
   expect(portrait.width).toBeGreaterThanOrEqual(85);
-  expect(portrait.width).toBeLessThanOrEqual(113);
+  expect(portrait.width).toBeLessThanOrEqual(155);
   await expect(page.locator('#login-form button.btn.primary')).toBeEnabled();
+  await expect(page.locator('.login-story > .brand')).toBeHidden();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  });
 }
