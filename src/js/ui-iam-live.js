@@ -26,7 +26,11 @@ function roleAssignments(formHost,projects,grants){
   line.append(label,role);wrap.append(line);result.push({checkbox,role,project_id:p.id});
  }
  formHost.replaceChildren(wrap);
- return ()=>result.filter(x=>x.checkbox.checked).map(x=>({project_id:x.project_id,role:x.role.value}));
+ const getSelected=()=>result.filter(x=>x.checkbox.checked)
+   .map(x=>({project_id:x.project_id,role:x.role.value}));
+ // A historical user must never inherit a prior invitee's assignments.
+ getSelected.reset=()=>{for(const x of result){x.checkbox.checked=false;x.role.value='viewer';}};
+ return getSelected;
 }
 const statusText={
  active:'Habilitado (sujeto a MFA)',inviting:'Invitación en curso',
@@ -86,19 +90,25 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
   const invite=form('Invitar personal (correo y contraseña propia)');
   const inviteName=control('input','text','Nombre completo');inviteName.maxLength=120;
   const inviteEmail=control('input','email','persona@empresa.com');
-  const inviteProject=control('select');fillProjects(inviteProject,projects);
-  const inviteRole=control('select');fillRoles(inviteRole);
+  const inviteGrantsHost=node('div');
+  const selectedInviteGrants=roleAssignments(inviteGrantsHost,projects,[]);
+  const inviteProperties=node('fieldset','','access-invite-properties');
+  inviteProperties.append(node('legend','Copropiedades y roles autorizados'),inviteGrantsHost);
+  inviteProperties.append(node('p',
+   'Marca únicamente las copropiedades verificadas. Cada una puede tener un rol diferente.','access-security-note'));
   const inviteReason=control('textarea','','Motivo y aprobación administrativa');inviteReason.maxLength=500;inviteReason.rows=2;
   const inviteButton=button('Enviar invitación real');
-  invite.append(field('Nombre',inviteName),field('Correo',inviteEmail),field('Copropiedad',inviteProject),
-    field('Rol',inviteRole),field('Motivo de autorización',inviteReason),inviteButton);
+  invite.append(field('Nombre',inviteName),field('Correo personal verificado',inviteEmail),
+    inviteProperties,field('Motivo de autorización',inviteReason),inviteButton);
   invite.addEventListener('submit',e=>{
    e.preventDefault();
-   if(!inviteProject.value||!inviteName.value.trim()||inviteReason.value.trim().length<8){
-    status.textContent='Completa nombre, copropiedad y motivo de la invitación.';return;
+   const assignments=selectedInviteGrants();
+   if(!inviteName.value.trim()||!inviteEmail.validity.valid||!inviteEmail.value.trim()||
+      assignments.length===0||assignments.length>100||inviteReason.value.trim().length<8){
+    status.textContent='Completa nombre, correo válido, al menos una copropiedad y motivo de autorización.';return;
    }
    void run('invite',{name:inviteName.value.trim(),email:inviteEmail.value.trim(),
-    assignments:[{project_id:inviteProject.value,role:inviteRole.value}],reason:inviteReason.value.trim()},inviteButton);
+    assignments,reason:inviteReason.value.trim()},inviteButton);
   });
   const grants=form('Cambiar permisos por copropiedad');
   const choose=control('select');choose.append(new Option('Selecciona cuenta habilitada',''));
@@ -182,8 +192,7 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
         // another employee's email, property grants, or approval text.
         inviteName.value=draft.display_name;
         inviteEmail.value='';
-        inviteProject.value='';
-        inviteRole.value='viewer';
+        selectedInviteGrants.reset();
         inviteReason.value='';
         status.textContent='Preseleccionado '+draft.historic_alias+
           '. Alias aún no vinculado para iniciar sesión. Verifica identidad, correo personal, copropiedad y motivo antes de enviar una invitación.';
