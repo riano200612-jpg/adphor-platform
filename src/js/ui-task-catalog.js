@@ -12,7 +12,7 @@ function field(title,node,span=false){
  label.append(el('span',title),node);return label;
 }
 function createProposalForm(onSubmit){
- const form=el('form','','panel qa-catalog-form');
+ const form=el('form','','panel qa-catalog-form adphor-simple-form');
  form.id='qa-catalog-proposal-form';
  const title=control('input','title');title.maxLength=120;title.required=true;
  const description=control('textarea','description');description.maxLength=1000;description.rows=3;
