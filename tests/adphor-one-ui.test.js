@@ -28,12 +28,27 @@ test('presentation enhancement fails closed when no authenticated dashboard exis
 });
 
 
-test('compact secondary navigation does not duplicate circular tools on home', async()=>{
- const {secondaryAdphorOnePages}=await import('../src/js/ui-adphor-one.js');
- const nav=[{id:'dashboard'},{id:'pqrs'},{id:'visits'},{id:'meetings'},{id:'tickets'},{id:'mine'},{id:'access-audit'}];
- assert.deepEqual(secondaryAdphorOnePages(nav,true).map(x=>x.id),['tickets','mine','access-audit']);
- assert.deepEqual(secondaryAdphorOnePages(nav,false).map(x=>x.id),['pqrs','visits','meetings','tickets','mine','access-audit']);
- assert.deepEqual(secondaryAdphorOnePages(null,true),[]);
+test('every authorized route, including general administration, is a visible circle', async()=>{
+ const {completeAdphorOneCatalog}=await import('../src/js/ui-adphor-one.js');
+ const complete=[
+ 'dashboard','meetings','agenda','visits','pqrs','unified','properties',
+ 'tickets','recorridos','mine','areas','reports','agent-history',
+ 'staff','corporate-staff','qa-source','access-audit','consultation'
+ ];
+ const nav=complete.map(id=>({id,label:id,icon:'fa-solid fa-circle'}));
+ assert.deepEqual(new Set(completeAdphorOneCatalog(nav).map(x=>x.id)),new Set(complete));
+ assert.equal(completeAdphorOneCatalog(nav).length,18);
+ assert.equal(completeAdphorOneCatalog(nav).some(x=>x.id==='access-audit'),true);
+ assert.equal(completeAdphorOneCatalog(nav).some(x=>x.id==='qa-source'),true);
+ assert.deepEqual(completeAdphorOneCatalog(nav.slice(0,13)).map(x=>x.id).sort(),complete.slice(0,13).sort());
+ assert.equal(completeAdphorOneCatalog(nav.slice(0,13)).some(x=>x.id==='access-audit'),false);
+ assert.deepEqual(completeAdphorOneCatalog(null),[]);
+ assert.equal(completeAdphorOneCatalog([...nav,nav[0]]).length,18);
+});
+test('an already-authorized future module also gets a circle, not a hidden link',async()=>{
+ const {completeAdphorOneCatalog}=await import('../src/js/ui-adphor-one.js');
+ const catalog=completeAdphorOneCatalog([{id:'new-module',label:'Nueva herramienta',icon:'fa-solid fa-wrench'}]);
+ assert.deepEqual(catalog.map(x=>({id:x.id,title:x.title,group:x.group})),[{id:'new-module',title:'Nueva herramienta',group:'other'}]);
 });
 test('full-width shell refuses to activate when no authenticated application exists',async()=>{
  const {enhanceAdphorOneShell}=await import('../src/js/ui-adphor-one.js');
