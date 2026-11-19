@@ -43,6 +43,7 @@ export function publicQaBuildConfig(env,{sha='',branch}) {
   portoQaEnabled:env.VITE_PORTO_QA_ENABLED,portoStagingRef:env.VITE_PORTO_STAGING_REF,
   runtimeMfaRequired:true,publicKeyPresent:true,
   visitsSqlEnabled:env.VITE_VISITS_SQL_ENABLED==='true',
+  pqrsEvidenceUploadConfigured:env.VITE_QA_EVIDENCE_UPLOAD_ENABLED==='true'&&branch==='qa/integral-claude-reviewed-20261111',
   visitsLifecycleEnabled:env.VITE_VISITS_SQL_ENABLED==='true'&&env.VITE_QA_VISITS_LIFECYCLE_ENABLED==='true',
   readOnlyMode:false,agentsApiConfigured:Boolean(env.VITE_AGENTS_API_URL?.trim()),
   accessVerifiedFlag:env.ADPHOR_QA_ACCESS_VERIFIED==='true',
