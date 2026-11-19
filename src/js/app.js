@@ -1,6 +1,7 @@
 import {mountAccessManagement} from './ui-access-management.js';
 import {mountVerifiedAgenda} from './ui-verified-agenda.js';
 import {renderOperationalAgenda} from './ui-operational-agenda.js';
+import {renderSprintBoard} from './ui-sprint-board.js';
 import {mountVisitPreparation} from './ui-visit-preparation.js';
 import {renderMfaScreen} from './ui-mfa.js';
 import {mountStaffDirectory} from './ui-staff-directory.js';
@@ -33,6 +34,7 @@ import '../css/board-governance.css';
 import '../css/visits.css';
 import '../css/corporate-staff.css';
 import '../css/operational-agenda.css';
+import '../css/sprint-board.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -58,7 +60,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const icon = name => `<i class="fa-solid fa-${name}" aria-hidden="true"></i>`;
 const fmt = date => date && !Number.isNaN(new Date(date).getTime()) ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' }).format(new Date(date.length === 10 ? `${date}T12:00:00-05:00` : date)) : '—';
 const stamp = date => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(date));
-const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false };
+const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false, sprintOffset: 0, sprintScope: 'mine' };
 let busy = false;
 let monthlyResult = null;
 let monthlyKey = '';
@@ -153,7 +155,7 @@ async function refresh() {
 }
 function selectWorkspaceProject(id) {
   if (!state.projects.some(project=>project.id===id)) return;
-  state.projectId=id; state.filters={}; monthlyResult=null; monthlyKey='';
+  state.projectId=id; state.filters={}; state.sprintOffset=0; state.sprintScope='mine'; monthlyResult=null; monthlyKey='';
   projectPreference(sessionStorage,state.user?.id,id); shell();
 }
 function shell() {
@@ -197,6 +199,7 @@ function card(t) {
   return `<button class="ticket-card" data-ticket="${esc(t.id)}"><div class="card-top">${priority(t)}<span class="ticket-id">${esc(t.id.slice(0,8))}</span></div><h3>${esc(t.title)}</h3><p class="card-area">${esc(t.area)}</p><p class="card-location">${icon('location-dot')} ${esc(t.location)}</p><div class="card-bottom"><span class="mini-user" title="${esc(person(t.assignee))}"><span class="avatar small">${esc(initials(person(t.assignee)))}</span>${esc(person(t.assignee).split(' ')[0])}</span><span class="due ${overdue(t) ? 'late' : ''}">${icon('calendar-day')} ${fmt(t.due_date)}</span></div></button>`;
 }
 function operationalAgenda(compact=false) { return renderOperationalAgenda(state.tickets,{projectId:state.projectId,userId:state.user.id,compact}); }
+function sprintBoard() { return renderSprintBoard(state.tickets,{projectId:state.projectId,userId:state.user.id,role:role(),offset:state.sprintOffset,scope:isManager(role())?state.sprintScope:'mine'}); }
 function dashboard() {
   const list = rows();
   const urgent = list.filter(t => overdue(t) || (t.priority === 'Urgente' && t.status !== 'Cerrada')).sort((a,b) => a.due_date.localeCompare(b.due_date));
@@ -213,7 +216,7 @@ function ticketResults() {
   if (state.view === 'list') return count + `<div tabindex="0" role="region" aria-label="Tabla de novedades" class="table-wrap panel"><table><thead><tr><th>Novedad</th><th>Responsable</th><th>Prioridad</th><th>Estado</th><th>Plazo</th></tr></thead><tbody>${filtered.map(t => `<tr><td><button class="table-title" data-ticket="${esc(t.id)}">${esc(t.title)}</button><small>${esc(t.area)}</small></td><td>${esc(person(t.assignee))}</td><td>${priority(t)}</td><td>${badge(t)}</td><td class="${overdue(t) ? 'late' : ''}">${fmt(t.due_date)}</td></tr>`).join('')}</tbody></table></div>`;
   return count + `<div class="kanban">${STATES.map((s,i) => { const items = filtered.filter(t => t.status === s); return `<section class="kanban-column"><h2><span class="state-dot dot-${i}"></span>${s}<span>${items.length}</span></h2><div class="kanban-cards">${items.map(card).join('') || '<p class="column-empty">Sin novedades</p>'}</div></section>`; }).join('')}</div>`;
 }
-function ticketsPage() { return heading(state.page === 'mine' ? 'Mis tareas' : 'Bitácora de mantenimiento', state.page === 'mine' ? 'Tu trabajo asignado, sus plazos y próximos pasos.' : 'Cada caso con responsable, evidencia y seguimiento.', newButton()) + (state.page === 'mine' ? operationalAgenda(false) : '') + `<section class="qa-guided-workflow" aria-label="Cómo funciona una novedad"><h2>De la novedad a la solución</h2><p>Un proceso claro, con responsable y evidencia en cada etapa.</p><ol><li><strong>1. Registra</strong><span>Describe el problema y añade una fotografía.</span></li><li><strong>2. Asigna</strong><span>Selecciona el área y el responsable.</span></li><li><strong>3. Haz seguimiento</strong><span>Consulta plazos, comentarios y evidencias.</span></li><li><strong>4. Verifica</strong><span>El coordinador confirma y cierra el caso.</span></li></ol></section><div class="toolbar"><p>Selecciona una novedad para ver su detalle y avanzar.</p><div class="segmented"><button data-view="board" aria-pressed="${state.view === 'board'}">${icon('table-columns')} Tablero</button><button data-view="list" aria-pressed="${state.view === 'list'}">${icon('list')} Lista</button></div></div>` + filters() + `<div id="ticket-results">${ticketResults()}</div>`; }
+function ticketsPage() { return heading(state.page === 'mine' ? 'Mis tareas' : 'Bitácora de mantenimiento', state.page === 'mine' ? 'Tu trabajo asignado, sus plazos y próximos pasos.' : 'Cada caso con responsable, evidencia y seguimiento.', newButton()) + (state.page === 'mine' ? operationalAgenda(false) + sprintBoard() : '') + `<section class="qa-guided-workflow" aria-label="Cómo funciona una novedad"><h2>De la novedad a la solución</h2><p>Un proceso claro, con responsable y evidencia en cada etapa.</p><ol><li><strong>1. Registra</strong><span>Describe el problema y añade una fotografía.</span></li><li><strong>2. Asigna</strong><span>Selecciona el área y el responsable.</span></li><li><strong>3. Haz seguimiento</strong><span>Consulta plazos, comentarios y evidencias.</span></li><li><strong>4. Verifica</strong><span>El coordinador confirma y cierra el caso.</span></li></ol></section><div class="toolbar"><p>Selecciona una novedad para ver su detalle y avanzar.</p><div class="segmented"><button data-view="board" aria-pressed="${state.view === 'board'}">${icon('table-columns')} Tablero</button><button data-view="list" aria-pressed="${state.view === 'list'}">${icon('list')} Lista</button></div></div>` + filters() + `<div id="ticket-results">${ticketResults()}</div>`; }
 function areasPage() { return heading('Áreas de trabajo', 'Prioriza el mantenimiento según los pendientes de cada área.') + `<div class="areas-grid">${project().areas.map((area,i) => { const m = metrics(rows().filter(t => t.area === area)); return `<button class="area-card" data-area="${esc(area)}"><span class="area-number">${String(i+1).padStart(2,'0')}</span><h2>${esc(area)}</h2><div><span><strong>${m.pending}</strong> pendientes</span><span class="${m.overdue ? 'late' : ''}"><strong>${m.overdue}</strong> fuera de plazo</span></div><p>Consultar bitácora ${icon('arrow-right')}</p></button>`; }).join('')}</div>`; }
 function reportPage() {
   if(repo.mode === 'cloud') {
@@ -236,7 +239,7 @@ function renderPage() {
   if(state.page==='corporate-staff' && repo.staffDirectoryEnabled){mountCorporateStaff($('page-content'),{repo});return;}
   if(state.page==='qa-source' && repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) { mountClientSourceReview($('page-content'));return; }
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
-  if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
+  if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
   if (state.page === 'agenda') {
     mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
@@ -378,10 +381,10 @@ async function submit(event) {
       const result = await repo.login(input);
       if(result.mfaRequired) {mfaScreen(result.enrollmentRequired);return;}
       state.user = result;
-      await refresh(); state.page = 'dashboard'; state.filters = {}; shell();
+      await refresh(); state.page = 'dashboard'; state.filters = {}; state.sprintOffset=0;state.sprintScope='mine'; shell();
     } else if(form.id === 'mfa-form') {
       state.user=await repo.completeMfa(input.code);form.reset();
-      await refresh();state.page='dashboard';state.filters={};shell();
+      await refresh();state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';shell();
     } else {
       const files = [...(form.elements.photos?.files || [])]; validateFiles(files);
       const action = form.id === 'new-case' ? 'create' : input.action;
@@ -406,6 +409,8 @@ document.addEventListener('click', async event => {
     if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;state.corporateAdmin=false;loginScreen();return;}
     if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
+    if (el.dataset.sprintShift) { const shift=Number(el.dataset.sprintShift); if(state.page==='mine' && Number.isInteger(shift) && [-1,1].includes(shift) && Math.abs(state.sprintOffset+shift)<=26){state.sprintOffset+=shift;renderPage();}return; }
+    if (el.dataset.sprintScope) { const next=el.dataset.sprintScope; if(state.page==='mine' && ['mine','team'].includes(next) && (next==='mine'||isManager(role()))){state.sprintScope=next;renderPage();}return; }
     if (el.dataset.view) { state.view = el.dataset.view; renderPage(); return; }
     if (el.dataset.area) { state.page = 'tickets'; state.filters = { area: el.dataset.area }; shell(); return; }
     if (el.dataset.status) { state.page = 'tickets'; state.filters = { status: el.dataset.status }; shell(); return; }
@@ -415,7 +420,7 @@ document.addEventListener('click', async event => {
       case 'close-dialog': dialog.close(); break;
       case 'clear': state.filters = {}; renderPage(); break;
       case 'refresh': el.disabled = true; try { await refresh(); shell(); toast('Datos actualizados.'); } finally { el.disabled = false; } break;
-      case 'logout': monthlyResult=null; monthlyKey=''; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
+      case 'logout': monthlyResult=null; monthlyKey=''; state.sprintOffset=0;state.sprintScope='mine'; await repo.logout(); state.user = null; state.corporateAdmin = false; state.projects = []; state.tickets = []; state.members = []; state.projectId = ''; loginScreen(); break;
       case 'monthly-load':
       case 'monthly-finalize': {
         const projectId=state.projectId, month=state.reportMonth, requestKey=currentReportKey();
@@ -480,7 +485,7 @@ async function startPortal() {
     if(resumed){
       state.user=resumed;
       await refresh();
-      state.page='dashboard';state.filters={};
+      state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';
       shell();
       return;
     }

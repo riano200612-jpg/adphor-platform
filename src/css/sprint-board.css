@@ -1,0 +1,22 @@
+/* QA Integral: 14-day planning over existing authorized maintenance tickets only. */
+.sprint-board .section-heading{margin-bottom:14px}
+.sprint-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sprint-controls strong{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.sprint-scope{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.sprint-scope button{background:#f5f8f9;color:#315360;border:1px solid #dde8ed;border-radius:25px;padding:9px 13px;font-size:12px}
+.sprint-scope button[aria-pressed="true"]{background:#dceff0;color:#113d49;border-color:#57989b;font-weight:700}
+.sprint-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.sprint-stat{border:1px solid #e2eaf0;background:#f8fafb;padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:7px}
+.sprint-stat span{font-size:11px;color:#5a7180}
+.sprint-stat strong{font-size:22px;font-variant-numeric:tabular-nums;color:#173e50}
+.sprint-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.sprint-group{border:1px solid #e1e9ec;border-radius:12px;padding:15px;min-width:0}
+.sprint-group h3{font-size:14px;margin:0 0 12px;display:flex;justify-content:space-between;gap:8px}
+.sprint-items{list-style:none;display:grid;gap:8px;padding:0;margin:0}
+.sprint-items li button{background:#fff;border:1px solid #e6eef0;width:100%;border-radius:9px;padding:12px;display:flex;justify-content:space-between;text-align:left;gap:8px;color:#203f4d}
+.sprint-items li button:hover,.sprint-items li button:focus-visible{border-color:#448b98}
+.sprint-items li strong,.sprint-items li small{display:block;overflow-wrap:anywhere}
+.sprint-items li small{font-size:11px;color:#627781;margin-top:5px}
+.sprint-due{font-size:11px;color:#536e79;flex-shrink:0}
+.sprint-footer{font-size:11px;line-height:1.65;margin:16px 0 0}
+@media(max-width:700px){.sprint-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.sprint-columns{grid-template-columns:1fr}.sprint-controls{justify-content:center}.sprint-controls strong{order:-1;width:100%;text-align:center}.sprint-controls button{flex:1}.sprint-items li button{flex-wrap:wrap}}
