@@ -44,7 +44,8 @@ export function mountQaTaskCatalog(root,{repo,projectId,projectName,userId}={}){
  const body=el('div');body.append(el('p','REVISIÓN HUMANA · QA INTEGRAL','eyebrow'),
  el('h1','Propuestas de actividades recurrentes'),
  el('p',projectName||'Copropiedad seleccionada','muted'));
- heading.append(body);shell.append(heading);
+ const back=el('button','Volver a Mis tareas','btn secondary');back.type='button';back.dataset.page='mine';
+ heading.append(body,back);shell.append(heading);
  shell.append(el('p','Este registro prepara el catálogo para José y la coordinación. Una revisión favorable NO activa tareas, vencimientos, correos, Google Calendar ni automatizaciones.','notice qa-catalog-note'));
  const listTitle=el('h2','Propuestas y decisiones');
  const loadStatus=el('p','','muted');loadStatus.setAttribute('role','status');
