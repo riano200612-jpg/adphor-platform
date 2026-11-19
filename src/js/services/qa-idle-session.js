@@ -1,6 +1,6 @@
 // ADPHOR QA Integral — 10-minute *browser* inactivity logout (R04).
 // The server is still the authority for identity, AAL2 and tenant permissions.
-// The per-tab stamp survives reloads; no token, credential or PII is stored here.
+// The browser-wide stamp survives reloads/restarts; no token or credential is stored.
 export const QA_IDLE_LIMIT_MS=10*60*1000;
 export const QA_IDLE_STORAGE_KEY='adphor.qa.integral.idle.v1';
 
@@ -41,6 +41,13 @@ export function createQaIdleGuard({
  };
  function check(){
   if(!active)return false;
+  // Other tabs may also be in active use. Honor the newest timestamp, while
+  // an explicit expired marker or account switch always wins (fail closed).
+  const shared=readIdleStamp(storage);
+  if(shared){
+   if(shared.uid!==uid||shared.expired)return expire();
+   if(shared.at>last)last=shared.at;
+  }
   const elapsed=now()-last;
   if(elapsed<0||elapsed>=limit)return expire();
   arm();
