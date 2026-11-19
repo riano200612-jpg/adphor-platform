@@ -33,7 +33,8 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
   const fallback=String(previous.textContent||'').trim().slice(0,4)||'?';
   const button=node(doc,'button','avatar qa-avatar-trigger',fallback);
   button.type='button';
-  button.title='Mi fotografía';
+  button.title='Mi fotografía de perfil';
+  button.dataset.photoState='loading';
   button.setAttribute('aria-label','Foto de mi perfil. Abrir opciones');
   const panel=node(doc,'section','qa-avatar-panel');
   panel.hidden=true;
@@ -44,7 +45,7 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
   button.setAttribute('aria-controls',menuId);
   button.setAttribute('aria-expanded','false');
   const title=node(doc,'strong','qa-avatar-title','Mi fotografía');
-  const hint=node(doc,'p','qa-avatar-hint','Solo tu cuenta puede ver y cambiar esta foto.');
+  const hint=node(doc,'p','qa-avatar-hint','Tu foto aparecerá aquí cada vez que ingreses. Solo tu cuenta puede verla y cambiarla. Selecciona una foto para reemplazar tus iniciales.');
   const input=node(doc,'input','qa-avatar-file');
   input.type='file';input.accept='image/jpeg,image/png,image/webp';input.hidden=true;
   input.setAttribute('aria-label','Seleccionar fotografía de perfil');
@@ -65,6 +66,7 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
   function release(){if(objectUrl){revokeUrl(objectUrl);objectUrl=null;}}
   function fallbackView(){
     release();hasPhoto=false;button.replaceChildren(doc.createTextNode(fallback));
+    button.dataset.photoState='empty';button.title='Agregar mi foto de perfil';
     remove.disabled=true;
   }
   function showPhoto(blob){
@@ -78,6 +80,7 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
       }
     };
     release();objectUrl=url;hasPhoto=true;button.replaceChildren(img);
+    button.dataset.photoState='ready';button.title='Ver o cambiar mi foto de perfil';
     remove.disabled=false;
   }
   async function refresh(){
@@ -86,7 +89,7 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
       const file=await store.read(userId);
       if(disposed||!button.isConnected||version!==request)return;
       showPhoto(file);
-      status.textContent=file?'Foto de perfil cargada.':'Aún no tienes foto guardada.';
+      status.textContent=file?'Foto de perfil cargada. Se mostrará en tus próximos ingresos.':'Aún no tienes foto guardada. Pulsa «Subir o cambiar foto» para personalizar tu cuenta.';
     }catch{
       if(disposed||version!==request)return;
       fallbackView();status.textContent='No se pudo consultar la foto. Se muestran tus iniciales.';
@@ -133,6 +136,7 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
       busy=false;if(!disposed){upload.disabled=false;remove.disabled=!hasPhoto;}
     }
   });
+  // The avatar always remains a self-service control; no unsolicited modal is shown.
   void refresh();
   return ()=>{
     disposed=true;++request;release();panel.remove();
