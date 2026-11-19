@@ -16,6 +16,7 @@ import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
 import {createIamClient} from './iam-client.js';
+import {validateTaskCandidate,validateQaCandidateRows} from './task-catalog.js';
 import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from './agent-api.js';
 import {qaAgentRegistryReadiness,qaAgentRuns,qaAgentRunDetail} from './qa-agent-registry.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
@@ -61,6 +62,7 @@ export function createCloudRepository(url, key) {
   const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
   const corporateStaff=authPolicy.isolatedQa?createCorporateStaff(client):null;
   const qaCalendarEdgeEnabled=authPolicy.isolatedQa && import.meta.env.VITE_QA_CALENDAR_EDGE_ENABLED==='true';
+  const qaTaskCatalogEnabled=authPolicy.isolatedQa && authPolicyForVisitEvidence(url);
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -74,6 +76,35 @@ export function createCloudRepository(url, key) {
     porto,
     visits,
     iam:authPolicy.isolatedQa?createIamClient(client.auth):null,
+    qaTaskCatalogEnabled,
+    async listQaTaskCandidates(projectId){
+      if(!qaTaskCatalogEnabled||!user)throw Error('Catálogo de propuestas requiere una sesión QA autorizada.');
+      const result=await client.from('qa_task_catalog_candidates')
+        .select('id,project_id,title,description,cadence,status,created_by,reviewed_by,review_note,created_at,reviewed_at')
+        .eq('project_id',projectId).order('created_at',{ascending:false}).limit(100);
+      if(result.error)throw Error('No se pudo leer el catálogo QA autorizado.');
+      return validateQaCandidateRows(result.data,projectId);
+    },
+    async proposeQaTaskCandidate(projectId,payload){
+      if(!qaTaskCatalogEnabled||!user)throw Error('Sesión QA requerida.');
+      const draft=validateTaskCandidate(payload);
+      const data=check(await client.rpc('qa_task_candidate_command',{
+        command:'propose',payload:{...draft,id:payload.id,project_id:projectId}
+      }));
+      if(data?.project_id!==projectId||data?.status!=='proposed')throw Error('Confirmación de propuesta no verificable.');
+      return data;
+    },
+    async reviewQaTaskCandidate(projectId,id,decision,note){
+      if(!qaTaskCatalogEnabled||!user)throw Error('Sesión QA requerida.');
+      if(!['reviewed_for_design','rejected'].includes(decision)||String(note).trim().length<5)
+        throw Error('Revisión no válida.');
+      const data=check(await client.rpc('qa_task_candidate_command',{
+        command:'review',payload:{id,decision,note:String(note).trim()}
+      }));
+      if(data?.project_id!==projectId||data?.status!==decision)throw Error('Confirmación de revisión no verificable.');
+      return data;
+    },
+
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.
