@@ -88,7 +88,7 @@ export function mountAccessManagement(root,{members=[],projects=[],iam=null}={})
   panel.append(sectionTitle('Preparar solicitudes','Borradores para revisión interna. Esta interfaz NO envía correos, crea cuentas ni revoca accesos.'));
   const forms=el('div','','access-forms');
 
-  const invitation=el('form','','access-workflow panel');invitation.noValidate=true;
+  const invitation=el('form','','access-workflow panel adphor-simple-form');invitation.noValidate=true;
   invitation.append(el('h3','Solicitud de alta'),el('p','Un colaborador del directorio no recibe credenciales automáticamente.','muted'));
   const email=el('input');email.id='access-invite-email';email.type='email';email.required=true;email.autocomplete='off';email.placeholder='persona@empresa.com';
   const project=el('select');project.id='access-invite-property';
@@ -105,7 +105,7 @@ export function mountAccessManagement(root,{members=[],projects=[],iam=null}={})
     catch(error){inviteResult.error(error.message);}
   });
 
-  const offboarding=el('form','','access-workflow panel');offboarding.noValidate=true;
+  const offboarding=el('form','','access-workflow panel adphor-simple-form');offboarding.noValidate=true;
   offboarding.append(el('h3','Solicitud de baja'),el('p','Retirar acceso no significa borrar la persona, los casos o las evidencias.','muted'));
   const target=el('select');target.id='access-offboard-target';
   target.append(new Option('Selecciona un usuario visible',''));
