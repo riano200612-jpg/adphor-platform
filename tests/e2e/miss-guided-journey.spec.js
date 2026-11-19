@@ -21,7 +21,7 @@ test('Miss Guardian: guided route from dashboard through PQRS to Visits, with no
  await enterDemo(page);
  const home=await guidedReply(page);
  await expect(home).toContainText('Recorrido de Resumen:');
- await expect(home).toContainText('4. Comprueba');
+ await expect(home).toContainText('4. Contrasta las cifras');
  await expect(home).toContainText('Revisión cruzada de calidad y seguridad');
  await page.locator('.sidebar nav button[data-page="pqrs"]').click();
  const pqrs=await guidedReply(page);
