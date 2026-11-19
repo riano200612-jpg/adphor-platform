@@ -3,7 +3,7 @@
 Fuentes: reunión del 18 de noviembre (matriz R02–R17); exclusión expresa de la migración de Google Calendar hasta el sábado por el cliente.
 
 ## P0 incorporado
-- R04: control de **10 minutos de inactividad** para sesión QA autenticada. Marca local por pestaña conservada entre recargas; comprueba la inactividad en navegación, escritura, foco y al volver de pestaña oculta; al vencer borra la interfaz protegida y llama al sign-out de Supabase. **Es cierre de sesión de la aplicación**, no prueba de que se revoque instantáneamente un JWT ya expedido.
+- R04: control de **10 minutos de inactividad** para sesión QA autenticada. Marca local de origen compartida entre pestañas y conservada también al reiniciar el navegador; comprueba la inactividad en navegación, escritura, foco y al volver de pestaña oculta; al vencer borra la interfaz protegida y llama al sign-out de Supabase. **Es cierre de sesión de la aplicación**, no prueba de que se revoque instantáneamente un JWT ya expedido.
 - Formularios: PQRS muestra tipo, asunto, descripción; torre, apartamento y solicitante solo si se desean. Si no hay servicio de almacenamiento privado, el botón para adjuntar no promete una carga imposible; radicación sin archivos sigue disponible. El botón no confirma hasta tener radicado.
 - Visitas: motivos sugeridos, instrucciones explícitas para revisar/confirmar, control de lectura sin escritura; mantiene el contrato SQL, responsable por copropiedad y seguimiento.
 - Alta y administración de usuarios: controles visuales y tipografía legible, sin cambiar operaciones IAM, confirmaciones ni permisos.
