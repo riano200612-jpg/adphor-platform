@@ -49,6 +49,23 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   summaryHelp.className='muted pqrs-form-short-help';
   summaryHelp.textContent='Solo necesitas elegir el tipo, escribir el asunto y explicar lo ocurrido. Los demás datos son opcionales.';
   primary.before(summaryHelp);
+  const fieldError=document.createElement('p');
+  fieldError.className='pqrs-form-error';
+  fieldError.setAttribute('role','alert');
+  fieldError.setAttribute('aria-live','assertive');
+  fieldError.tabIndex=-1;
+  optional.after(fieldError);
+  form.addEventListener('invalid',event=>{
+    const target=event.target;
+    if(target?.name==='subject')fieldError.textContent='Escribe un asunto de al menos tres caracteres.';
+    else if(target?.name==='description')fieldError.textContent='Explica qué ocurrió y qué solución necesitas (mínimo tres caracteres).';
+    else fieldError.textContent='Revisa el campo requerido señalado por el navegador.';
+    if(target instanceof HTMLElement)target.setAttribute('aria-invalid','true');
+  },true);
+  form.addEventListener('input',event=>{
+    if(event.target instanceof HTMLElement)event.target.removeAttribute('aria-invalid');
+    if(form.elements.subject.validity.valid&&form.elements.description.validity.valid)fieldError.textContent='';
+  });
   const guide=document.createElement('details');
   guide.innerHTML='<summary>Miss ADPHOR · Guía de PQRS</summary><p>Filtra por estado para localizar pendientes. Abre «Ver historial» para revisar el radicado. Cuando tu rol lo permita, revisa la respuesta y los cambios antes de guardarlos.</p><p aria-live="polite"></p>';
   const draftGuide=guide.lastElementChild;
