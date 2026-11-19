@@ -13,68 +13,85 @@ async function enableQaWelcomeOnLocalHost(page) {
     mountMissAdphorWelcome(document);
   });
 }
+const centerY=(r)=>r.y+r.height/2;
 
-for (const [width,height] of [[1440,900],[1366,768],[1200,800],[1024,768],[820,768],[760,620]]) {
-  test('QA Integral: aligned centered welcome and login at '+width+'×'+height,async({page})=>{
-    await page.setViewportSize({width,height});
-    await page.goto('./');
-    await enableQaWelcomeOnLocalHost(page);
-    const story=await page.locator('.login-story').boundingBox();
-    const brand=await page.locator('.login-story > .brand').boundingBox();
-    const portrait=await page.locator('.client-avatar-frame').boundingBox();
-    const form=await page.locator('.login-form-wrap form').boundingBox();
-    expect(story).not.toBeNull();
-    expect(brand).not.toBeNull();
-    expect(portrait).not.toBeNull();
-    expect(form).not.toBeNull();
-    // Consistent horizontal axis for every important visual element.
-    const midpoint=(r)=>r.x+r.width/2;
-    expect(Math.abs(midpoint(story)-midpoint(form))).toBeLessThan(2);
-    expect(Math.abs(midpoint(story)-midpoint(brand))).toBeLessThan(2);
-    expect(Math.abs(midpoint(story)-midpoint(portrait))).toBeLessThan(2);
-    expect(Math.abs(story.width-form.width)).toBeLessThan(2);
-    expect(story.y+story.height).toBeLessThanOrEqual(form.y+2);
-    expect(brand.y+brand.height).toBeLessThan(portrait.y);
-    // A compact, balanced composition rather than broad banner + tiny video.
-    expect(form.width).toBeGreaterThanOrEqual(430);
-    expect(form.width).toBeLessThanOrEqual(530);
-    expect(portrait.width).toBeGreaterThanOrEqual(75);
-    expect(portrait.width).toBeLessThanOrEqual(102);
-    expect(portrait.height/portrait.width).toBeGreaterThan(1.70);
-    expect(portrait.height/portrait.width).toBeLessThan(1.88);
-    const loginButton=page.locator('#login-form button.btn.primary');
-    await expect(loginButton).toHaveCount(1);
-    await expect(loginButton).toBeEnabled();
-    await expect(page.locator('#login-form input, #login-form select').first()).toBeVisible();
-    await expect(page.locator('.client-avatar-frame .miss-welcome-video')).toHaveCount(1);
-    await expect(page.getByRole('button',{name:'Activar sonido de Miss ADPHOR'})).toBeVisible();
-    // On a short monitor it is acceptable to scroll vertically, never sideways.
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
-    // Required login actions must be reachable, never clipped under an overlay.
-    await loginButton.scrollIntoViewIfNeeded();
-    const button=await loginButton.boundingBox();
-    expect(button.y+button.height).toBeLessThanOrEqual(height+2);
-  });
-}
-test('QA Integral desktop welcome remains usable with keyboard and supports WCAG',async({page})=>{
-  await page.setViewportSize({width:1366,height:768});
+for(const [width,height] of [[1440,900],[1366,768],[1200,800],[1024,768],[920,700],[840,620]]){
+ test('QA Integral: medium Miss ADPHOR video beside balanced credential form at '+width+'×'+height,async({page})=>{
+  await page.setViewportSize({width,height});
   await page.goto('./');
   await enableQaWelcomeOnLocalHost(page);
-  const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
-  expect(result.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);
-  const submit=page.locator('#login-form button.btn.primary');
-  await submit.focus();
-  await expect(submit).toBeFocused();
-});
-test('QA Integral mobile portrait layout remains unchanged',async({page})=>{
-  await page.setViewportSize({width:390,height:844});
-  await page.goto('./');
-  await page.locator('.login-shell').evaluate(el=>el.classList.add('miss-welcome-cover'));
-  await expect(page.locator('.login-shell')).toHaveCSS('display','block');
+  const story=await page.locator('.login-story').boundingBox();
+  const brand=await page.locator('.login-story > .brand').boundingBox();
   const portrait=await page.locator('.client-avatar-frame').boundingBox();
-  expect(portrait.width).toBeGreaterThan(225);
-  expect(portrait.width).toBeLessThan(330);
-  expect(portrait.height/portrait.width).toBeGreaterThan(1.53);
-  expect(portrait.height/portrait.width).toBeLessThan(1.60);
+  const form=await page.locator('.login-form-wrap form').boundingBox();
+  const panel=await page.locator('.login-form-wrap').boundingBox();
+  for(const box of [story,brand,portrait,form,panel]) expect(box).not.toBeNull();
+  // First impression: two clear and aligned panels, not a full-screen video or a thumbnail.
+  expect(story.x+story.width).toBeLessThan(panel.x);
+  expect(Math.abs(story.y-panel.y)).toBeLessThan(2);
+  expect(Math.abs(story.height-panel.height)).toBeLessThan(2);
+  expect(story.width).toBeGreaterThanOrEqual(290);
+  expect(panel.width).toBeGreaterThanOrEqual(350);
+  expect(story.width/panel.width).toBeGreaterThan(.66);
+  expect(story.width/panel.width).toBeLessThan(.94);
+  expect(Math.abs(centerY(story)-centerY(portrait))).toBeLessThan(75);
+  expect(portrait.width).toBeGreaterThanOrEqual(125);
+  expect(portrait.width).toBeLessThanOrEqual(194);
+  expect(portrait.height/portrait.width).toBeGreaterThan(1.70);
+  expect(portrait.height/portrait.width).toBeLessThan(1.88);
+  expect(portrait.height).toBeLessThan(height*.48);
+  await expect(page.locator('.login-story > .brand')).toBeVisible();
+  await expect(page.locator('#login-form')).toBeVisible();
+  await expect(page.locator('#login-form button.btn.primary')).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Activar sonido de Miss ADPHOR'})).toBeVisible();
+  await expect(page.locator('.client-avatar-frame .miss-welcome-video')).toHaveCount(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const submit=page.locator('#login-form button.btn.primary');
+  await submit.scrollIntoViewIfNeeded();
+  const submitBox=await submit.boundingBox();
+  expect(submitBox.y+submitBox.height).toBeLessThanOrEqual(height+2);
+ });
+}
+
+for(const [width,height] of [[820,768],[760,620],[600,800]]){
+ test('QA Integral: narrow tablet uses an accessible compact stacked layout at '+width+'×'+height,async({page})=>{
+  await page.setViewportSize({width,height});
+  await page.goto('./');
+  await enableQaWelcomeOnLocalHost(page);
+  const story=await page.locator('.login-story').boundingBox();
+  const panel=await page.locator('.login-form-wrap').boundingBox();
+  const portrait=await page.locator('.client-avatar-frame').boundingBox();
+  expect(story.y+story.height).toBeLessThanOrEqual(panel.y+2);
+  expect(Math.abs(story.x-panel.x)).toBeLessThan(2);
+  expect(Math.abs(story.width-panel.width)).toBeLessThan(2);
+  expect(portrait.width).toBeGreaterThanOrEqual(85);
+  expect(portrait.width).toBeLessThanOrEqual(113);
+  await expect(page.locator('#login-form button.btn.primary')).toBeEnabled();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ });
+}
+
+test('QA Integral: desktop login keeps keyboard navigation, semantic labels and WCAG',async({page})=>{
+ await page.setViewportSize({width:1366,height:768});
+ await page.goto('./');
+ await enableQaWelcomeOnLocalHost(page);
+ const accessibility=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
+ expect(accessibility.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);
+ const submit=page.locator('#login-form button.btn.primary');
+ await submit.focus();
+ await expect(submit).toBeFocused();
+ await expect(page.locator('#login-form label')).not.toHaveCount(0);
+});
+
+test('QA Integral: the original mobile login presentation is not modified',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('./');
+ await page.locator('.login-shell').evaluate(el=>el.classList.add('miss-welcome-cover'));
+ await expect(page.locator('.login-shell')).toHaveCSS('display','block');
+ const portrait=await page.locator('.client-avatar-frame').boundingBox();
+ expect(portrait.width).toBeGreaterThan(225);
+ expect(portrait.width).toBeLessThan(330);
+ expect(portrait.height/portrait.width).toBeGreaterThan(1.53);
+ expect(portrait.height/portrait.width).toBeLessThan(1.60);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
