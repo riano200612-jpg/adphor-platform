@@ -40,6 +40,43 @@ export function mountMissAdphorWelcome(root, options={}) {
   portrait.after(video);
   frame.append(controls);
 
+  // Two entry choices requested by José in the 18 November ADPHOR meeting.
+  // The original corporate portrait, MP4 and login are deliberately untouched.
+  const actions=document.createElement('div');
+  actions.className='miss-entry-actions';
+  actions.setAttribute('role','group');
+  actions.setAttribute('aria-label','Opciones de ingreso a ADPHOR');
+  const firstTime=document.createElement('button');
+  firstTime.type='button';firstTime.className='miss-entry-first';
+  firstTime.textContent='Primera vez';firstTime.setAttribute('aria-expanded','false');
+  const enter=document.createElement('button');
+  enter.type='button';enter.className='miss-entry-login';
+  enter.textContent='Ingresar al portal';
+  actions.append(firstTime,enter);frame.after(actions);
+  const guide=document.createElement('dialog');
+  guide.className='miss-entry-guide';guide.id='miss-entry-guide';guide.hidden=true;
+  guide.setAttribute('aria-modal','true');
+  guide.setAttribute('aria-label','Guía de primer ingreso de Miss ADPHOR');
+  guide.innerHTML=`<h2 tabindex="-1">Tu primera vez en ADPHOR</h2>
+    <p>Miss ADPHOR te acompaña para comenzar con seguridad.</p>
+    <ol>
+      <li>Ingresa el usuario y la contraseña temporal que te entregaron.</li>
+      <li>Cuando la plataforma te lo solicite, crea tu contraseña personal.</li>
+      <li>Si usas una aplicación autenticadora, escanea el código QR y escribe el código que aparezca en la aplicación.</li>
+      <li>Si tu cuenta tiene habilitada la opción de correo personal, solicita e ingresa el código recibido. Esta opción no está disponible para todas las cuentas.</li>
+      <li>Si olvidaste tu contraseña, selecciona «¿Olvidaste tu contraseña?».</li>
+    </ol>
+    <p>Este es un tutorial escrito de primer ingreso. El video existente es de bienvenida; el tutorial audiovisual completo sigue pendiente.</p>
+    <button class="miss-entry-guide-close" type="button">Cerrar guía</button>`;
+  actions.after(guide);
+  firstTime.setAttribute('aria-controls',guide.id);
+  const closeGuide=()=>{
+    if(typeof guide.close==='function' && guide.open)guide.close();
+    guide.hidden=true;firstTime.setAttribute('aria-expanded','false');
+  };
+  guide.querySelector?.('.miss-entry-guide-close')?.addEventListener('click',closeGuide);
+  guide.addEventListener('close',()=>{guide.hidden=true;firstTime.setAttribute('aria-expanded','false');});
+
   let disposed=false,pending=false,loaded=false;
   const updateSound=(muted)=>{
     video.muted=muted;
@@ -96,6 +133,25 @@ export function mountMissAdphorWelcome(root, options={}) {
       }catch{updateSound(true);}
     }else updateSound(true);
   });
+
+  firstTime.addEventListener('click',()=>{
+    if(disposed)return;
+    guide.hidden=false;
+    if(typeof guide.showModal==='function' && !guide.open)guide.showModal();
+    firstTime.setAttribute('aria-expanded','true');
+    guide.querySelector?.('h2')?.focus?.();
+    void play(true);
+  });
+  enter.addEventListener('click',()=>{
+    if(disposed)return;
+    closeGuide();
+    const field=root.querySelector('#login-form [name="email"]')
+      ?? root.querySelector('#login-form [name="profile"]')
+      ?? root.querySelector('#login-form input');
+    const form=root.querySelector('#login-form');
+    (field??form)?.scrollIntoView?.({behavior:reducedMotion?'instant':'smooth',block:'center'});
+    (field??form)?.focus?.({preventScroll:true});
+  });
   video.addEventListener('ended',showPortrait);
   video.addEventListener('error',showPortrait);
   if(!reducedMotion)void play(false);
@@ -107,7 +163,7 @@ export function mountMissAdphorWelcome(root, options={}) {
     video.removeAttribute('src');
     video.load();
     video.remove();
-    controls.remove();
+    closeGuide();controls.remove();actions.remove();guide.remove();
     portrait.hidden=false;
     frame.classList.remove('miss-welcome-playing');
   };

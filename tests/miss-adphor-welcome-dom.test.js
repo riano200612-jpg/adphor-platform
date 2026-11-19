@@ -43,7 +43,7 @@ test('autoplay is muted and only a single circular sound button is created',asyn
     const buttons=dom.created.filter(e=>e.tag==='button');
     const sound=buttons[0];
     assert.ok(video);
-    assert.equal(buttons.length,1);
+    assert.equal(buttons.length,3);
     assert.equal(sound.className,'miss-welcome-sound');
     assert.equal(sound.attrs['aria-label'],'Activar sonido de Miss ADPHOR');
     assert.equal(sound.attrs['aria-pressed'],'false');
@@ -72,7 +72,7 @@ test('autoplay is muted and only a single circular sound button is created',asyn
     await video.fire('ended');
     assert.equal(dom.portrait.hidden,false);
     assert.equal(dom.form.classList.contains('miss-welcome-ready'),true);
-    assert.equal(buttons.length,1);
+    assert.equal(buttons.length,3);
     // The same unobtrusive speaker button replays the clip after it ends.
     await sound.fire('click');
     assert.equal(video.playCount,3);
@@ -124,11 +124,45 @@ test('media error falls back to original portrait; external video paths are reje
     await video.fire('error');
     assert.equal(dom.portrait.hidden,false);
     assert.equal(video.hidden,true);
-    assert.equal(dom.created.filter(e=>e.tag==='button').length,1);
+    assert.equal(dom.created.filter(e=>e.tag==='button').length,3);
   }finally{dom.restore();}
   const other=setupFakeDom();
   try{
     mountMissAdphorWelcome(other.root,{videoPath:'https://flow-content.google/temporary.mp4'});
     assert.equal(other.created.some(e=>e.tag==='video'),false);
   }finally{other.restore();}
+});
+
+
+test('first-visit and existing-user choices preserve original login',async()=>{
+  const dom=setupFakeDom({reducedMotion:true});
+  try{
+    const cleanup=mountMissAdphorWelcome(dom.root);
+    const first=dom.created.find(e=>e.className==='miss-entry-first');
+    const enter=dom.created.find(e=>e.className==='miss-entry-login');
+    const guide=dom.created.find(e=>e.className==='miss-entry-guide');
+    assert.ok(first);assert.ok(enter);assert.ok(guide);
+    assert.equal(first.textContent,'Primera vez');
+    assert.equal(enter.textContent,'Ingresar al portal');
+    assert.equal(guide.hidden,true);
+    assert.match(guide.innerHTML,/código QR/);
+    assert.match(guide.innerHTML,/correo personal/);
+    assert.match(guide.innerHTML,/no está disponible para todas las cuentas/);
+    assert.match(guide.innerHTML,/tutorial audiovisual completo sigue pendiente/);
+    await first.fire('click');
+    assert.equal(guide.hidden,false);
+    assert.equal(first.attrs['aria-expanded'],'true');
+    await enter.fire('click');
+    assert.equal(guide.hidden,true);
+    assert.equal(first.attrs['aria-expanded'],'false');
+    assert.equal(dom.form.disabled,undefined);
+    cleanup();
+    assert.equal(guide.removed,true);
+    assert.equal(first.removed,undefined);
+  }finally{dom.restore();}
+});
+test('the welcome stays scoped to QA Integral',async()=>{
+  const {shouldOfferMissWelcome}=await import('../src/js/ui-miss-adphor-welcome.js');
+  assert.equal(shouldOfferMissWelcome({enabled:true,hostname:'qa-integral-claude-reviewed.adphor-platform.pages.dev'}),true);
+  assert.equal(shouldOfferMissWelcome({enabled:true,hostname:'adphor-platform.pages.dev'}),false);
 });

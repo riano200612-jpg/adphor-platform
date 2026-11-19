@@ -301,3 +301,39 @@
   }
   .miss-welcome-cover .login-form-wrap form{gap:8px;padding-block:14px}
 }
+
+
+/* Miss ADPHOR: optional first-visit choice without replacing the corporate media. */
+.miss-welcome-cover .miss-entry-actions {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:8px;width:min(100%,340px);margin:13px auto 0;flex-shrink:0;
+}
+.miss-welcome-cover .miss-entry-actions button {
+  box-sizing:border-box;min-height:46px;padding:9px 8px;border-radius:12px;
+  border:1px solid #d2b578;font:600 13px/1.35 inherit;cursor:pointer;
+}
+.miss-welcome-cover .miss-entry-first {background:#f7ead2;color:#173854;}
+.miss-welcome-cover .miss-entry-login {background:#1d4966;color:#fff;}
+.miss-welcome-cover .miss-entry-actions button:focus-visible,
+.miss-welcome-cover .miss-entry-guide-close:focus-visible {outline:3px solid #f5cf67;outline-offset:3px;}
+/* Native modal stays above the hero, avoiding crop or layout displacement. */
+.miss-welcome-cover .miss-entry-guide {
+  box-sizing:border-box;position:fixed;inset:0;margin:auto;
+  width:min(92vw,570px);max-width:min(92vw,570px);max-height:min(84svh,740px);
+  padding:clamp(18px,3vw,28px);border:1px solid #d5bd84;border-radius:20px;
+  box-shadow:0 28px 70px #07172870;overflow:auto;overscroll-behavior:contain;
+  background:#fff;color:#183b52;text-align:left;font:400 14px/1.5 inherit;
+}
+.miss-welcome-cover .miss-entry-guide[hidden] {display:none!important}
+.miss-welcome-cover .miss-entry-guide::backdrop {background:rgba(3,17,30,.72)}
+.miss-welcome-cover .miss-entry-guide h2 {font-size:clamp(19px,2.5vw,24px);margin:0 0 12px}
+.miss-welcome-cover .miss-entry-guide ol {padding-left:23px;margin:12px 0}
+.miss-welcome-cover .miss-entry-guide li {margin-bottom:10px}
+.miss-welcome-cover .miss-entry-guide-close {
+  min-height:44px;padding:10px 18px;margin-top:12px;border:1px solid #214d68;
+  border-radius:12px;background:#173e59;color:#fff;font-weight:600;cursor:pointer;
+}
+@media(max-width:580px){
+  .miss-welcome-cover .miss-entry-actions {margin-top:9px}
+  .miss-welcome-cover .miss-entry-actions button {font-size:12px;min-height:44px}
+}
