@@ -23,3 +23,16 @@
 .access-live .access-grant-row select{width:min(100%,11rem)}
 .access-live .access-table-wrap{overflow:auto}
 @media(max-width:620px){.access-live .access-forms{grid-template-columns:1fr}}
+
+
+/* Large teams: visible search and selected count instead of scrolling 43 grants. */
+.access-live .access-grants-toolbar{display:grid;gap:.6rem;margin:.75rem 0}
+.access-live .access-grants-toolbar label{display:grid;gap:.4rem;font-size:14px;font-weight:650}
+.access-live .access-grants-toolbar input[type=search]{min-height:50px;width:100%;font-size:16px}
+.access-live .access-grants-count,.access-live .access-grants-help{font-size:13px;line-height:1.5;margin:0;color:#385567}
+.access-live .access-grants-toolbar button{justify-self:start;min-height:46px}
+.access-live .access-grant-row[hidden]{display:none!important}
+.access-live .access-grant-row select{font-size:15px;min-height:44px}
+.access-live .access-form-error:not(:empty){padding:12px 14px;border-radius:9px;border:1px solid #dfaba4;background:#fff1ef;color:#842a22;font-size:14px}
+.access-live [aria-invalid=true]{outline:2px solid #b23b32;outline-offset:2px}
+@media(max-width:600px){.access-live .access-grant-row{flex-wrap:wrap}.access-live .access-grant-row label{min-height:44px}.access-live .access-grant-row select{width:100%}}
