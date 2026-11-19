@@ -36,3 +36,18 @@ test('viewer cannot see team mode or write commands in sprint board',async({page
  await expect(board.getByRole('button',{name:'Equipo de la copropiedad'})).toHaveCount(0);
  await expect(board.getByRole('button',{name:'Registrar novedad'})).toHaveCount(0);
 });
+
+test('a new login resets previous admin-only team state',async({page})=>{
+ await enter(page,'admin-demo');
+ await page.getByRole('button',{name:'Mis tareas',exact:true}).click();
+ const board=page.getByRole('region',{name:'Plan quincenal de trabajo'});
+ await board.getByRole('button',{name:'Equipo de la copropiedad'}).click();
+ await expect(board.getByRole('button',{name:'Equipo de la copropiedad'})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
+ await page.locator('[name="profile"]').selectOption('tecnico');
+ await page.getByRole('button',{name:'Explorar demostración'}).click();
+ await page.getByRole('button',{name:'Mis tareas',exact:true}).click();
+ await expect(board).toBeVisible();
+ await expect(board.getByRole('button',{name:'Equipo de la copropiedad'})).toHaveCount(0);
+ await expect(board).toContainText('Vista de tus propias asignaciones');
+});
