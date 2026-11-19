@@ -337,3 +337,25 @@
   .miss-welcome-cover .miss-entry-actions {margin-top:9px}
   .miss-welcome-cover .miss-entry-actions button {font-size:12px;min-height:44px}
 }
+
+
+/* Only QA Integral. Original gold and white logo on the existing navy background. */
+.miss-welcome-cover .miss-qa-corporate-identity{
+  box-sizing:border-box;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;align-self:center;width:min(100%,210px);
+  padding:5px 9px 7px;margin:0 auto 2px;
+  background:#0c2743;border:1px solid rgba(218,183,110,.74);border-radius:12px;
+}
+.miss-welcome-cover .miss-qa-corporate-identity img{
+  display:block;width:min(100%,167px);height:auto;max-height:94px;object-fit:contain;
+}
+.miss-welcome-cover .miss-qa-corporate-identity p{
+  color:#fff3d1;font-size:13px;font-weight:600;line-height:1.3;text-align:center;
+  margin:0;letter-spacing:.01em;
+}
+@media(max-width:580px){
+ .miss-welcome-cover .login-story>.brand:has(.miss-qa-corporate-identity){width:100%;}
+ .miss-welcome-cover .miss-qa-corporate-identity{width:100%;max-width:340px;min-height:0;padding:1px 3px;flex-direction:row;gap:10px;border:0;background:transparent;align-items:center;justify-content:center;}
+ .miss-welcome-cover .miss-qa-corporate-identity img{flex:none;width:76px;max-height:43px;}
+ .miss-welcome-cover .miss-qa-corporate-identity p{font-size:12px;line-height:1.25;text-align:left}
+}

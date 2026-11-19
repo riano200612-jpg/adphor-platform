@@ -166,3 +166,22 @@ test('the welcome stays scoped to QA Integral',async()=>{
   assert.equal(shouldOfferMissWelcome({enabled:true,hostname:'qa-integral-claude-reviewed.adphor-platform.pages.dev'}),true);
   assert.equal(shouldOfferMissWelcome({enabled:true,hostname:'adphor-platform.pages.dev'}),false);
 });
+
+
+test('shows official ADPHOR identity without replacing the original portrait or video',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const logo=readFileSync(new URL('../public/assets/branding/adphor-logo-oficial-v3.png',import.meta.url));
+  assert.deepEqual([...logo.subarray(0,8)],[137,80,78,71,13,10,26,10]);
+  const dom=setupFakeDom({reducedMotion:true});
+  try{
+    const stop=mountMissAdphorWelcome(dom.root);
+    const image=dom.created.find(e=>e.tag==='img' && e.alt?.includes('Administradores Profesionales en Propiedad Horizontal'));
+    const slogan=dom.created.find(e=>e.tag==='p' && e.textContent==='Administramos sueños');
+    assert.ok(image);assert.ok(slogan);
+    assert.equal(image.src,'/assets/branding/adphor-logo-oficial-v3.png');
+    assert.equal(dom.portrait.getAttribute('src'),'/assets/branding/miss-adphor-qa-integral(4).webp');
+    assert.equal(dom.form.disabled,undefined);
+    const brand=dom.created.find(e=>e.className==='miss-qa-corporate-identity');
+    stop();assert.equal(brand.removed,true);
+  }finally{dom.restore();}
+});

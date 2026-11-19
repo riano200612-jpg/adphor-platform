@@ -40,6 +40,26 @@ export function mountMissAdphorWelcome(root, options={}) {
   portrait.after(video);
   frame.append(controls);
 
+  // Exact corporate master asset from José's Drive, not a generated replacement.
+  const identity=document.createElement('div');
+  identity.className='miss-qa-corporate-identity';
+  identity.setAttribute('role','group');
+  identity.setAttribute('aria-label','Identidad corporativa ADPHOR');
+  const corporateLogo=document.createElement('img');
+  corporateLogo.src='/assets/branding/adphor-logo-oficial-v3.png';
+  corporateLogo.alt='ADPHOR. Administradores Profesionales en Propiedad Horizontal';
+  corporateLogo.loading='eager';corporateLogo.decoding='async';
+  const motto=document.createElement('p');motto.textContent='Administramos sueños';
+  identity.append(corporateLogo,motto);
+  const mobileIdentity=globalThis.matchMedia?.('(max-width:580px)')?.matches===true;
+  const mobileBrand=mobileIdentity?root.querySelector?.('.login-story > .brand'):null;
+  const originalMobileBrandMarkup=mobileBrand?.innerHTML;
+  const eyebrow=mobileBrand?null:root.querySelector?.('.login-form-wrap .eyebrow');
+  // Preserve the login-story child ordering used by the existing QA layout CSS.
+  if(mobileBrand)mobileBrand.replaceChildren(identity);
+  else if(eyebrow){eyebrow.hidden=true;eyebrow.after(identity);}
+  else root.querySelector?.('#login-form')?.append?.(identity);
+
   // Two entry choices requested by José in the 18 November ADPHOR meeting.
   // The original corporate portrait, MP4 and login are deliberately untouched.
   const actions=document.createElement('div');
@@ -164,6 +184,8 @@ export function mountMissAdphorWelcome(root, options={}) {
     video.load();
     video.remove();
     closeGuide();controls.remove();actions.remove();guide.remove();
+    identity.remove();if(mobileBrand)mobileBrand.innerHTML=originalMobileBrandMarkup;
+    if(eyebrow)eyebrow.hidden=false;
     portrait.hidden=false;
     frame.classList.remove('miss-welcome-playing');
   };
