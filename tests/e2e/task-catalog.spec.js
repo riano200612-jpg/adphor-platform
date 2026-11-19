@@ -3,7 +3,7 @@ test('review proposals UI is explicit about no task creation and protects agains
  await page.goto('./');
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.evaluate(async()=>{
-  const {mountQaTaskCatalog}=await import('/src/js/ui-task-catalog.js');
+  const {mountQaTaskCatalog}=await import('/adphor-platform/src/js/ui-task-catalog.js');
   const root=document.createElement('div');root.id='qa-catalog-test';document.body.append(root);
   const entries=[];
   const repo={
@@ -29,7 +29,7 @@ test('review proposals UI is explicit about no task creation and protects agains
 test('review controls require a different reviewer and reason; re-render on decision',async({page})=>{
  await page.goto('./');
  await page.evaluate(async()=>{
-  const {mountQaTaskCatalog}=await import('/src/js/ui-task-catalog.js');
+  const {mountQaTaskCatalog}=await import('/adphor-platform/src/js/ui-task-catalog.js');
   const root=document.createElement('div');root.id='qa-catalog-review';document.body.append(root);
   let value={id:'candidate-1',project_id:'p1',created_by:'author',title:'Verificación propuesta',
    cadence:'monthly',status:'proposed',description:'Sin programación',created_at:'2026-11-19'};
