@@ -75,3 +75,96 @@
  .adphor-one-home .adphor-one-grid .adphor-one-tile,
  .adphor-one-home .adphor-one-grid .adphor-one-tile > i{transition:none!important;transform:none!important}
 }
+
+
+/* ADPHOR ONE · immersive workspace: one visual home, no duplicate side navigation.
+   Sidebar is only retained in the DOM as the original authorization-filtered source. */
+.adphor-one-shell > .sidebar {display:none!important}
+.adphor-one-shell > .workspace {margin-left:0!important;width:100%;max-width:none;min-width:0}
+.adphor-one-shell .topbar{
+  position:relative; min-height:78px; padding:13px clamp(16px,3vw,40px);
+  gap:18px; background:rgba(255,255,255,.97); border-bottom:1px solid #e1e7ed;
+}
+.adphor-one-topbrand{
+  display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+  color:#264b6b;white-space:nowrap;min-height:44px;flex-shrink:0;
+}
+.adphor-one-topbrand i{font-size:23px;color:#b59c21}
+.adphor-one-topbrand strong{font-size:21px;font-weight:750;letter-spacing:.4px}
+.adphor-one-topbrand small{font-size:10px;font-weight:750;align-self:center;color:#264b6b}
+.adphor-one-shell .project-control {flex:1;min-width:185px;max-width:460px}
+.adphor-one-shell .topbar-actions{display:flex;align-items:center;gap:10px;margin-left:auto}
+.adphor-one-shell .workspace main{max-width:1530px;padding:26px clamp(16px,3vw,42px)}
+.adphor-one-go-home,
+.adphor-one-more > summary{
+  min-height:44px;border:1px solid #dce5ea;border-radius:12px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:9px 13px;background:#f8fafb;color:#264b6b;
+  font-weight:650;font-size:12px;white-space:nowrap;cursor:pointer;
+}
+.adphor-one-go-home:hover,
+.adphor-one-more > summary:hover{background:#edf2f6}
+.adphor-one-more{position:relative;flex-shrink:0}
+.adphor-one-more > summary{list-style:none}
+.adphor-one-more > summary::-webkit-details-marker{display:none}
+.adphor-one-more > summary:after{content:"⌄";color:#536575;font-weight:700}
+.adphor-one-more[open] > summary{background:#edf2f6;border-color:#9fb7c6}
+.adphor-one-more-list{
+  position:absolute;top:calc(100% + 9px);right:0;z-index:80;
+  display:grid;gap:2px;width:min(280px,calc(100vw - 32px));
+  max-height:min(68vh,520px);overflow-y:auto;padding:9px;
+  border:1px solid #d5e0e9;background:#fff;border-radius:17px;
+  box-shadow:0 20px 45px rgba(15,39,61,.2);
+}
+.adphor-one-menu-item{
+  display:flex;gap:12px;align-items:center;width:100%;min-height:44px;
+  padding:10px 13px;border:0;border-radius:10px;
+  color:#264b6b;background:transparent;text-align:left;
+  font-size:13px;font-weight:550;
+}
+.adphor-one-menu-item:hover,
+.adphor-one-menu-item[aria-current="page"]{background:#edf3f6}
+.adphor-one-menu-item i{width:18px;color:#44697f;text-align:center}
+.adphor-one-topbrand:focus-visible,
+.adphor-one-go-home:focus-visible,
+.adphor-one-more > summary:focus-visible,
+.adphor-one-menu-item:focus-visible{outline:3px solid #9c7c26;outline-offset:3px}
+.adphor-one-shell .adphor-one-home .adphor-one-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));max-width:1060px;
+  margin:4px auto 22px;padding:14px 0 22px;gap:17px 12px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-grid .adphor-one-tile{
+  min-height:156px;
+}
+.adphor-one-shell .adphor-one-home .adphor-one-hero{
+  max-width:1060px;margin:12px auto 16px;
+}
+.adphor-one-shell .adphor-one-home .dashboard-intro{
+  border-radius:18px;box-shadow:none;
+}
+@media(max-width:960px){
+ .adphor-one-shell .adphor-one-home .adphor-one-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .adphor-one-shell .topbar{gap:10px;flex-wrap:wrap}
+ .adphor-one-shell .project-control{order:3;max-width:none;flex-basis:100%}
+ .adphor-one-shell .topbar-actions{order:2}
+ .adphor-one-topbrand{order:1}
+}
+@media(max-width:610px){
+ .adphor-one-shell .adphor-one-home .adphor-one-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 6px}
+ .adphor-one-shell .topbar{padding:10px 14px}
+ .adphor-one-topbrand strong{font-size:18px}
+ .adphor-one-topbrand i{font-size:18px}
+ .adphor-one-shell .topbar-actions{gap:6px}
+ .adphor-one-more > summary{padding:8px 10px}
+ .adphor-one-more > summary span{display:none}
+ .adphor-one-go-home{padding:8px 10px}
+ .adphor-one-shell .workspace main{padding:18px 14px}
+ .adphor-one-shell .adphor-one-home .adphor-one-grid .adphor-one-tile{min-height:148px}
+}
+@media(max-width:360px){
+ .adphor-one-shell .user-chip strong,.adphor-one-shell .user-chip small{display:none}
+ .adphor-one-shell .user-chip{padding-left:6px}
+}
+@media(prefers-reduced-motion:reduce){
+ .adphor-one-shell .adphor-one-topbrand,.adphor-one-shell .adphor-one-menu-item{transition:none!important}
+}
