@@ -101,3 +101,42 @@ test('ADPHOR ONE: full mobile menu has circles without hidden navigation or over
  expect(await activateFullWidth(page)).toBe(true);
  await expect(page.locator('.adphor-one-grid .adphor-one-tile')).toHaveCount(allowed);
 });
+
+
+test('ADPHOR ONE: balanced six-tool desktop rows without asymmetric oversized circles',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await enterDemo(page);
+ expect(await activateFullWidth(page)).toBe(true);
+ const grid=page.locator('.adphor-one-group-grid');
+ const counts=await grid.evaluateAll(elements=>elements.map(x=>x.querySelectorAll('.adphor-one-tile').length));
+ expect(counts.slice(0,2)).toEqual([6,6]);
+ for(let i=0;i<2;i++){
+  const metrics=await grid.nth(i).locator('.adphor-one-tile').evaluateAll(nodes=>nodes.map(el=>{
+    const box=el.getBoundingClientRect();
+    const orb=el.querySelector('i').getBoundingClientRect();
+    return {y:box.y,w:box.width,diameter:orb.width,height:box.height};
+  }));
+  expect(Math.max(...metrics.map(x=>x.y))-Math.min(...metrics.map(x=>x.y))).toBeLessThan(2);
+  expect(Math.max(...metrics.map(x=>x.w))-Math.min(...metrics.map(x=>x.w))).toBeLessThan(2);
+  expect(Math.max(...metrics.map(x=>x.diameter))).toBeLessThanOrEqual(80);
+  expect(Math.max(...metrics.map(x=>x.height))-Math.min(...metrics.map(x=>x.height))).toBeLessThan(2);
+ }
+ const actual=await page.locator('.adphor-one-tile').evaluateAll(nodes=>nodes.map(x=>x.dataset.page));
+ const authorized=await page.locator('.sidebar nav button[data-page]').evaluateAll(nodes=>nodes.map(x=>x.dataset.page));
+ expect(new Set(actual)).toEqual(new Set(authorized));
+});
+test('ADPHOR ONE: responsive tablet and mobile keep regular circular columns',async({page})=>{
+ await enterDemo(page);
+ expect(await activateFullWidth(page)).toBe(true); // local E2E host is not the QA Integral hostname
+ for(const width of [1024,768,390]){
+  await page.setViewportSize({width,height:844});
+  await expect(page.locator('.adphor-one-grid')).toBeVisible();
+  const first=await page.locator('.adphor-one-group-grid').first().locator('.adphor-one-tile').evaluateAll(nodes=>nodes.map(n=>{
+    const r=n.getBoundingClientRect(); return {x:Math.round(r.x),y:Math.round(r.y),w:r.width};
+  }));
+  const rows=[...new Set(first.map(x=>x.y))];
+  expect(rows.length).toBe(width===390?3:2);
+  expect(Math.max(...first.map(x=>x.w))-Math.min(...first.map(x=>x.w))).toBeLessThan(2);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ }
+});
