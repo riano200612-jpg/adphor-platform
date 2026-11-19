@@ -54,13 +54,17 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         <fieldset><legend>1. Datos de la visita</legend><div class="visit-fields">
           <label>Tipo o motivo<input name="kind" list="visit-kind-suggestions" maxlength="200" required placeholder="Ej. Inspección de zonas comunes"><small>Puedes elegir una sugerencia o escribir el motivo.</small></label><datalist id="visit-kind-suggestions"><option value="Inspección de zonas comunes"><option value="Revisión de mantenimiento"><option value="Visita administrativa"><option value="Seguimiento a proveedor"><option value="Recorrido de seguridad"></datalist>
           <label>Fecha y hora (Colombia)<input name="start" type="datetime-local" required></label>
-          <label>Escribir fecha y hora (alternativa accesible)
-            <input name="startText" type="text" maxlength="16" autocomplete="off" placeholder="AAAA-MM-DD HH:mm" aria-describedby="visit-date-text-help">
-            <small id="visit-date-text-help">Si el calendario no responde, introduce la fecha como AAAA-MM-DD HH:mm. Se reflejará en el campo anterior.</small>
-          </label>
+          <details class="visit-manual-date">
+            <summary>Prefiero escribir la fecha y hora</summary>
+            <label>Escribir fecha y hora (alternativa accesible)
+              <input name="startText" type="text" maxlength="16" autocomplete="off" inputmode="numeric" placeholder="AAAA-MM-DD HH:mm" aria-describedby="visit-date-text-help">
+              <small id="visit-date-text-help">Ejemplo: 2026-11-21 10:30 (hora de Colombia). También aparecerá en el calendario anterior.</small>
+            </label>
+          </details>
           <label>Responsable<select name="responsible" required><option value="">Seleccionar del equipo autorizado</option></select><small>Solo aparecen personas de la copropiedad seleccionada.</small></label>
         </div></fieldset>
         <details><summary>Observaciones, seguimiento y resultado</summary><p class="muted">${repository?.lifecycleEnabled?'Abre Seguimiento en la visita registrada para consultar su estado y documentar los resultados.':'Estos datos corresponden al ciclo posterior de la visita. Se habilitarán cuando se apruebe el contrato de registro e historial.'}</p></details>
+        <p class="visit-form-hint" data-visit-form-hint role="status" aria-live="polite"></p>
         <div class="visit-actions"><button class="btn primary" type="button" data-review disabled>${shared?'Revisar visita':'Revisar borrador'}</button></div>
         <p data-summary role="status"></p>
         <details data-visit-guide><summary>Miss ADPHOR · Guía de Visitas</summary><p aria-live="polite"></p></details>
@@ -196,6 +200,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   }
   const review = root.querySelector('[data-review]');
   const summary = root.querySelector('[data-summary]');
+  const formHint=root.querySelector('[data-visit-form-hint]');
   const draft = () => ({
       projectId, kind: fields.querySelector('[name=kind]').value,
       start: fields.querySelector('[name=start]').value,
@@ -207,8 +212,14 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   };
   const update = () => {
     const data = draft();
-    review.disabled = !ready(data)||(shared&&!canCreate);
-    if (guide.open) guide.querySelector('p').textContent = shared&&!canCreate?'Consulta disponible. El registro requiere habilitación de escritura y rol de Administración o Coordinación.':shared&&ready(data)?'Revisa los datos y confirma para registrar la visita en QA.':visitDraftGuidance(data);
+    const valid=ready(data);
+    review.disabled=!valid||(shared&&!canCreate);
+    const advice=shared&&!canCreate
+      ? 'Puedes consultar visitas. Para registrar se requiere Administración o Coordinación con MFA.'
+      : valid?'Los datos están completos. Pulsa «Revisar visita» y luego confirma para guardarla.'
+      : visitDraftGuidance(data);
+    formHint.textContent=advice;
+    if(guide.open)guide.querySelector('p').textContent=advice;
   };
   review.addEventListener('click', () => {
     const data = draft();
@@ -292,8 +303,10 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
     });
   }
   guide.addEventListener('toggle', update);
+  fields.addEventListener('change',update);
   fields.addEventListener('input', () => {
     summary.textContent = '';
     update();
   });
+  update();
 }
