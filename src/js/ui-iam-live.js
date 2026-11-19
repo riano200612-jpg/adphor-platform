@@ -152,6 +152,7 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
    if(!inviteName.value.trim()){showFieldError(invite,'Escribe el nombre completo de la persona.',inviteName);return;}
    if(!inviteEmail.validity.valid||!inviteEmail.value.trim()){showFieldError(invite,'Introduce un correo electrónico válido.',inviteEmail);return;}
    if(assignments.length===0||assignments.length>100){
+    status.textContent='Debes seleccionar al menos una copropiedad autorizada. Usa el buscador para encontrarla.';
     showFieldError(invite,'Marca al menos una copropiedad autorizada. Usa el buscador si no aparece.',null);
     selectedInviteGrants.focusSearch();return;
    }
