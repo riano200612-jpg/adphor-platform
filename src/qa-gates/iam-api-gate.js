@@ -72,7 +72,36 @@ export function createIamQaHandler(makeClient){
    if(request.method==='GET'){
      const snapshot=await rpc(client,'qa_iam_snapshot',{p_actor:identity.userId,p_session:identity.sessionId});
      if(!snapshot||!Array.isArray(snapshot.accounts)||!Array.isArray(snapshot.audit))return deny(503);
-     return json(200,{enabled:true,admin_state:snapshot.admin_state||null,accounts:snapshot.accounts,audit:snapshot.audit});
+     // Optional private legacy roster review. The existing IAM remains available
+     // if the additive QA migration has not yet been applied.
+     let legacy_review;
+     try{
+       const {data:legacy,error:legacyError}=await client.rpc('qa_iam_legacy_review',{
+         p_actor:identity.userId,p_session:identity.sessionId
+       });
+       if(!legacyError && Number.isInteger(legacy?.total) &&
+          Array.isArray(legacy.candidates) && legacy.candidates.length<=200 &&
+          legacy.total>=legacy.candidates.length){
+         const states=new Set(['Activo','Bloqueado','Desactivado']);
+         const reviews=new Set(['MATCHED','ALIAS_REVIEW','UNMATCHED','SYSTEM','BLOCKED','DISABLED']);
+         const candidates=legacy.candidates.map(c=>({
+           username:safe(c.username).slice(0,80),
+           display_name:safe(c.display_name).slice(0,120),
+           legacy_status:safe(c.legacy_status),
+           review_classification:safe(c.review_classification),
+           staff_matched:c.staff_matched===true,
+           auth_linked:c.auth_linked===true
+         }));
+         if(candidates.every(c=>/^[a-z0-9._-]{2,80}$/.test(c.username) &&
+           c.display_name.length>0 && states.has(c.legacy_status) &&
+           reviews.has(c.review_classification))){
+           legacy_review={total:legacy.total,candidates};
+         }
+       }
+     }catch{ /* Review is unavailable until QA private schema is provisioned. */ }
+     return json(200,{enabled:true,admin_state:snapshot.admin_state||null,
+       accounts:snapshot.accounts,audit:snapshot.audit,
+       ...(legacy_review?{legacy_review}:{})});
    }
    const raw=await request.text();
    if(raw.length>12000)return deny(413);

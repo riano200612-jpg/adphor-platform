@@ -86,5 +86,5 @@ test('Edge adapter verifies current account, AAL2, session, active admin and del
  assert.equal(result.status,200);
  const body=await result.json();
  assert.equal(body.admin_state.active,1);
- assert.deepEqual(calls.map(x=>x.name),['qa_iam_is_operator','qa_iam_snapshot']);
+ assert.deepEqual(calls.map(x=>x.name),['qa_iam_is_operator','qa_iam_snapshot','qa_iam_legacy_review']);
 });

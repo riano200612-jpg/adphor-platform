@@ -138,6 +138,44 @@ export async function mountLiveIamAdmin(root,{iam,projects=[]}={}){
    void run(action.value,{email:user.value,reason:reason.value.trim()},removeButton);
   });
   forms.append(invite,grants,removal);section.append(forms);
+  // Read-only inventory, already authorized by the backend IAM AAL2 gate.
+  if(Array.isArray(data.legacy_review?.candidates)){
+   const catalog=data.legacy_review.candidates;
+   section.append(node('h3','Usuarios históricos · conciliación previa al ingreso'));
+   section.append(node('p','Consulta administrativa. No activa usuarios ni reutiliza PIN. Verifica la identidad y un correo personal antes de invitar.','access-security-note'));
+   section.append(node('p',
+     'Identificadores: '+String(data.legacy_review.total)+
+     ' · Coinciden con personal: '+String(catalog.filter(c=>c.staff_matched).length)+
+     ' · Sin Auth vinculado: '+String(catalog.filter(c=>!c.auth_linked).length)));
+   const lookup=control('input','search','Buscar usuario, nombre o estado');
+   lookup.setAttribute('aria-label','Buscar usuarios históricos');
+   const wrap=node('div','','access-table-wrap');
+   const table=node('table');
+   const hdr=node('tr');
+   for(const label of ['Usuario','Persona','Estado original','Conciliación','Personal QA'])
+    hdr.append(node('th',label));
+   const th=node('thead');th.append(hdr);table.append(th);
+   const tb=node('tbody');table.append(tb);wrap.append(table);
+   const drawCandidates=()=>{
+    const term=lookup.value.trim().toLocaleLowerCase('es');
+    const found=catalog.filter(c=>[c.username,c.display_name,c.legacy_status,
+       c.review_classification].some(v=>String(v).toLocaleLowerCase('es').includes(term)));
+    tb.replaceChildren();
+    for(const candidate of found){
+     const tr=node('tr');
+     for(const val of [candidate.username,candidate.display_name,
+       candidate.legacy_status,candidate.review_classification,
+       candidate.staff_matched?'Encontrado':'Pendiente']){
+      tr.append(node('td',String(val)));
+     }
+     tb.append(tr);
+    }
+    if(!found.length){const tr=node('tr');const td=node('td','Sin coincidencias.');
+      td.colSpan=5;tr.append(td);tb.append(tr);}
+   };
+   lookup.addEventListener('input',drawCandidates);
+   section.append(lookup,wrap);drawCandidates();
+  }
   const heading=node('h3','Historial administrativo reciente');section.append(heading);
   const table=node('table');const head=node('tr');
   for(const label of ['Fecha','Acción','Cuenta','Resultado'])head.append(node('th',label));

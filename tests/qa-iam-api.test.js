@@ -12,7 +12,7 @@ const input={action:'invite',email:'persona@ejemplo.co',name:'Persona de prueba'
  assignments:[{project_id:'qa-01',role:'viewer'}],reason:'Alta autorizada para prueba',requestId:REQUEST};
 
 function fixture({allowed=true,aal='aal2',userId=ACTOR,claimsSub=ACTOR,
- inviteError=false,banError=false,operatorError=false}={}){
+ inviteError=false,banError=false,operatorError=false,legacyReview=null}={}){
  const calls=[];
  const client={
   auth:{
@@ -29,6 +29,7 @@ function fixture({allowed=true,aal='aal2',userId=ACTOR,claimsSub=ACTOR,
    if(operatorError&&name==='qa_iam_is_operator')return {error:{message:'unavailable'},data:null};
    if(name==='qa_iam_is_operator')return{data:allowed,error:null};
    if(name==='qa_iam_snapshot')return{data:{accounts:[],audit:[]},error:null};
+   if(name==='qa_iam_legacy_review')return legacyReview?{data:legacyReview,error:null}:{data:null,error:{message:'not yet installed'}};
    if(name==='qa_iam_command')return{data:{user_id:TARGET,status:'database_applied'},error:null};
    return{data:null,error:{message:'unexpected'}};
   }
@@ -127,4 +128,31 @@ test('Auth failure must be reported as PARTIAL, never as completed offboard',asy
  assert.equal(res.status,202);assert.equal((await res.json()).status,'access_restricted_auth_pending');
  const actions=f.calls.filter(x=>x[1]==='qa_iam_command').map(x=>x[2].p_action);
  assert.deepEqual(actions,['offboard']);
+});
+
+test('legacy review is restricted to AAL2 operator and response never leaks source credentials',async()=>{
+ const source={total:1,candidates:[{username:'j.guzman',display_name:'Persona QA',
+  legacy_status:'Activo',review_classification:'MATCHED',staff_matched:true,
+  auth_linked:false,secret_pin:'never-copy',email:'private@example.invalid'}]};
+ const allowed=fixture({legacyReview:source});
+ const res=await allowed.handler({request:allowed.request(),env});
+ assert.equal(res.status,200);
+ const body=await res.json();
+ assert.deepEqual(body.legacy_review,{total:1,candidates:[{
+  username:'j.guzman',display_name:'Persona QA',legacy_status:'Activo',
+  review_classification:'MATCHED',staff_matched:true,auth_linked:false
+ }]});
+ assert.equal(JSON.stringify(body).includes('never-copy'),false);
+ const denied=fixture({allowed:false,legacyReview:source});
+ assert.equal((await denied.handler({request:denied.request(),env})).status,403);
+ assert.equal(denied.calls.some(c=>c[1]==='qa_iam_legacy_review'),false);
+});
+test('invalid legacy-review data fails closed without impacting current IAM',async()=>{
+ const source={total:1,candidates:[{username:'<script>',display_name:'Injected',
+  legacy_status:'Activo',review_classification:'MATCHED',staff_matched:true,
+  auth_linked:false}]};
+ const f=fixture({legacyReview:source});
+ const res=await f.handler({request:f.request(),env});
+ assert.equal(res.status,200);
+ assert.equal((await res.json()).legacy_review,undefined);
 });
