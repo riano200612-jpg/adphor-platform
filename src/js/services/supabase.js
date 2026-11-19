@@ -4,6 +4,7 @@ import {readVerifiedAgendaQuery} from './verified-agenda.js';
 import {createSharedVisitRepository} from './shared-visits.js';
 import { createEvidenceApiRepository } from './evidence-api.js';
 import {createQaCaseEvidenceRepository} from './qa-case-evidence.js';
+import {qaPrivatePqrsEvidenceAllowed} from './qa-pqrs-evidence-rollout.js';
 import {createQaVisitEvidenceRepository} from './qa-visit-evidence.js';
 import { createPrivateMediaRepository } from './private-media.js';
 import { signedPropertyPhoto } from './property-photos.js';
@@ -37,10 +38,16 @@ export function createCloudRepository(url, key) {
     ? createPrivateMediaRepository(client) : null);
   const isEvidenceQa=url==='https://qfctnnnnltghepwujpdm.supabase.co' &&
     portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF);
-  const evidenceEnabled=import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED==='true';
-  const evidence=isEvidenceQa&&evidenceEnabled
+  const evidenceEnabled=qaPrivatePqrsEvidenceAllowed({
+    url,qaFlag:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,
+    portoEnabled:import.meta.env.VITE_PORTO_QA_ENABLED,
+    stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,
+    hostname:globalThis.location?.hostname
+  });
+  const evidence=evidenceEnabled
     ?createQaCaseEvidenceRepository(client,{url})
-    :createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
+    // A flag must never silently fall back to a different backend in QA.
+    :isEvidenceQa?null:createEvidenceApiRepository({url,enabled:import.meta.env.VITE_QA_EVIDENCE_UPLOAD_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF,origin:import.meta.env.VITE_AGENTS_API_URL,auth:client.auth,development:import.meta.env.DEV});
   const porto=createPortoRepository(client,{url,enabled:import.meta.env.VITE_PORTO_QA_ENABLED,stagingRef:import.meta.env.VITE_PORTO_STAGING_REF});
   if(evidence){
     porto.uploadEvidence=evidence.uploadEvidence;
