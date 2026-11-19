@@ -26,3 +26,17 @@ test('presentation enhancement fails closed when no authenticated dashboard exis
  assert.equal(enhanceAdphorOneDashboard({querySelector:()=>null}),false);
  assert.equal(enhanceAdphorOneDashboard(null),false);
 });
+
+
+test('compact secondary navigation does not duplicate circular tools on home', async()=>{
+ const {secondaryAdphorOnePages}=await import('../src/js/ui-adphor-one.js');
+ const nav=[{id:'dashboard'},{id:'pqrs'},{id:'visits'},{id:'meetings'},{id:'tickets'},{id:'mine'},{id:'access-audit'}];
+ assert.deepEqual(secondaryAdphorOnePages(nav,true).map(x=>x.id),['tickets','mine','access-audit']);
+ assert.deepEqual(secondaryAdphorOnePages(nav,false).map(x=>x.id),['pqrs','visits','meetings','tickets','mine','access-audit']);
+ assert.deepEqual(secondaryAdphorOnePages(null,true),[]);
+});
+test('full-width shell refuses to activate when no authenticated application exists',async()=>{
+ const {enhanceAdphorOneShell}=await import('../src/js/ui-adphor-one.js');
+ assert.equal(enhanceAdphorOneShell(null),false);
+ assert.equal(enhanceAdphorOneShell({querySelector:()=>null}),false);
+});

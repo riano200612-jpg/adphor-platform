@@ -82,13 +82,102 @@ export function enhanceAdphorOneDashboard(doc) {
   intro.after(createHero(doc),grid);
   return true;
 }
+
+/** Build a compact list from the application's *already permitted* navigation.
+ * The circular dashboard remains the primary navigation, not the sidebar. */
+export function secondaryAdphorOnePages(navItems, isHome = true) {
+  const primary = new Set(ADPHOR_ONE_MODULES.map(item => item.id));
+  return (Array.isArray(navItems) ? navItems : []).filter(item =>
+    item && item.id && item.id !== 'dashboard' &&
+    (!isHome || !primary.has(item.id))
+  );
+}
+function navigationLink(doc, item, active) {
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.className = 'adphor-one-menu-item';
+  button.dataset.page = item.id; // use native app handler and existing authorization
+  if (item.id === active) button.setAttribute('aria-current','page');
+  const icon = doc.createElement('i');
+  icon.className = item.icon || 'fa-solid fa-circle';
+  icon.setAttribute('aria-hidden','true');
+  const label = doc.createElement('span');
+  label.textContent = item.label;
+  button.append(icon,label);
+  return button;
+}
+export function enhanceAdphorOneShell(doc) {
+  const shell = doc?.querySelector?.('.app-shell');
+  const sidebar = shell?.querySelector?.('.sidebar');
+  const topbar = shell?.querySelector?.('.workspace > .topbar');
+  const actions = topbar?.querySelector?.('.topbar-actions');
+  if (!shell || !sidebar || !topbar || !actions) return false;
+  if (shell.dataset.adphorOneLayout === 'ready') return false;
+  // Copy only pages that the original, role-filtered navigation has authorized.
+  const buttons = [...sidebar.querySelectorAll('nav button[data-page]')];
+  if (!buttons.length) return false;
+  const navigation = buttons.map(button => ({
+    id: button.dataset.page,
+    label: button.getAttribute('aria-label') || button.textContent.trim(),
+    icon: button.querySelector('i')?.className || 'fa-solid fa-circle'
+  }));
+  const active = buttons.find(button => button.getAttribute('aria-current') === 'page')?.dataset.page || 'dashboard';
+  const home = active === 'dashboard';
+  const brand = doc.createElement('a');
+  brand.href = '#';
+  brand.className = 'adphor-one-topbrand';
+  brand.dataset.page = 'dashboard';
+  brand.setAttribute('aria-label','ADPHOR: volver al inicio');
+  const brandIcon = doc.createElement('i');
+  brandIcon.className = 'fa-solid fa-building';
+  brandIcon.setAttribute('aria-hidden','true');
+  const brandName = doc.createElement('strong');
+  brandName.textContent = 'ADPHOR';
+  const brandLegal = doc.createElement('small');
+  brandLegal.textContent = 'S.A.S.';
+  brand.append(brandIcon,brandName,brandLegal);
+  topbar.insertBefore(brand,topbar.firstChild);
+  if (!home) {
+    const goHome = doc.createElement('button');
+    goHome.type = 'button';
+    goHome.className = 'adphor-one-go-home';
+    goHome.dataset.page = 'dashboard';
+    goHome.textContent = '← Inicio';
+    goHome.setAttribute('aria-label','Volver a la pantalla de inicio');
+    actions.prepend(goHome);
+  }
+  const more = secondaryAdphorOnePages(navigation, home);
+  if (more.length) {
+    const details = doc.createElement('details');
+    details.className = 'adphor-one-more';
+    const summary = doc.createElement('summary');
+    summary.setAttribute('aria-label',home ? 'Otras funciones autorizadas' : 'Herramientas autorizadas');
+    const summaryIcon = doc.createElement('i');
+    summaryIcon.className = 'fa-solid fa-grip';
+    summaryIcon.setAttribute('aria-hidden','true');
+    const summaryLabel = doc.createElement('span');
+    summaryLabel.textContent = home ? 'Otras funciones' : 'Herramientas';
+    summary.append(summaryIcon,summaryLabel);
+    const list = doc.createElement('nav');
+    list.className = 'adphor-one-more-list';
+    list.setAttribute('aria-label','Herramientas autorizadas');
+    for (const item of more) list.append(navigationLink(doc,item,active));
+    details.append(summary,list);
+    actions.prepend(details);
+  }
+  shell.classList.add('adphor-one-shell');
+  shell.dataset.adphorOneLayout = 'ready';
+  return true;
+}
+
 function startAdphorOne() {
   if (!isIntegralQaHost(globalThis.location?.hostname)) return;
   const root = document.getElementById('root');
   if (!root || typeof MutationObserver === 'undefined') return;
-  const observer = new MutationObserver(() => enhanceAdphorOneDashboard(document));
+  const enhance = () => { enhanceAdphorOneShell(document); enhanceAdphorOneDashboard(document); };
+  const observer = new MutationObserver(enhance);
   observer.observe(root,{childList:true,subtree:true});
-  enhanceAdphorOneDashboard(document);
+  enhance();
 }
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startAdphorOne,{once:true});
