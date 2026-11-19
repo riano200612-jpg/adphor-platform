@@ -52,6 +52,25 @@ test('expired sessions remain blocked on reload until a new login',()=>{
  assert.equal(readIdleStamp(f.storage),null);
 });
 
+test('a second tab extends only the same authenticated browser session',()=>{
+ const f=fixture();
+ let secondExpired=0;
+ const other=createQaIdleGuard({storage:f.storage,now:f.now,
+  schedule:()=>1,cancel:()=>{},onExpire:()=>secondExpired++});
+ f.guard.start('qa-user',{fresh:true});
+ other.start('qa-user');
+ f.advance(500000);
+ other.activity();
+ f.advance(200000);
+ assert.equal(f.guard.check(),true); // initial tab's own deadline passed
+ assert.equal(f.expired(),0);
+ f.advance(400000);
+ assert.equal(f.guard.check(),false);
+ assert.equal(f.expired(),1);
+ assert.equal(other.check(),false); // explicit expired marker wins in other tabs
+ assert.equal(secondExpired,1);
+});
+
 test('clock rollback, corrupted stamp and no storage fail closed on re-entry',()=>{
  const f=fixture();f.guard.start('qa-user',{fresh:true});
  f.advance(-1000);assert.equal(f.guard.check(),false);
@@ -64,7 +83,7 @@ test('clock rollback, corrupted stamp and no storage fail closed on re-entry',()
 test('QA app integrates after AAL2 and clears state on timeout',()=>{
  const s=readFileSync(new URL('../src/js/app.js',import.meta.url),'utf8');
  assert.match(s,/idleSession\.start\(state\.user\.id,\{fresh:true\}\)/);
- assert.match(s,/expiredStoredSession\(sessionStorage\)/);
+ assert.match(s,/expiredStoredSession\(localStorage\)/);
  assert.match(s,/if\(repo\.mode==='cloud'&&state\.user&&!idleSession\.start\(state\.user\.id\)\)return/);
  assert.match(s,/void repo\.logout\(\)\.catch/);
  assert.match(s,/state\.projects=\[\];state\.members=\[\]/);
