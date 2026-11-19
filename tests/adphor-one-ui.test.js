@@ -36,14 +36,16 @@ test('every authorized route, including general administration, is a visible cir
  'staff','corporate-staff','qa-source','access-audit','consultation'
  ];
  const nav=complete.map(id=>({id,label:id,icon:'fa-solid fa-circle'}));
- assert.deepEqual(new Set(completeAdphorOneCatalog(nav).map(x=>x.id)),new Set(complete));
- assert.equal(completeAdphorOneCatalog(nav).length,18);
+ const tools=complete.filter(id=>id!=='dashboard');
+ assert.deepEqual(new Set(completeAdphorOneCatalog(nav).map(x=>x.id)),new Set(tools));
+ assert.equal(completeAdphorOneCatalog(nav).length,17);
  assert.equal(completeAdphorOneCatalog(nav).some(x=>x.id==='access-audit'),true);
  assert.equal(completeAdphorOneCatalog(nav).some(x=>x.id==='qa-source'),true);
- assert.deepEqual(completeAdphorOneCatalog(nav.slice(0,13)).map(x=>x.id).sort(),complete.slice(0,13).sort());
+ assert.deepEqual(completeAdphorOneCatalog(nav.slice(0,13)).map(x=>x.id).sort(),complete.slice(0,13).filter(id=>id!=='dashboard').sort());
  assert.equal(completeAdphorOneCatalog(nav.slice(0,13)).some(x=>x.id==='access-audit'),false);
  assert.deepEqual(completeAdphorOneCatalog(null),[]);
- assert.equal(completeAdphorOneCatalog([...nav,nav[0]]).length,18);
+ assert.equal(completeAdphorOneCatalog([...nav,nav[0]]).length,17);
+ assert.equal(completeAdphorOneCatalog(nav).some(x=>x.id==='dashboard'),false);
 });
 test('an already-authorized future module also gets a circle, not a hidden link',async()=>{
  const {completeAdphorOneCatalog}=await import('../src/js/ui-adphor-one.js');
@@ -54,4 +56,11 @@ test('full-width shell refuses to activate when no authenticated application exi
  const {enhanceAdphorOneShell}=await import('../src/js/ui-adphor-one.js');
  assert.equal(enhanceAdphorOneShell(null),false);
  assert.equal(enhanceAdphorOneShell({querySelector:()=>null}),false);
+});
+
+test('Resumen is only a return-to-Inicio control and not a visible task tile',async()=>{
+ const {completeAdphorOneCatalog}=await import('../src/js/ui-adphor-one.js');
+ const nav=[{id:'dashboard',label:'Resumen'},{id:'pqrs',label:'PQRS'},{id:'visits',label:'Visitas'}];
+ assert.deepEqual(completeAdphorOneCatalog(nav).map(x=>x.id),['pqrs','visits']);
+ assert.equal(visibleAdphorOneModules(['dashboard','pqrs']).some(x=>x.id==='dashboard'),false);
 });
