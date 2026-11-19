@@ -11,7 +11,7 @@ function read(href, backend = url) {
 const origin = 'https://qa-integral-claude-reviewed.adphor-platform.pages.dev';
 const fragment = '#type=recovery&access_token=test-access&refresh_token=test-refresh';
 test('recovery removes URL credentials and only accepts isolated QA targets', () => {
-  assert.deepEqual(read(origin + fragment), {result: {access_token:'test-access', refresh_token:'test-refresh'}, cleaned:'/'});
+  assert.deepEqual(read(origin + fragment), {result: {access_token:'test-access', refresh_token:'test-refresh',purpose:'recovery'}, cleaned:'/'});
   for (const host of ['https://adphor-platform.pages.dev', 'https://evil.example', 'http://qa-integral-claude-reviewed.adphor-platform.pages.dev', 'https://qa-pqrs-carrusel-integracion.adphor-platform.pages.dev']) {
     assert.ok(read(host + fragment).result.error);
   }
@@ -21,7 +21,10 @@ test('recovery removes URL credentials and only accepts isolated QA targets', ()
 });
 test('official invitation fragments use the isolated password setup flow', () => {
   const invite = fragment.replace('recovery', 'invite');
-  assert.deepEqual(read(origin + invite), read(origin + fragment));
+  assert.deepEqual(read(origin + invite),{
+    result:{access_token:'test-access',refresh_token:'test-refresh',purpose:'invite'},cleaned:'/'
+  });
+  assert.notDeepEqual(read(origin + invite),read(origin + fragment));
   assert.ok(read('https://adphor-platform.pages.dev' + invite).result.error);
   assert.ok(read(origin + '#type=invite&access_token=x').result.error);
 });
@@ -50,4 +53,27 @@ test('verified recovery validates confirmation, updates once, signs out, never l
   assert.deepEqual(await recovery.update('a-long-test-password','a-long-test-password'), {signedOut:true});
   await assert.rejects(recovery.update('a-long-test-password','a-long-test-password'));
   assert.deepEqual(calls, ['session','verify','update','signout']);
+});
+
+test('first-access invitation purpose is not inferred from user supplied query string',()=>{
+ const forged=read(origin+'?type=invite'+fragment);
+ assert.equal(forged.result.purpose,'recovery');
+ assert.equal(forged.cleaned,'/');
+ const malicious=read(origin+'#type=signup&access_token=x&refresh_token=y');
+ assert.ok(malicious.result.error);
+});
+test('invitation temporary password session never loads operational data or enrolls MFA',async()=>{
+ const calls=[];
+ const auth={
+  setSession:async tokens=>{assert.deepEqual(Object.keys(tokens).sort(),['access_token','refresh_token']);calls.push('session');return {error:null};},
+  getUser:async()=>{calls.push('verify');return {data:{user:{id:'synthetic-invite'}}};},
+  updateUser:async({password})=>{calls.push('set-password');assert.equal(password,'long-qa-invitation-123');return {error:null};},
+  signOut:async()=>{calls.push('signout');return {error:null};}
+ };
+ const temp=await createPasswordRecovery(auth,{
+  access_token:'synthetic-only',refresh_token:'synthetic-only',purpose:'invite'
+ });
+ assert.deepEqual(await temp.update('long-qa-invitation-123','long-qa-invitation-123'),{signedOut:true});
+ assert.deepEqual(calls,['session','verify','set-password','signout']);
+ await assert.rejects(temp.update('another-secret-123','another-secret-123'));
 });
