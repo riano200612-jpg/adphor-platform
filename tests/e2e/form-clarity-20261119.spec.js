@@ -33,7 +33,7 @@ test('IAM: search across 43 copropiedades, retain selections and refuse incomple
  await search.fill('Copropiedad QA 42');
  await expect(invite.getByLabel('Permitir Copropiedad QA 42')).toBeChecked();
  await expect(invite.getByLabel('Rol para Copropiedad QA 42')).toHaveValue('technician');
- await invite.getByRole('button',{name:'Ver las 43 copropiedades'}).toHaveCount(0);
+ await expect(invite.getByRole('button',{name:'Ver las 43 copropiedades'})).toHaveCount(0);
  await search.fill('');
  await invite.getByRole('button',{name:'Ver las 43 copropiedades'}).click();
  await expect(invite.locator('.access-grant-row:visible')).toHaveCount(43);
