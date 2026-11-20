@@ -40,7 +40,7 @@ export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',
   '<button type="button" class="btn secondary" data-page="mine">Abrir Mis tareas</button></div>'+
   scopeButtons+'<div class="operational-agenda-stats" aria-label="Resumen de vencimientos">'+highlight+'</div>'+
   '<div class="operational-agenda-windows">'+(snapshot.total?columns:
-    '<p class="muted">'+(team?'Sin tareas abiertas del equipo registradas en esta copropiedad.':'Sin pendientes propios registrados en la bitácora de esta copropiedad.')+'</p>')+'</div>'+
+    '<p class="muted">'+(team?'Sin tareas abiertas del equipo registradas en esta copropiedad.':'Sin pendientes registrados en la bitácora de esta copropiedad.')+'</p>')+'</div>'+
   '<p class="muted operational-agenda-foot">'+later+' tareas posteriores a 15 días. '+
   (snapshot.unclassified?snapshot.unclassified+' registros no verificables se omitieron. ':'')+
   'Fuente: bitácora persistente; no incluye aún actividades recurrentes, '+
