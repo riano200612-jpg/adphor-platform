@@ -85,7 +85,9 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         <ul class="visit-results" data-visit-results></ul>
       </section>
     </div></section>`;
-  root.querySelector('[data-property]').textContent = projectName || 'Selecciona una copropiedad asignada';
+  root.querySelector('[data-property]').textContent = projectName
+    ? 'Estás trabajando en: '+projectName
+    : 'Selecciona una copropiedad asignada';
   root.querySelector('[data-project-count]').textContent = projects?.length ?? Number(Boolean(projectId));
   if (projects && onProjectChange) {
     mountProjectSelector(root.querySelector('[data-visit-project]'), {
@@ -160,8 +162,13 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       title.textContent=row.motive;
       const details=document.createElement('small');
       details.textContent=[localDate(row),responsibleNames.get(row.responsible_id) || 'Responsable no disponible',row.request_id].join(' · ');
-      item.append(title,details);
-      if(repository?.lifecycleEnabled)mountVisitLifecycle(item,{row,repository,canWrite:canCreate,responsibleNames,reload:loadList});
+      const building=document.createElement('p');
+      building.className='visit-building-context';
+      building.textContent='Edificio: '+(projectName||'Copropiedad seleccionada');
+      item.append(title,building,details);
+      if(repository?.lifecycleEnabled)mountVisitLifecycle(item,{
+        row,repository,canWrite:canCreate,responsibleNames,reload:loadList,projectName
+      });
       results.append(item);
     }
     listStatus.textContent=visible.length ? visible.length+(shared?' visitas visibles.':' borradores visibles.') :
@@ -288,7 +295,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         reviewState.confirmed(request);
         savedRequestId=request.requestId;
         if (summary.isConnected) summary.textContent = shared
-          ? 'Programación guardada en SQL. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.'
+          ? 'Visita guardada en '+(projectName||'la copropiedad seleccionada')+'. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.'
           : 'Borrador de prueba guardado y confirmado.';
         save.hidden = true;
         if(canList) await loadList();
