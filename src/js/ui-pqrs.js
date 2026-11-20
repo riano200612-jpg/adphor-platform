@@ -272,7 +272,7 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
             }
           });
         }catch(error){
-          throw Error(`Radicado: ${saved.id}. ${confirmedFiles} de ${files.length} evidencias confirmadas. Conserva los adjuntos y reintenta: ${error.message}`);
+          throw Error(`Radicado: ${saved.id}. Evidencias incompletas. ${confirmedFiles} de ${files.length} archivos confirmados. Conserva los adjuntos y reintenta: ${error.message}`);
         }
       }
       pendingCase=null;
