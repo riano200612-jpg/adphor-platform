@@ -34,7 +34,7 @@ export function verifyMissWeeklyReportScope(report,authorizedIds){
       (values.some(x=>x===null)?total!==null:total!==values.reduce((n,x)=>n+x,0)))
       throw Error('Los totales no concilian con las copropiedades.');
  }
- if(typeof report.weekStart!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(report.weekStart))
+ if(typeof report.weekStart!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(report.weekStart))
    throw Error('Período del informe no verificable.');
  return true;
 }
