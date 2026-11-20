@@ -58,3 +58,26 @@ test('Visitas: el nombre de la copropiedad se muestra como texto, nunca HTML eje
  await expect(page.locator('[data-property]')).toContainText('<img src=x onerror=alert(1)>');
  await expect(page.locator('#visit img')).toHaveCount(0);
 });
+
+test('Visitas: la confirmación de registro identifica el edificio tras guardar un borrador sintético',async({page,baseURL})=>{
+ const moduleUrl=new URL('src/js/ui-visit-preparation.js',baseURL).href;
+ const html='<!doctype html><html lang="es"><meta charset="utf-8"><div id="visit"></div>'
+ +'<script type="module">'
+ +'import {mountVisitPreparation} from "'+moduleUrl+'";'
+ +'mountVisitPreparation(document.getElementById("visit"),{'
+ +'projectId:"p1",projectName:"Edificio Mares",'
+ +'members:[{project_id:"p1",user_id:"u1",name:"Administradora de prueba"}],'
+ +'canCreate:true,isolatedRepository:{lifecycleEnabled:false,'
+ +'save:async(request)=>({project_id:request.projectId,request_id:request.requestId})}});'
+ +'</script>';
+ await page.route('**/qa-visit-save-building-confirmation',route=>route.fulfill({contentType:'text/html',body:html}));
+ await page.goto('./qa-visit-save-building-confirmation');
+ await page.getByLabel('Tipo o motivo').fill('Inspección sintética (sin escritura real)');
+ await page.getByLabel('Fecha y hora (Colombia)',{exact:true}).fill('2026-11-21T10:00');
+ await page.locator('select[name=responsible]').selectOption('u1');
+ await page.getByRole('button',{name:'Revisar borrador'}).click();
+ await expect(page.locator('[data-summary]')).toContainText('Edificio Mares');
+ await page.getByRole('button',{name:'Confirmar y guardar borrador de prueba'}).click();
+ await expect(page.locator('[data-summary]')).toContainText('Borrador de prueba guardado y confirmado');
+ await expect(page.locator('[data-property]')).toHaveText('Estás trabajando en: Edificio Mares');
+});
