@@ -85,7 +85,9 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         <ul class="visit-results" data-visit-results></ul>
       </section>
     </div></section>`;
-  root.querySelector('[data-property]').textContent = projectName || 'Selecciona una copropiedad asignada';
+  root.querySelector('[data-property]').textContent = projectName
+    ? 'Estás trabajando en: '+projectName
+    : 'Selecciona una copropiedad asignada';
   root.querySelector('[data-project-count]').textContent = projects?.length ?? Number(Boolean(projectId));
   if (projects && onProjectChange) {
     mountProjectSelector(root.querySelector('[data-visit-project]'), {
@@ -160,8 +162,13 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       title.textContent=row.motive;
       const details=document.createElement('small');
       details.textContent=[localDate(row),responsibleNames.get(row.responsible_id) || 'Responsable no disponible',row.request_id].join(' · ');
-      item.append(title,details);
-      if(repository?.lifecycleEnabled)mountVisitLifecycle(item,{row,repository,canWrite:canCreate,responsibleNames,reload:loadList});
+      const building=document.createElement('p');
+      building.className='visit-building-context';
+      building.textContent='Edificio: '+(projectName||'Copropiedad seleccionada');
+      item.append(title,building,details);
+      if(repository?.lifecycleEnabled)mountVisitLifecycle(item,{
+        row,repository,canWrite:canCreate,responsibleNames,reload:loadList,projectName
+      });
       results.append(item);
     }
     listStatus.textContent=visible.length ? visible.length+(shared?' visitas visibles.':' borradores visibles.') :
@@ -200,6 +207,11 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   }
   const review = root.querySelector('[data-review]');
   const summary = root.querySelector('[data-summary]');
+  const savedBuilding=document.createElement('p');
+  savedBuilding.className='visit-building-context';
+  savedBuilding.dataset.visitSavedBuilding='';
+  savedBuilding.hidden=true;
+  summary.after(savedBuilding);
   const formHint=root.querySelector('[data-visit-form-hint]');
   const draft = () => ({
       projectId, kind: fields.querySelector('[name=kind]').value,
@@ -271,6 +283,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       reviewState.invalidate();
       save.hidden = true;
       openSavedVisit.hidden=true;
+      savedBuilding.hidden=true;
     });
     save.addEventListener('click', async () => {
       if (!reviewState.current() || saving) return;
@@ -290,6 +303,8 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         if (summary.isConnected) summary.textContent = shared
           ? 'Programación guardada en SQL. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.'
           : 'Borrador de prueba guardado y confirmado.';
+        savedBuilding.textContent='Visita guardada para: '+(projectName||'Copropiedad seleccionada');
+        savedBuilding.hidden=false;
         save.hidden = true;
         if(canList) await loadList();
         openSavedVisit.hidden=!(shared&&canList&&repository.lifecycleEnabled&&rows.some(x=>x.request_id===savedRequestId)&&listLoaded);
