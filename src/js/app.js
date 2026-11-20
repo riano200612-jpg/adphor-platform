@@ -29,6 +29,7 @@ import { mountClientSourceReview } from './ui-client-source-review.js';
 import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import { mountAgentHistory } from './ui-agent-history.js';
+import {mountMissDocumentIntake} from './ui-miss-document-intake.js';
 import {mountMissQaWeekly} from './ui-miss-qa-weekly.js';
 import {mountQaDiagnosticAgents} from './ui-qa-agent-diagnostics.js';
 import { mountTenantConsultation } from './ui-tenant-consultation.js';
@@ -201,6 +202,7 @@ function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['unified','grip','Centro integrado'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
   nav.splice(1,0,['meetings','calendar','Reuniones'],['agenda','calendar-days','Agenda'],['visits','route','Visitas'],['pqrs','inbox','PQRS']);
+  if(repo.missDocumentsEnabled)nav.push(['miss-documents','folder-open','Documentos para Miss ADPHOR']);
   if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo'],['corporate-staff','people-group','Equipo corporativo']);
   if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['qa-source','users','Auditoría histórica']);
   if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['access-audit','user-shield','Usuarios y permisos']);
@@ -220,6 +222,9 @@ function shell() {
       userId:state.user?.id,role:role(),mode:repo.mode,
       page:state.page,availablePages:nav.map(([id])=>id)
     }),
+    documentsEnabled:repo.mode==='cloud'&&repo.missDocumentsEnabled===true,
+    uploadDocument:repo.missDocumentsEnabled===true?(id,file)=>repo.submitMissLocalDocument(id,file):undefined,
+    submitDriveLink:repo.missDocumentsEnabled===true?(id,url,name)=>repo.submitMissDriveLink(id,url,name):undefined,
     loadMeetings:repo.mode==='cloud' && typeof repo.listVerifiedQaMeetings==='function'
       ? id=>repo.listVerifiedQaMeetings(id) : undefined,
     loadPqrs:repo.mode==='cloud' && repo.porto ? id=>repo.porto.listAttention(id) : undefined,
@@ -284,6 +289,10 @@ function renderPage() {
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if(state.page==='miss-documents'){
+    if(!repo.missDocumentsEnabled){state.page='dashboard';renderPage();return;}
+    mountMissDocumentIntake($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
+  }
   if(state.page==='task-catalog'){
     if(!repo.qaTaskCatalogEnabled||!isManager(role())){state.page='mine';renderPage();return;}
     mountQaTaskCatalog($('page-content'),{repo,projectId:state.projectId,projectName:project().name,userId:state.user.id});return;

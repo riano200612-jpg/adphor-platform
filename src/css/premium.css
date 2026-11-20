@@ -310,3 +310,14 @@
 .access-security-note{background:#f7f8f5;border-left:3px solid #b69b36;padding:17px 20px;border-radius:10px;line-height:1.65;color:#435969}
 @media(max-width:960px){.access-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.access-hero{padding:20px;flex-direction:column}.access-metrics,.access-actions{grid-template-columns:1fr}.access-console{gap:18px}.access-action{padding:18px}}
+
+/* Miss ADPHOR: compact attachment composer (enabled only in isolated QA). */
+.miss-chat-documents{border:1px solid #dbe3ea;border-radius:12px;background:#f7fafc;padding:8px 10px;max-height:215px;overflow-y:auto;flex-shrink:0}
+.miss-chat-documents summary{cursor:pointer;color:#264b6b;font-size:13px;font-weight:700;list-style-position:inside}
+.miss-chat-documents-note{font-size:12px;line-height:1.45;color:#506579;margin:8px 0}
+.miss-chat-document-form{display:grid;gap:6px;padding:8px 0;border-top:1px solid #dbe3ea;font-size:12px}
+.miss-chat-document-form label{display:grid;gap:4px;font-weight:600}
+.miss-chat-document-form input{display:block;box-sizing:border-box;width:100%;min-width:0;font-size:12px}
+.miss-chat-document-form button{border:0;border-radius:8px;background:#264b6b;color:#fff;cursor:pointer;padding:9px;font-weight:650}
+.miss-chat-document-form button:disabled{opacity:.65;cursor:wait}
+.miss-chat-document-form p[role=status]{margin:0;font-size:12px;overflow-wrap:anywhere}
