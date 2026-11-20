@@ -258,15 +258,27 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
       const saved=pendingCase||await repository.create(projectId,payload,requestId);
       if(!saved?.id)throw Error('El servicio no confirmó el radicado. Conserva los datos y vuelve a intentar.');
       pendingCase=saved;
+      let confirmedFiles=0;
       if(files.length){
-        // A failed upload keeps the confirmed case and files for a safe retry.
-        try{await uploadPrivateEvidence({repository,projectId,caseId:saved.id,files});}
-        catch(error){throw Error(`Radicado: ${saved.id}. Evidencias incompletas. ${error.message}`);}
+        // Count only storage objects with confirmed private metadata.
+        // A failed upload preserves the radicado and selected files for safe retry.
+        try{
+          await uploadPrivateEvidence({repository,projectId,caseId:saved.id,files,
+            onProgress:({completed,total})=>{
+              if(Number.isSafeInteger(completed)&&completed>=0&&completed<=files.length&&total===files.length){
+                confirmedFiles=completed;
+                if(root.isConnected)message.textContent=`Radicado ${saved.id} guardado. Evidencias privadas confirmadas: ${completed} de ${total}.`;
+              }
+            }
+          });
+        }catch(error){
+          throw Error(`Radicado: ${saved.id}. Evidencias incompletas. ${confirmedFiles} de ${files.length} archivos confirmados. Conserva los adjuntos y reintenta: ${error.message}`);
+        }
       }
       pendingCase=null;
       requestId=crypto.randomUUID();
       form.reset();clearPreviews();evidenceList.replaceChildren();clearEvidence.hidden=true;
-      const confirmation=`Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;
+      const confirmation=`Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${files.length?(files.length===1?'1 evidencia privada confirmada. ':files.length+' evidencias privadas confirmadas. '):''}${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;
       try{await load();}catch{return confirmation+' No se pudo actualizar la lista. Pulsa Actualizar lista para consultar el radicado.';}
       return confirmation;
     }).finally(()=>{if(!pendingCase){for(const control of lockedControls)control.disabled=false;lockedControls=[];}submitting=false;button.disabled=false;});

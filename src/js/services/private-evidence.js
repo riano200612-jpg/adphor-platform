@@ -7,10 +7,18 @@ export function createEvidenceUploadPlan({projectId,caseId,files,kind='pqrs'}={}
  return selected.map(file=>({project_id:projectId,case_id:caseId,kind,
    name:file.name,type:file.type,size:file.size,status:'awaiting_private_upload'}));
 }
-export async function uploadPrivateEvidence({repository,projectId,caseId,files,kind='pqrs'}={}) {
+export async function uploadPrivateEvidence({repository,projectId,caseId,files,kind='pqrs',onProgress}={}) {
  const plan=createEvidenceUploadPlan({projectId,caseId,files,kind});
  if(!plan.length)return [];
  if(typeof repository?.uploadEvidence!=='function')throw Error('Almacenamiento privado no configurado. No se cargaron los archivos.');
  // Server must verify authentication, tenant access, content type, file quota and audit trail.
- return repository.uploadEvidence({projectId,caseId,kind,files:Array.from(files)});
+ const response=await repository.uploadEvidence({projectId,caseId,kind,files:Array.from(files),onProgress});
+ if(!Array.isArray(response)||response.length!==plan.length||
+    new Set(response.map(item=>item?.id)).size!==plan.length||
+    response.some(item=>typeof item?.id!=='string'||!item.id.trim()||
+      item.project_id!==projectId||item.case_id!==caseId||
+      item.visibility!=='private'||item.storage_written!==true||
+      item.metadata_linked!==true))
+  throw Error('No se confirmó la asociación privada de todos los archivos. Conserva el radicado y reintenta con los mismos adjuntos.');
+ return response;
 }

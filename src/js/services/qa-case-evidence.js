@@ -53,12 +53,17 @@ export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
   return row;
  }
  return {
-  async uploadEvidence({projectId,caseId,kind='pqrs',files}){
+  async uploadEvidence({projectId,caseId,kind='pqrs',files,onProgress}){
    scoped(projectId,caseId,kind);
    const selected=validateQaEvidence(files);
    if(!selected.length)throw Error('Selecciona una evidencia válida.');
    const actor=await authorize(projectId,caseId);
    const confirmed=[];
+   const notify=()=>{
+     if(typeof onProgress==='function')try{
+       onProgress({completed:confirmed.length,total:selected.length});
+     }catch{/* Visual progress must never invalidate persisted evidence. */}
+   };
    for(const file of selected){
     const id=await evidenceObjectId(file,projectId,caseId,actor);
     const path=[projectId,'pqrs',caseId,actor,id+'.'+EXT[file.type]].join('/');
@@ -67,6 +72,7 @@ export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
       if(previous.storage_path!==path||previous.uploaded_by!==actor||previous.media_type!==file.type||Number(previous.file_bytes)!==file.size)
        throw Error('Evidencia existente incompatible; no se sobrescribió.');
       confirmed.push({id,project_id:projectId,case_id:caseId,visibility:'private',storage_written:true,metadata_linked:true});
+      notify();
       continue;
     }
     const uploaded=await client.storage.from(BUCKET).upload(path,file,{upsert:false,contentType:file.type,cacheControl:'0'});
@@ -83,6 +89,7 @@ export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
     if(!saved||saved.id!==id||saved.project_id!==projectId||saved.case_id!==caseId||saved.storage_path!==path||saved.storage_bucket!==BUCKET||saved.uploaded_by!==actor)
       throw Error('La evidencia no quedó asociada al radicado. Reintenta sin duplicar la PQRS.');
     confirmed.push({id,project_id:projectId,case_id:caseId,visibility:'private',storage_written:true,metadata_linked:true});
+    notify();
    }
    return confirmed;
   },

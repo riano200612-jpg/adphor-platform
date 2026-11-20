@@ -3,7 +3,7 @@
 export function createPrivateEvidenceRepository(api) {
  if(typeof api?.putCaseEvidence!=='function')throw Error('API privada de evidencias no disponible');
  return {
-  async uploadEvidence({projectId,caseId,kind,files}) {
+  async uploadEvidence({projectId,caseId,kind,files,onProgress}) {
    if(!projectId||!caseId||!['pqrs','recorridos'].includes(kind))throw Error('Caso inválido');
    if(!Array.isArray(files)||!files.length)throw Error('Archivos requeridos');
    const results=[];
@@ -16,7 +16,11 @@ export function createPrivateEvidenceRepository(api) {
     }
     if(result?.project_id!==projectId||result?.case_id!==caseId||result?.visibility!=='private'||result?.storage_written!==true||result?.metadata_linked!==true||!result?.id)
       throw Error('Confirmación inválida: '+results.length+' de '+files.length+' archivos confirmados. Verifica el historial antes de reintentar.');
-    results.push({id:result.id,project_id:projectId,case_id:caseId,visibility:'private'});
+    results.push({id:result.id,project_id:projectId,case_id:caseId,visibility:'private',
+      storage_written:true,metadata_linked:true});
+    if(typeof onProgress==='function')try{
+      onProgress({completed:results.length,total:files.length});
+    }catch{/* A display callback cannot roll back confirmed storage. */}
    }
    return results;
   }

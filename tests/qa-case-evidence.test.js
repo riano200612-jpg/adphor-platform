@@ -87,3 +87,24 @@ test('storage errors never fabricate a linked evidence result',async()=>{
  await assert.rejects(x.repo.uploadEvidence({projectId:project,caseId,files:[file]}),/carga privada/);
  assert.equal(x.stored.length,0);
 });
+
+test('progress is emitted only for linked evidence and for idempotent retry',async()=>{
+ const x=fixture();const progress=[];
+ await x.repo.uploadEvidence({projectId:project,caseId,files:[file],onProgress:s=>{
+   progress.push(s);assert.equal(x.stored.length,s.completed);
+ }});
+ assert.deepEqual(progress,[{completed:1,total:1}]);
+ await x.repo.uploadEvidence({projectId:project,caseId,files:[file],onProgress:s=>progress.push(s)});
+ assert.deepEqual(progress.at(-1),{completed:1,total:1});
+ assert.equal(x.uploads.length,1);
+});
+test('failed storage cannot announce confirmed evidence',async()=>{
+ const x=fixture({storageFailure:{statusCode:'403',message:'blocked'}});const progress=[];
+ await assert.rejects(x.repo.uploadEvidence({projectId:project,caseId,files:[file],onProgress:s=>progress.push(s)}));
+ assert.deepEqual(progress,[]);
+});
+test('progress callback error cannot undo confirmed metadata',async()=>{
+ const x=fixture();
+ const rows=await x.repo.uploadEvidence({projectId:project,caseId,files:[file],onProgress:()=>{throw Error('Unmounted UI');}});
+ assert.equal(rows.length,1);assert.equal(x.stored.length,1);
+});

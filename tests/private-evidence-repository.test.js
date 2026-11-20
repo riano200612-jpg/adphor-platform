@@ -33,3 +33,12 @@ test('storage-only success cannot be represented as a persisted attachment',asyn
  const api={putCaseEvidence:async()=>({id:'blob',project_id:'p1',case_id:'c1',visibility:'private',storage_written:true,metadata_linked:false})};
  await assert.rejects(createPrivateEvidenceRepository(api).uploadEvidence({projectId:'p1',caseId:'c1',kind:'pqrs',files:[{}]}),/Confirmación inválida/);
 });
+
+test('generic adapter preserves private acknowledgement and per-file progress',async()=>{
+ const progress=[];
+ let n=0;
+ const repo=createPrivateEvidenceRepository({putCaseEvidence:async()=>({id:'ok'+(++n),project_id:'p1',case_id:'c1',visibility:'private',storage_written:true,metadata_linked:true})});
+ const r=await repo.uploadEvidence({projectId:'p1',caseId:'c1',kind:'pqrs',files:[{},{}],onProgress:s=>progress.push(s)});
+ assert.deepEqual(progress,[{completed:1,total:2},{completed:2,total:2}]);
+ assert.ok(r.every(x=>x.storage_written===true&&x.metadata_linked===true));
+});
