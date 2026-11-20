@@ -30,8 +30,9 @@ export function buildOperationalAgenda(tickets,{projectId,userId,role='viewer',s
  const byKey=Object.fromEntries(groups.map(g=>[g.key,g]));
  let unclassified=0;
  for(const row of tickets){
-  // Only assignments for the authenticated actor and selected tenant are projected.
-  // Server RLS remains the authorization boundary; do not add cross-property links.
+  // Personal mode only sees the authenticated actor; manager team mode sees
+  // assigned and unassigned rows for this property only. Server RLS still owns
+  // the authorization boundary; this projection cannot confer SQL privileges.
   if(row?.project_id!==projectId||(scope==='mine'&&row.assignee!==userId)||row.status==='Cerrada')continue;
   if(typeof row.id!=='string'||!row.id.trim()||typeof row.title!=='string'||
      !row.title.trim()||!STATES.includes(row.status)||!validOperationalDate(row.due_date)){
