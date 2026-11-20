@@ -79,5 +79,6 @@ test('Visitas: la confirmación de registro identifica el edificio tras guardar 
  await expect(page.locator('[data-summary]')).toContainText('Edificio Mares');
  await page.getByRole('button',{name:'Confirmar y guardar borrador de prueba'}).click();
  await expect(page.locator('[data-summary]')).toContainText('Borrador de prueba guardado y confirmado');
+ await expect(page.locator('[data-visit-saved-building]')).toHaveText('Visita guardada para: Edificio Mares');
  await expect(page.locator('[data-property]')).toHaveText('Estás trabajando en: Edificio Mares');
 });
