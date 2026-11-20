@@ -42,3 +42,13 @@
   overflow-wrap: anywhere;
 }
 .visit-evidence input[type="file"] { max-width: 100%; min-width: 0; }
+
+/* The selected building stays readable next to each visit and its evidence. */
+.visit-workspace [data-property],
+.visit-workspace .visit-building-context {
+  font-size:1.125rem;
+  font-weight:650;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+.visit-workspace .visit-building-context { margin:.3rem 0; }
