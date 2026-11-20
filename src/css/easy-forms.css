@@ -37,3 +37,7 @@ dialog .adphor-simple-form .dialog-footer .btn{min-height:50px;font-size:15px;pa
 
 .pqrs-form .pqrs-form-error:not(:empty){padding:12px 14px;border:1px solid #dfaba4;background:#fff1ef;color:#842a22;font-size:14px;line-height:1.5;border-radius:9px}
 .pqrs-form [aria-invalid=true]{outline:2px solid #b23b32;outline-offset:2px}
+
+/* Show the selected building before asking users to describe a new task. */
+.adphor-simple-form .simple-form-building{grid-column:1/-1;font-size:1.125rem;font-weight:600;line-height:1.45;overflow-wrap:anywhere;margin:0 0 .35rem}
+.adphor-simple-form .simple-form-building strong{font-weight:750}
