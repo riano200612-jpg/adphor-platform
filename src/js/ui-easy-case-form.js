@@ -27,8 +27,11 @@ export function renderEasyCaseForm({project,members,user,role,date,priorities,re
  const areaOptions='<option value="">Elige un área</option>'+
     areas.map(a=>option(a,a)).join('');
  const labels=Array.isArray(priorities)?priorities:[];
+ const activeBuilding=typeof project?.name==='string'&&project.name.trim()
+   ? project.name.trim() : 'Copropiedad seleccionada';
  return '<form id="new-case" class="adphor-simple-form" novalidate data-request-id="'+esc(requestId)+'">'+
   '<div class="dialog-body form-grid">'+
+  '<p class="simple-form-building span-2" data-active-building>Estás trabajando en: <strong>'+esc(activeBuilding)+'</strong></p>'+
   '<p class="simple-form-help">Los campos marcados con <strong>*</strong> son necesarios. Las fotos son opcionales.</p>'+
   step('1','¿Qué sucedió?','Describe la novedad con tus palabras.')+
   row('title','¿Qué pasó? '+required,
