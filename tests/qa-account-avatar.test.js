@@ -73,3 +73,38 @@ test('Absent photo does not substitute another account photo',async()=>{
  f.client.storage.from=()=>({download:async()=>({error:{statusCode:'404',message:'Object not found'}})});
  assert.equal(await f.store.read(owner),null);
 });
+
+test('corporate fallback uses only the own AAL2 server-side binding, never a client-supplied staff id',async()=>{
+ const f=fixture();const calls=f.calls;
+ f.client.rpc=async(name)=>{
+   calls.push('rpc:'+name);
+   assert.equal(name,'qa_my_corporate_avatar_path');
+   return {data:'delegate-11/'+('a'.repeat(64))+'.png',error:null};
+ };
+ const originalStorage=f.client.storage.from;
+ f.client.storage.from=bucket=>{
+   if(bucket!=='qa-staff-photos')return originalStorage(bucket);
+   calls.push('bucket:'+bucket);
+   return {createSignedUrl:async(path,ttl)=>{
+     calls.push('signed:'+path);
+     assert.equal(ttl,300);
+     return {data:{signedUrl:'https://qa-staff-photo.example.invalid/private-signed-avatar'},error:null};
+   }};
+ };
+ const url=await f.store.staffPreview(owner);
+ assert.equal(url,'https://qa-staff-photo.example.invalid/private-signed-avatar');
+ assert.deepEqual(calls.slice(0,5),['verify-user','verify-aal','rpc:qa_my_corporate_avatar_path','bucket:qa-staff-photos','signed:delegate-11/'+('a'.repeat(64))+'.png']);
+ calls.length=0;
+ await assert.rejects(f.store.staffPreview(other),/sesión/);
+ assert.deepEqual(calls,[]);
+ f.setLevel('aal1');
+ await assert.rejects(f.store.staffPreview(owner),/MFA/);
+ assert.equal(calls.some(x=>x.startsWith('rpc:')),false);
+});
+test('unknown or unapproved staff photo bindings fail closed',async()=>{
+ const f=fixture();
+ f.client.rpc=async()=>({data:'../some-other-user/photo.png',error:null});
+ assert.equal(await f.store.staffPreview(owner),null);
+ f.client.rpc=async()=>({error:{message:'function absent'}});
+ assert.equal(await f.store.staffPreview(owner),null);
+});

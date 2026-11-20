@@ -108,3 +108,29 @@ test('A saved photo reappears on the next authenticated shell mount without expo
  await expect(page.locator('.qa-avatar-trigger')).toHaveAttribute('data-photo-state','ready');
  await expect(page.locator('.qa-avatar-trigger')).toHaveAttribute('title','Ver o cambiar mi foto de perfil');
 });
+
+test('authorized corporate photo is displayed when the account has no personal upload',async({page})=>{
+ await demo(page);
+ const {readFile}=await import('node:fs/promises');
+ const image=await readFile(new URL('../../public/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp',import.meta.url));
+ const signed='https://example.invalid/signed-corporate-portrait.webp';
+ await page.route(signed,route=>route.fulfill({status:200,contentType:'image/webp',body:image}));
+ await page.evaluate(async({owner,signed})=>{
+   const host=document.querySelector('.topbar .user-chip');
+   const {mountQaAccountAvatar}=await import('/adphor-platform/src/js/ui-qa-user-avatar.js');
+   window.__qaAvatarCleanup=mountQaAccountAvatar(host,{
+     userId:owner,
+     store:{
+       read:async()=>null,
+       staffPreview:async id=>id===owner?signed:null,
+       upload:async()=>{},remove:async()=>{}
+     }
+   });
+ },{owner,signed});
+ const avatar=page.getByRole('button',{name:'Foto de mi perfil. Abrir opciones'});
+ await expect(avatar).toHaveAttribute('data-photo-state','corporate');
+ await expect(avatar.locator('img')).toHaveAttribute('src',signed);
+ await avatar.click();
+ await expect(page.getByRole('button',{name:'Quitar foto'})).toBeDisabled();
+ await expect(page.getByText('Se muestra tu foto corporativa. Puedes reemplazarla con una personal.')).toBeVisible();
+});

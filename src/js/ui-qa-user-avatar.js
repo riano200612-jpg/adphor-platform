@@ -69,6 +69,21 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
     button.dataset.photoState='empty';button.title='Agregar mi foto de perfil';
     remove.disabled=true;
   }
+  function showStaffPreview(url){
+    if(typeof url!=='string'||!/^https:\/\//.test(url)){fallbackView();return;}
+    release();
+    const img=node(doc,'img','qa-avatar-photo');
+    img.alt='';img.decoding='async';img.referrerPolicy='no-referrer';img.src=url;
+    img.onerror=()=>{
+      if(!disposed&&!hasPhoto && button.dataset.photoState==='corporate'){
+        fallbackView();
+        status.textContent='No fue posible mostrar la foto corporativa.';
+      }
+    };
+    button.replaceChildren(img);hasPhoto=false;remove.disabled=true;
+    button.dataset.photoState='corporate';
+    button.title='Foto corporativa. Agregar mi fotografía personal';
+  }
   function showPhoto(blob){
     if(!blob||blob.type!=='image/webp'){fallbackView();return;}
     const url=makeUrl(blob);
@@ -88,8 +103,22 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
     try{
       const file=await store.read(userId);
       if(disposed||!button.isConnected||version!==request)return;
-      showPhoto(file);
-      status.textContent=file?'Foto de perfil cargada. Se mostrará en tus próximos ingresos.':'Aún no tienes foto guardada. Pulsa «Subir o cambiar foto» para personalizar tu cuenta.';
+      if(file){
+        showPhoto(file);
+        status.textContent='Foto de perfil cargada. Se mostrará en tus próximos ingresos.';
+        return;
+      }
+      // No personal file: show only the staff photo bound server-side to this account.
+      const staffUrl=typeof store.staffPreview==='function'
+        ?await store.staffPreview(userId).catch(()=>null):null;
+      if(disposed||!button.isConnected||version!==request)return;
+      if(staffUrl){
+        showStaffPreview(staffUrl);
+        status.textContent='Se muestra tu foto corporativa. Puedes reemplazarla con una personal.';
+        return;
+      }
+      fallbackView();
+      status.textContent='Aún no tienes foto guardada. Pulsa «Subir o cambiar foto» para personalizar tu cuenta.';
     }catch{
       if(disposed||version!==request)return;
       fallbackView();status.textContent='No se pudo consultar la foto. Se muestran tus iniciales.';
@@ -129,7 +158,10 @@ export function mountQaAccountAvatar(host,{store,userId,makeUrl=blob=>URL.create
     try{
       await store.remove(userId);
       if(disposed)return;
-      ++request;fallbackView();status.textContent='Foto retirada. Se muestran tus iniciales.';
+      ++request;fallbackView();await refresh();
+      status.textContent=button.dataset.photoState==='corporate'
+        ?'Foto personal retirada. Se muestra nuevamente tu foto corporativa.'
+        :'Foto retirada. Se muestran tus iniciales.';
     }catch(error){
       if(!disposed)status.textContent=error?.message||'No se pudo quitar la foto.';
     }finally{

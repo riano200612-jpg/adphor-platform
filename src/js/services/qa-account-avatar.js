@@ -3,6 +3,7 @@ import {QA_INTEGRAL_HOST,QA_URL} from './qa-auth-policy.js';
 export const ACCOUNT_AVATAR_BUCKET='qa-account-avatars';
 export const ACCOUNT_AVATAR_MAX_BYTES=1048576;
 export const ACCOUNT_AVATAR_INPUT_MAX_BYTES=5242880;
+const corporatePath=/^delegate-[0-9]+\/[a-f0-9]{64}\.(?:jpg|jpeg|png|webp)$/;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function accountAvatarEnabled({url,hostname}){
@@ -39,6 +40,16 @@ export function createQaAccountAvatarRepository(client,{url,hostname,getActor}){
     return path;
   }
   return {
+    // AAL2-only, self-scoped fallback to an already approved staff photo.
+    // The server chooses the user-to-staff binding; the caller cannot supply a staff id.
+    async staffPreview(id){
+      await verifiedPath(id);
+      const {data:path,error}=await client.rpc('qa_my_corporate_avatar_path');
+      if(error||typeof path!=='string'||!corporatePath.test(path))return null;
+      const signed=await client.storage.from('qa-staff-photos').createSignedUrl(path,300);
+      if(signed.error||typeof signed.data?.signedUrl!=='string')return null;
+      return signed.data.signedUrl;
+    },
     async read(id){
       const path=await verifiedPath(id);
       const {data,error}=await client.storage.from(ACCOUNT_AVATAR_BUCKET).download(path);
