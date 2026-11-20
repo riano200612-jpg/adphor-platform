@@ -97,15 +97,26 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
   const selectedList=document.createElement('ul');
   selectedList.dataset.visitSelectedFiles='';
   selectedList.setAttribute('aria-label','Archivos seleccionados para esta visita');
+  const clearButton=document.createElement('button');
+  clearButton.type='button';
+  clearButton.textContent='Quitar selección';
+  clearButton.addEventListener('click',()=>{
+   if(sending)return;
+   fileInput.value='';
+   showSelectedFiles();
+   fileInput.focus();
+  });
   let sending=false;
   function showSelectedFiles(){
    selectedList.replaceChildren();
+   clearButton.hidden=!fileInput.files.length;
+   clearButton.disabled=sending;
    uploadButton.disabled=true;
    let files;
    try{files=validateQaVisitEvidence(fileInput.files);}
    catch(error){selectionStatus.textContent=error.message;return;}
    if(!files.length){
-    selectionStatus.textContent='Selecciona imágenes o documentos permitidos antes de guardar.';
+    selectionStatus.textContent='Elige los archivos que quieres agregar a esta visita.';
     return;
    }
    for(const file of files){
@@ -113,11 +124,13 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
     item.textContent=(file.name||'Archivo')+' · '+(file.size/1048576).toFixed(2)+' MB';
     selectedList.append(item);
    }
-   selectionStatus.textContent=files.length+' archivo(s) listos para subir de forma privada.';
+   selectionStatus.textContent=(files.length===1?'1 archivo seleccionado':files.length+' archivos seleccionados')+'. Revisa la lista y pulsa «Guardar evidencias privadas».';
    uploadButton.disabled=sending;
   }
   label.append(fileInput);
-  section.append(label,selectionStatus,selectedList,uploadButton);
+  uploadButton.className='btn primary';
+  clearButton.className='btn secondary';
+  section.append(label,selectionStatus,selectedList,uploadButton,clearButton);
   if(canPrepareSyntheticVisitPdf({hostname:globalThis.location?.hostname,row,canWrite})){
    const prepareSynthetic=document.createElement('button');
    prepareSynthetic.type='button';prepareSynthetic.className='btn secondary';
@@ -169,7 +182,7 @@ export function mountVisitEvidence(root,{row,evidence,canWrite=false}){
    let files;
    try{files=validateQaVisitEvidence(fileInput.files);if(!files.length)throw Error('Selecciona algún archivo.');}
    catch(error){message.textContent=error.message;return;}
-   sending=true;uploadButton.disabled=true;fileInput.disabled=true;
+   sending=true;uploadButton.disabled=true;clearButton.disabled=true;fileInput.disabled=true;
    let progress=0;
    message.textContent='Guardando archivos en almacenamiento privado…';
    try{

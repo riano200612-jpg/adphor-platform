@@ -50,12 +50,17 @@ test('Visitas: private files persist across page reload and signed URL is user-i
  await page.locator('input[type=file]').setInputFiles({name:'acta.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from([0x50,0x4b,0x03,0x04,1])});
  await expect(page.locator('[data-visit-selected-files]')).toContainText('acta.docx');
  await expect(saveButton).toBeEnabled();
+ await expect(page.locator('[data-visit-selection-status]')).toContainText('pulsa «Guardar evidencias privadas»');
+ await page.getByRole('button',{name:'Quitar selección'}).click();
+ await expect(saveButton).toBeDisabled();
+ await expect(page.locator('input[type=file]')).toBeFocused();
+ expect(saves).toBe(0);
  await page.locator('input[type=file]').setInputFiles({name:'acta.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from([0x50,0x4b,0x03,0x04,1])});
  await expect(page.locator('[data-visit-selected-files]')).toContainText('acta.xlsx');
  await expect(saveButton).toBeEnabled();
  await page.locator('input[type=file]').setInputFiles({name:'acta.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7')});
  await expect(page.locator('[data-visit-selected-files]')).toContainText('acta.pdf');
- await expect(page.locator('[data-visit-selection-status]')).toContainText('1 archivo(s) listos');
+ await expect(page.locator('[data-visit-selection-status]')).toContainText('1 archivo seleccionado');
  await expect(saveButton).toBeEnabled();
  await saveButton.click();
  await expect(saveButton).toBeDisabled();
