@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {missQaCurrentWeek,summarizeMissQaWeek,qaMissWeeklyReader} from '../src/js/services/qa-miss-weekly-report.js';
-import {missQaWeeklyCsv} from '../src/js/ui-miss-qa-weekly.js';
+import {missQaWeeklyCsv,verifyMissWeeklyReportScope} from '../src/js/ui-miss-qa-weekly.js';
 const now=Date.parse('2026-11-20T14:00:00Z'),weekStart='2026-11-16',projectIds=['source-1'];
 const sources={tasks:[{project_id:'source-1',created_at:'2026-11-19T10:00:00Z',status:'Pendiente',due_date:'2026-11-18'}],visits:[{project_id:'source-1',created_at:'2026-11-18T09:00:00Z',finished_at:null,status:'programada'}],pqrs:[{project_id:'source-1',created_at:'2026-11-19T10:00:00Z',closed_at:null}],meetings:[{project_id:'source-1',start_at:'2026-11-20T09:00:00Z',is_calendar_verified:true}]};
 test('Miss computes Colombia work week and verifies available sources without invented completion',()=>{
@@ -33,4 +33,27 @@ test('wrong host, AAL1 and unauthorized building fail before any source data rea
  assert.equal(calls,1);
  const wrong=qaMissWeeklyReader(client,{...options,hostname:'adphor-platform.pages.dev'});
  await assert.rejects(wrong({weekStart,projectIds}),/QA Integral/);
+});
+
+test('GAUNTLET report scope: one exact row for each authorized building and reconciled totals',()=>{
+ const ids=['source-1','source-2'];
+ const valid=summarizeMissQaWeek({now,weekStart,projectIds:ids,
+   sources:{tasks:[],visits:[],pqrs:[],meetings:[]}});
+ assert.equal(verifyMissWeeklyReportScope(valid,ids),true);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,properties:valid.properties.slice(0,1)},ids),/faltan copropiedades/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,properties:[valid.properties[0],valid.properties[0]]},ids),/duplicado/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,properties:[valid.properties[0],{...valid.properties[1],projectId:'foreign'}]},ids),/fuera del alcance/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,totals:{...valid.totals,pqrsNew:1}},ids),/no concilian/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,properties:[{...valid.properties[0],pqrsNew:-1},valid.properties[1]]},ids),/Indicadores incompletos/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,properties:[{...valid.properties[0],pqrsNew:null},valid.properties[1]]},ids),/no concilian/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,status:'CERTIFIED_QA'},ids),/no verificables/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,weekStart:'2026-W47'},ids),/Período/);
+ assert.throws(()=>verifyMissWeeklyReportScope(valid,['source-1','source-1']),/Ámbito/);
+});
+test('GAUNTLET does not mark a report ready with an absent list or zero properties',()=>{
+ const valid=summarizeMissQaWeek({now,weekStart,projectIds,sources});
+ assert.equal(verifyMissWeeklyReportScope(valid,projectIds),true);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,properties:[]},projectIds),/faltan copropiedades/);
+ assert.throws(()=>verifyMissWeeklyReportScope(valid,[]),/Ámbito/);
+ assert.throws(()=>verifyMissWeeklyReportScope({...valid,totals:{...valid.totals,visitsRegistered:undefined}},projectIds),/no concilian/);
 });
