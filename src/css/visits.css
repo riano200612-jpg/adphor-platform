@@ -28,3 +28,17 @@
 .visit-editor .visit-manual-date summary{cursor:pointer;font-size:14px;font-weight:650;min-height:44px;display:flex;align-items:center}
 .visit-editor .visit-manual-date label{display:grid;gap:7px;margin-top:9px}
 .visit-editor .visit-form-hint{font-size:14px;line-height:1.6;margin:12px 0;color:#355365}
+
+/* Evidence actions must stay legible and reachable when text wraps on a phone. */
+.visit-evidence button,
+.visit-evidence .btn,
+.visit-evidence input[type="file"]::file-selector-button {
+  min-height: 48px;
+  max-width: 100%;
+  height: auto;
+  font-size: 1.125rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.visit-evidence input[type="file"] { max-width: 100%; min-width: 0; }

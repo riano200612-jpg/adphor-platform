@@ -23,7 +23,7 @@ test('Visitas: private files persist across page reload and signed URL is user-i
   return 'https://qfctnnnnltghepwujpdm.supabase.co/storage/v1/object/sign/qa-visit-evidence/p1/visitas/test?token=synthetic';
  });
  const moduleUrl=new URL('src/js/ui-visit-evidence.js',baseURL).href;
- const html=`<!doctype html><html lang="es"><meta charset="utf-8"><div id="test-visit"></div>
+ const html=`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="${new URL('src/css/visits.css',baseURL).href}"><div id="test-visit"></div>
  <script type="module">
  import {mountVisitEvidence} from '${moduleUrl}';
  const projectId='p1',requestId='a330278f-54b4-41e6-89a1-805086ec3df4';
@@ -42,6 +42,13 @@ test('Visitas: private files persist across page reload and signed URL is user-i
  await page.getByRole('button',{name:'Consultar evidencias de la visita'}).click();
  await expect(page.locator('[data-visit-evidence-list]')).toContainText('aún no tiene evidencias');
  const saveButton=page.getByRole('button',{name:'Guardar evidencias privadas'});
+ for(const width of [360,390,768,1280]){
+  await page.setViewportSize({width,height:820});
+  const bounds=await saveButton.boundingBox();
+  expect(bounds.height).toBeGreaterThanOrEqual(48);
+  expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+  await expect(saveButton).toHaveCSS('font-size','18px');
+ }
  await expect(saveButton).toBeDisabled();
  await page.locator('input[type=file]').setInputFiles({name:'inseguro.exe',mimeType:'application/x-msdownload',buffer:Buffer.from('invalid')});
  await expect(page.locator('[data-visit-selection-status]')).toContainText('Archivo no permitido');
