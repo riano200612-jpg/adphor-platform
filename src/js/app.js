@@ -29,6 +29,7 @@ import { mountClientSourceReview } from './ui-client-source-review.js';
 import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import { mountAgentHistory } from './ui-agent-history.js';
+import {mountQaDiagnosticAgents} from './ui-qa-agent-diagnostics.js';
 import { mountTenantConsultation } from './ui-tenant-consultation.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import '../css/styles.css';
@@ -43,6 +44,7 @@ import '../css/operational-agenda.css';
 import '../css/sprint-board.css';
 import '../css/task-catalog.css';
 import '../css/easy-forms.css';
+import '../css/qa-agent-diagnostics.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
 import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isManager, canWrite, allowedActions, validateInput, validateFiles, ACTION_LABELS } from './core/workflow.js';
@@ -328,6 +330,16 @@ function renderPage() {
   }
   if (state.page === 'agent-history') {
     $('page-content').innerHTML = '<div class="page-heading"><div><p class="eyebrow">INTELIGENCIA CON TRAZABILIDAD</p><h1>Del dato a la decisión</h1><p class="muted">Cada recomendación conserva sus fuentes y requiere revisión humana.</p></div></div><div class="agent-layout"><div class="agent-step"><strong>01 · Operaciones</strong><small>Casos y vencimientos. Consulta en cada ejecución si se usaron reglas o un modelo.</small></div><div class="agent-step"><strong>02 · Análisis</strong><small>Hallazgos y evidencias autorizadas. La inferencia visual real sigue pendiente de validación.</small></div><div class="agent-step"><strong>03 · Informes</strong><small>Borradores ejecutivos. Ningún agente aprueba, cierra casos ni envía informes.</small></div></div><div id="agent-history"></div>';
+    if(repo.mode==='cloud'&&['admin','coordinator'].includes(role())){
+      mountQaDiagnosticAgents($('qa-agent-diagnostics'),{
+        repo,hostname:globalThis.location?.hostname,mode:repo.mode,role:role(),
+        userId:state.user?.id,projectId:state.projectId,
+        authorizedProjects:state.projects.map(p=>p.id),
+        corporateAdmin:state.corporateAdmin,
+        tickets:rows(),availablePages:Array.from(document.querySelectorAll('.sidebar [data-page]')).map(b=>b.dataset.page),
+        missReady:Boolean(document.getElementById('miss-adphor-chat-root'))
+      });
+    }
     mountAgentHistory($('agent-history'), {repo, projectId: state.projectId, role: role()});
     return;
   }

@@ -1,0 +1,12 @@
+/* Agents QA verification panel. Preserve ADPHOR's existing navy/gold scheme. */
+.qa-agent-watch{margin-bottom:20px}
+.qa-agent-watch h2{margin:0 0 10px;color:var(--brand,#173854)}
+.qa-agent-watch-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}
+.qa-agent-watch-log{list-style:none;padding:0;margin:12px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.qa-agent-watch-item{padding:12px 14px;background:#f5f7f9;border:1px solid #d7e1e9;border-left:4px solid #b2904e;border-radius:12px;overflow-wrap:anywhere}
+.qa-agent-watch-item[data-status=ok]{border-left-color:#416b55}
+.qa-agent-watch-item[data-status=blocked]{border-left-color:#9a594a}
+.qa-agent-watch-item strong{display:block;color:var(--brand,#173854)}
+.qa-agent-watch-item p{font-size:13px;margin:7px 0;color:#38556a;line-height:1.5}
+.qa-agent-watch-item small{color:#536575}
+@media(max-width:700px){.qa-agent-watch-log{grid-template-columns:1fr}}
