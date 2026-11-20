@@ -53,7 +53,7 @@ import { STATES, PRIORITIES, ROLES, today, metrics, overdue, filterTickets, isMa
 import { createDemoRepository, DEMO_USERS } from './services/demo.js';
 import { createCloudRepository } from './services/supabase.js';
 import {applicationRepositoryMode} from './services/qa-auth-policy.js';
-import {delegateAdminLabel,verifyGeneralAdmin,corporatePageAllowed} from './services/delegate-scope.js';
+import {delegateAdminLabel,verifyGeneralAdmin,corporatePageAllowed,corporateAccessNotice} from './services/delegate-scope.js';
 import {readWithinDeadline,qaMeetingReadFeedback} from './services/qa-readonly-deadline.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
@@ -73,7 +73,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const icon = name => `<i class="fa-solid fa-${name}" aria-hidden="true"></i>`;
 const fmt = date => date && !Number.isNaN(new Date(date).getTime()) ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' }).format(new Date(date.length === 10 ? `${date}T12:00:00-05:00` : date)) : '—';
 const stamp = date => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(date));
-const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false, sprintOffset: 0, sprintScope: 'mine' };
+const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false, iamStatus: 'not-checked', sprintOffset: 0, sprintScope: 'mine' };
 let disposeQaAccountAvatar=()=>{};
 let busy = false;
 let monthlyResult = null;
@@ -179,11 +179,13 @@ function loginScreen({skipCover=false}={}) {
 function mfaScreen(enrollmentRequired=false,enrollment=null){renderMfaScreen(root,enrollmentRequired,enrollment);}
 async function refresh() {
   state.corporateAdmin = false;
+  state.iamStatus = 'not-checked';
   const data = await repo.load();
   Object.assign(state, data);
   // Only the server-side AAL2 IAM gate can attest general administration.
   state.corporateAdmin = await verifyGeneralAdmin(repo.iam, {
-    eligible: repo.mode === 'cloud' && state.members.some(m => m.user_id === state.user?.id && m.role === 'admin')
+    eligible: repo.mode === 'cloud' && state.members.some(m => m.user_id === state.user?.id && m.role === 'admin'),
+    reportStatus:status=>{state.iamStatus=status;}
   });
   state.projectId = chooseProject(state.projects, state.projectId || projectPreference(sessionStorage,state.user?.id));
   projectPreference(sessionStorage,state.user?.id,state.projectId);
@@ -366,8 +368,10 @@ function renderPage() {
       heading.textContent = 'Reuniones verificadas';
       const status = document.createElement('p');
       status.setAttribute('role', 'status');
-      status.textContent = 'Consultando reuniones…';
-      meetingCard.textContent = status.textContent;
+      // The Reuniones module is always the authoritative navigation route;
+      // this optional dashboard read must never leave the card unusable.
+      status.textContent = 'Puedes abrir Reuniones para consultar la agenda. Actualizando este resumen…';
+      meetingCard.textContent = 'Abrir Reuniones para consultar';
       section.append(heading, status);
       meetingCard.closest('.module-grid').after(section);
       readWithinDeadline(()=>repo.listVerifiedQaMeetings(projectId)).then(rows => {
@@ -392,6 +396,14 @@ function renderPage() {
         status.textContent = qaMeetingReadFeedback(error);
         meetingCard.textContent = status.textContent;
       });
+    }
+    if(state.iamStatus!=='verified' && role()==='admin'){
+      const message=corporateAccessNotice(state.iamStatus);
+      if(message){
+        const note=document.createElement('p');note.className='qa-iam-readiness';
+        note.setAttribute('role','status');note.textContent=message;
+        $('page-content').prepend(note);
+      }
     }
     if(pqrsCard){pqrsCard.textContent='Consultando solicitudes…';const id=state.projectId;(repo.mode==='demo'?demoPorto:repo.porto).list(id).then(items=>{if(!pqrsCard.isConnected||state.projectId!==id)return;pqrsCard.textContent=`${items.length===200?'Al menos ':''}${items.filter(i=>i.status!=='closed').length} sin cerrar · ${repo.mode==='demo'?'datos locales de prueba':'consulta autorizada'}`;}).catch(()=>{if(pqrsCard.isConnected)pqrsCard.textContent='Consulta no disponible. Abre PQRS para revisar.';});}
   }
