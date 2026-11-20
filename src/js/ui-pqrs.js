@@ -3,6 +3,7 @@ import {mountWeeklyPqrs} from './ui-pqrs-weekly.js';
 import {mountPqrsRouteReadiness} from './ui-pqrs-route-readiness.js';
 import {mountRecipientReviewRequest} from './ui-pqrs-recipient-review.js';
 import { validateQaEvidence } from './services/qa-evidence-policy.js';
+import { verifyPqrsListScope } from './services/qa-pqrs-list-scope.js';
 export function pqrsDraftGuidance(form) {
   if(form.elements.subject.value.trim().length<3) return 'Escribe un asunto de al menos tres caracteres.';
   if(form.elements.description.value.trim().length<3) return 'Describe qué sucedió y qué solución necesitas.';
@@ -122,8 +123,16 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
   let listRevision=0;
   async function load(){
     const revision=++listRevision;
-    const rows=await repository.list(projectId,filter.value);
-    if(!list.isConnected || revision!==listRevision)return;
+    let rows;
+    try{
+      const fetched=await repository.list(projectId,filter.value);
+      if(!list.isConnected||revision!==listRevision)return;
+      rows=verifyPqrsListScope(fetched,projectId,filter.value);
+    }catch(_){
+      if(!list.isConnected||revision!==listRevision)return;
+      list.replaceChildren(el('p','No se pudo verificar el listado de esta copropiedad. Comprueba tu acceso y pulsa Actualizar lista.'));
+      throw Error('No se pudo verificar el listado PQRS. No se muestran datos sin comprobar su copropiedad.');
+    }
     list.replaceChildren();
     for(const row of rows){
       const card=el('article','');card.className='panel';card.append(el('h3',row.subject),el('p',[row.tower&&'Torre '+row.tower,row.apartment&&'Apto '+row.apartment,row.owner&&'Solicitante '+row.owner].filter(Boolean).join(' · ')),el('p',row.description),el('p',`${statusLabels[row.status]||row.status} · ${row.priority} · versión ${row.version}`),el('p',`Radicado: ${row.id}`));
