@@ -29,6 +29,7 @@ import { mountClientSourceReview } from './ui-client-source-review.js';
 import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import { mountAgentHistory } from './ui-agent-history.js';
+import {mountMissQaWeekly} from './ui-miss-qa-weekly.js';
 import {mountQaDiagnosticAgents} from './ui-qa-agent-diagnostics.js';
 import { mountTenantConsultation } from './ui-tenant-consultation.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -44,6 +45,7 @@ import '../css/operational-agenda.css';
 import '../css/sprint-board.css';
 import '../css/task-catalog.css';
 import '../css/easy-forms.css';
+import '../css/miss-qa-weekly.css';
 import '../css/qa-agent-diagnostics.css';
 import {mountPropertyCatalog, operationalChart} from './ui-premium.js';
 import {mountUnifiedHub} from './ui-unified-hub.js';
@@ -344,6 +346,13 @@ function renderPage() {
     return;
   }
   $('page-content').innerHTML = ({ dashboard, tickets: ticketsPage, mine: ticketsPage, areas: areasPage, reports: reportPage }[state.page] || dashboard)();
+  if(state.page==='reports'&&repo.mode==='cloud'){
+    const weeklyHost=document.createElement('div');
+    weeklyHost.id='miss-qa-weekly-report';
+    $('page-content').prepend(weeklyHost);
+    mountMissQaWeekly(weeklyHost,{repo,mode:repo.mode,role:role(),
+      projects:state.projects,projectId:state.projectId,corporateAdmin:state.corporateAdmin});
+  }
   if(state.page==='dashboard') {
     const pqrsCard=$('page-content').querySelector('.module-card[data-page=pqrs] small');
     const meetingCard=$('page-content').querySelector('.module-card[data-page=meetings] small');

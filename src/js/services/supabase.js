@@ -21,6 +21,7 @@ import {createIamClient} from './iam-client.js';
 import {validateTaskCandidate,validateQaCandidateRows} from './task-catalog.js';
 import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from './agent-api.js';
 import {qaAgentRegistryReadiness,qaAgentRuns,qaAgentRunDetail} from './qa-agent-registry.js';
+import {qaMissWeeklyReader} from './qa-miss-weekly-report.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
 const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
@@ -89,6 +90,7 @@ export function createCloudRepository(url, key) {
     accountAvatar,
     iam:authPolicy.isolatedQa?createIamClient(client.auth):null,
     qaTaskCatalogEnabled,
+    missWeeklyPreview:qaMissWeeklyReader(client,{url,hostname:globalThis.location?.hostname,getActor:()=>user}),
     async listQaTaskCandidates(projectId){
       if(!qaTaskCatalogEnabled||!user)throw Error('Catálogo de propuestas requiere una sesión QA autorizada.');
       const result=await client.from('qa_task_catalog_candidates')
