@@ -11,10 +11,14 @@ export function canAttachVisitEvidence(row,repository,canWrite){
 import {visitActions,visitLocalDate,visitStates,visitTransitionPayload} from './services/visit-lifecycle.js';
 
 // Every value from SQL is assigned with textContent/value, never interpolated HTML.
-export function mountVisitLifecycle(item,{row,repository,canWrite,responsibleNames,reload}){
+export function mountVisitLifecycle(item,{row,repository,canWrite,responsibleNames,reload,projectName}){
  const section=document.createElement('details');
  const heading=document.createElement('summary');
  heading.textContent='Seguimiento · '+visitStates[row.status];section.append(heading);
+ const building=document.createElement('p');
+ building.className='visit-building-context';
+ building.textContent='Edificio: '+(projectName||'Copropiedad seleccionada');
+ section.append(building);
  const info=document.createElement('p');
  const time=value=>value?new Intl.DateTimeFormat('es-CO',{timeZone:'America/Bogota',dateStyle:'medium',timeStyle:'short'}).format(new Date(value)):'Pendiente';
  info.textContent=`Ingreso: ${time(row.started_at)} · Salida: ${time(row.finished_at)} · Versión ${row.version}`;section.append(info);
@@ -70,10 +74,10 @@ export function mountVisitLifecycle(item,{row,repository,canWrite,responsibleNam
    let key;
    try{key=JSON.stringify([action,row.version,visitTransitionPayload(action,values)]);}catch(error){message.textContent=error.message;return;}
    if(!requests.has(key))requests.set(key,crypto.randomUUID());
-   busy=true;form.disabled=true;message.textContent='Confirmando operación…';
+   busy=true;form.disabled=true;message.textContent='Confirmando operación en '+(projectName||'la copropiedad seleccionada')+'…';
    try{
     await repository.transition({projectId:row.project_id,requestId:row.request_id,operationId:requests.get(key),version:row.version,status:row.status,action,values});
-    message.textContent='Operación confirmada en SQL.';
+    message.textContent='Operación confirmada para '+(projectName||'la copropiedad seleccionada')+' en SQL.';
     await reload();
    }catch{
     message.textContent='No se pudo confirmar la operación. Reintenta sin cambiar los datos; si la visita cambió, vuelve a consultarla.';
