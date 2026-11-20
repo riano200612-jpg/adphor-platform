@@ -58,8 +58,8 @@ export function mountUnifiedPqrs(root,{repo,projectId,role,environment='',storag
      preview.replaceChildren(el('p','Formulario original pendiente de conexión. No se perderán ni crearán radicados desde esta vista.'));launch.disabled=true;
      return;
    }
-   try{currentUrl=pqrsPortalRoute(base,selected);frame.src=currentUrl;preview.replaceChildren(frame,fallback);launch.disabled=false;copyTracking.disabled=false;
-       notice.textContent='Portal original conectado. Confirma el número de radicado y los adjuntos en el formulario antes de cerrar. La entrega de correos a cada copropiedad aún no está certificada: utiliza únicamente casos autorizados para las pruebas.';}
+   try{currentUrl=pqrsPortalRoute(base,selected);frame.onerror=()=>{notice.textContent='No se pudo cargar el formulario original. Para registrar tu solicitud, utiliza el formulario interno de ADPHOR.';};frame.src=currentUrl;preview.replaceChildren(frame,fallback);launch.disabled=false;copyTracking.disabled=false;
+       notice.textContent='Enlace configurado. No se ha podido verificar el formulario original. Para registrar tu solicitud, utiliza el formulario interno de ADPHOR.';}
    catch(err){notice.textContent=err.message;launch.disabled=true;}
  }
  for(const [id,label] of tabs){

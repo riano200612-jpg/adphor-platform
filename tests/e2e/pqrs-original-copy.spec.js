@@ -16,6 +16,7 @@ test('PQRS original: consulta copiable sin radicar ni escribir en el sistema de 
     mountUnifiedPqrs(root,{role:'admin',environment:'https://script.google.com/macros/s/AKfycbxw64JyydOaye-GksILdtYO4KvshS3OrNW6lXAKmq_Q/exec',storage,open:url=>opened.push(url)});
   });
   const root=page.locator('#pqrs-original-test-root');
+  await expect(root.getByRole('status')).toContainText('No se ha podido verificar el formulario original');
   const copy=root.getByRole('button',{name:'Copiar enlace de consulta'});
   await expect(copy).toBeHidden();
   await root.getByRole('button',{name:'Consultar radicado'}).click();
