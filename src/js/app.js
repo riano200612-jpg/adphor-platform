@@ -375,7 +375,7 @@ function renderPage() {
       section.append(heading, status);
       meetingCard.closest('.module-grid').after(section);
       readWithinDeadline(()=>repo.listVerifiedQaMeetings(projectId)).then(rows => {
-        if (!section.isConnected || state.projectId !== projectId) return;
+        if (!meetingCard.isConnected || state.projectId !== projectId) return;
         const meetings = rows.filter(row => row.project_id === projectId);
         status.textContent = meetings.length ? 'Horarios de Colombia' : 'Sin reuniones verificadas para esta copropiedad.';
         meetingCard.textContent = meetings.length ? `${meetings.length} reuniones verificadas` : status.textContent;
@@ -392,7 +392,7 @@ function renderPage() {
         }
         section.append(list);
       }).catch(error => {
-        if (!section.isConnected || state.projectId !== projectId) return;
+        if (!meetingCard.isConnected || state.projectId !== projectId) return;
         status.textContent = qaMeetingReadFeedback(error);
         meetingCard.textContent = status.textContent;
       });

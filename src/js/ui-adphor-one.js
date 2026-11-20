@@ -145,7 +145,8 @@ export function enhanceAdphorOneDashboard(doc) {
   // Menu-only home: remove the old summary, charts, alerts and recent
   // ticket widgets from THIS rendered view, never from the app or its data.
   // The underlying views and permission-filtered routes remain unchanged.
-  page.replaceChildren(createHero(doc), grid);
+  const iamNotice = page.querySelector('.qa-iam-readiness');
+  page.replaceChildren(createHero(doc), ...(iamNotice ? [iamNotice] : []), grid);
   return true;
 }
 export function enhanceAdphorOneShell(doc) {
