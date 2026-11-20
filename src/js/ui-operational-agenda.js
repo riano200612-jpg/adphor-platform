@@ -35,11 +35,12 @@ export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',
  return '<section class="panel operational-agenda'+(compact?' operational-agenda-compact':'')+
   '" aria-label="'+(team?'Agenda operativa del equipo':'Agenda operativa de mis tareas')+'">'+
   '<div class="section-heading"><div><p class="eyebrow">AGENDA OPERATIVA · BITÁCORA AUTORIZADA</p>'+
-  '<h2>Mis compromisos por plazo</h2><p>Tareas de mantenimiento asignadas a ti en esta copropiedad.</p></div>'+
+  '<h2>'+(team?'Compromisos del equipo por plazo':'Mis compromisos por plazo')+'</h2><p>'+
+  (team?'Tareas de mantenimiento del equipo de esta copropiedad, visibles para supervisión.':'Tareas de mantenimiento asignadas a ti en esta copropiedad.')+'</p></div>'+
   '<button type="button" class="btn secondary" data-page="mine">Abrir Mis tareas</button></div>'+
-  '<div class="operational-agenda-stats" aria-label="Resumen de vencimientos">'+highlight+'</div>'+
+  scopeButtons+'<div class="operational-agenda-stats" aria-label="Resumen de vencimientos">'+highlight+'</div>'+
   '<div class="operational-agenda-windows">'+(snapshot.total?columns:
-    '<p class="muted">Sin pendientes registrados en la bitácora de esta copropiedad.</p>')+'</div>'+
+    '<p class="muted">'+(team?'Sin tareas abiertas del equipo registradas en esta copropiedad.':'Sin pendientes propios registrados en la bitácora de esta copropiedad.')+'</p>')+'</div>'+
   '<p class="muted operational-agenda-foot">'+later+' tareas posteriores a 15 días. '+
   (snapshot.unclassified?snapshot.unclassified+' registros no verificables se omitieron. ':'')+
   'Fuente: bitácora persistente; no incluye aún actividades recurrentes, '+
