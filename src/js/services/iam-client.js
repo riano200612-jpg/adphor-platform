@@ -8,7 +8,9 @@ export function createIamClient(auth, request=globalThis.fetch){
    const options={
      method,
      headers:{Authorization:'Bearer '+data.session.access_token,'Accept':'application/json'},
-     credentials:'omit',redirect:'error',cache:'no-store'
+     // IAM lives behind Cloudflare Access on this same origin. Its HttpOnly
+     // Access cookie must accompany the user JWT; never send it cross-origin.
+     credentials:'same-origin',redirect:'error',cache:'no-store'
    };
    if(method==='POST'){
      options.headers['Content-Type']='application/json';
