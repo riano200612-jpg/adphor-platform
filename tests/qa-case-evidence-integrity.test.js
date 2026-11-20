@@ -72,7 +72,7 @@ test('runtime refuses signed URLs for a different file even within the same QA b
  for(let i=0;i<substitutions.length;i++){
   const repo=createQaCaseEvidenceRepository(fakeClient(substitutions[i]));
   if(i===0)assert.equal(await repo.signedEvidence(project,caseId,id),correct);
-  else await assert.rejects(repo.signedEvidence(project,caseId,id),/enlace firmado/);
+  else await assert.rejects(repo.signedEvidence(project,caseId,id),/(enlace firmado|Destino de archivo no autorizado)/);
  }
 });
 test('runtime rejects a tampered evidence listing before exposing its rows',async()=>{
