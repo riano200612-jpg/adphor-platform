@@ -46,7 +46,7 @@
 /* The selected building stays readable next to each visit and its evidence. */
 .visit-workspace [data-property],
 .visit-workspace .visit-building-context {
-  font-size:1.125rem;
+  font-size:18px;
   font-weight:650;
   line-height:1.45;
   overflow-wrap:anywhere;
