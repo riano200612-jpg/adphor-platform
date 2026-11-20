@@ -7,7 +7,7 @@ test('Miss ADPHOR guides and shows a bounded weekly draft, no false zero for mis
   window.__reads=0;
   mountMissQaWeekly(host,{mode:'cloud',role:'admin',projectId:'source-1',corporateAdmin:false,projects:[{id:'source-1',name:'Edificio QA'}],now:()=>Date.parse('2026-11-20T14:00:00Z'),repo:{
     missWeeklyPreview:async({projectIds})=>{window.__reads++;if(projectIds.join(',')!=='source-1')throw Error('Scope');
-      return{weekStart:'2026-11-16',cutoff:'2026-11-20T14:00:00Z',propertyCount:1,status:'BORRADOR_FUENTES_INCOMPLETAS',note:'QA controlada',properties:[{projectId:'source-1',pqrsNew:null}],
+      return{weekStart:'2026-11-16',cutoff:'2026-11-20T14:00:00Z',propertyCount:1,status:'BORRADOR_FUENTES_INCOMPLETAS',note:'QA controlada',properties:[{projectId:'source-1',tasksCreated:1,tasksOverdueAtCutoff:1,visitsRegistered:2,visitsFinished:0,pqrsNew:null,pqrsClosed:null,meetingsImported:1}],
       totals:{tasksCreated:1,tasksOverdueAtCutoff:1,visitsRegistered:2,visitsFinished:0,pqrsNew:null,pqrsClosed:null,meetingsImported:1}};
     }
   }});
@@ -24,4 +24,30 @@ test('Miss weekly viewer has no export and cannot start a report',async({page})=
  const {mountMissQaWeekly}=await import('/adphor-platform/src/js/ui-miss-qa-weekly.js');
  mountMissQaWeekly(host,{mode:'cloud',role:'viewer',projectId:'source-1',repo:{}});
  });await expect(page.getByRole('button',{name:'Preparar informe semanal'})).toHaveCount(0);
+});
+
+test('GAUNTLET: Miss ADPHOR refuses to show or export a weekly draft with missing tenant rows',async({page})=>{
+ await page.goto('./');
+ await page.evaluate(async()=>{
+   document.body.replaceChildren();
+   const host=document.createElement('main');document.body.append(host);
+   const {mountMissQaWeekly}=await import('/adphor-platform/src/js/ui-miss-qa-weekly.js');
+   const complete={projectId:'source-1',tasksCreated:2,tasksOverdueAtCutoff:0,
+    visitsRegistered:0,visitsFinished:0,pqrsNew:0,pqrsClosed:0,meetingsImported:0};
+   const repo={missWeeklyPreview:async()=>({
+     weekStart:'2026-11-16',propertyCount:2,
+     status:'BORRADOR_SEMANA_PARCIAL',note:'QA sintética',
+     properties:[complete,complete],totals:{tasksCreated:4,tasksOverdueAtCutoff:0,
+      visitsRegistered:0,visitsFinished:0,pqrsNew:0,pqrsClosed:0,meetingsImported:0}
+   })};
+   mountMissQaWeekly(host,{repo,mode:'cloud',role:'admin',
+     projectId:'source-1',corporateAdmin:true,
+     projects:[{id:'source-1',name:'Edificio A'},{id:'source-2',name:'Edificio B'}],
+     now:()=>Date.parse('2026-11-20T14:00:00Z')});
+ });
+ await page.getByLabel('Alcance del informe semanal').selectOption('all');
+ await page.getByRole('button',{name:'Preparar informe semanal'}).click();
+ await expect(page.getByRole('status')).toContainText('No se pudo verificar el informe');
+ await expect(page.getByRole('button',{name:'Descargar CSV de respaldo'})).toHaveCount(0);
+ await expect(page.getByRole('table')).toHaveCount(0);
 });
