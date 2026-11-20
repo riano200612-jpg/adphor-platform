@@ -68,7 +68,7 @@ test('unverified login identity, absent grant, foreign grant, wrong link and dup
 test('unexpected IAM grant outside original assignments is reported, not normalized into access',()=>{
  const r=run([prop('a','d1')],[delegate('d1')],[link('a','d1')],
  [grant('a','d1'),{projectId:'other',userId:'user-d1',role:'admin'}]);
- assert.equal(r.readyToTest,1);
+ assert.equal(r.readyToTest,0);
  assert.equal(r.outOfScopeGrants,1);
  assert.equal(r.certified,false);
 });
