@@ -231,3 +231,16 @@ test('ADPHOR ONE: Mis tareas is the first circle and opens the existing authoriz
  const displayed=await page.locator('.adphor-one-grid .adphor-one-tile').evaluateAll(nodes=>nodes.map(node=>node.dataset.page));
  expect(new Set(displayed)).toEqual(new Set(allowed));
 });
+
+test('la portada conserva el aviso IAM al reagrupar las herramientas', async ({page}) => {
+  await enterDemo(page);
+  await page.evaluate(() => {
+    const notice = document.createElement('p');
+    notice.className = 'qa-iam-readiness';
+    notice.setAttribute('role', 'status');
+    notice.textContent = 'Actualizar datos';
+    document.querySelector('#page-content').prepend(notice);
+  });
+  await activateQaVisualInLocalTest(page);
+  await expect(page.locator('#page-content .qa-iam-readiness')).toHaveText('Actualizar datos');
+});
