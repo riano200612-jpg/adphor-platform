@@ -113,3 +113,54 @@ test('corporate admin chooses matching numbered source photo; mismatched and unc
   await expect(page.locator('.staff-company-card').first().locator('.staff-company-placeholder')).toHaveCount(0);
   expect(await page.evaluate(()=>window.photoImports)).toEqual([['delegate-16','16. Ruby Ramos.jpg']]);
 });
+
+// A batch is staged first; no image can be uploaded without explicit review.
+test('authorized admin reviews a numbered multi-file batch and imports without overwriting',async({page})=>{
+ await page.goto('./');
+ await page.evaluate(async()=>{
+   const {mountCorporateStaff}=await import('/adphor-platform/src/js/ui-corporate-staff.js');
+   document.body.replaceChildren();
+   const root=document.createElement('main');document.body.append(root);
+   window.batchWrites=[];
+   const people=[
+     {id:'delegate-16',name:'Ruby Luz Ramos',role_label:'Delegada',department:'Delegados',photo_path:null,carousel_visible:true,assigned_properties:0,functions:[]},
+     {id:'delegate-37',name:'Jeaneth Rey',role_label:'Delegada',department:'Delegados',photo_path:null,carousel_visible:true,assigned_properties:0,functions:[]},
+     {id:'delegate-11',name:'José Guzmán Castilla',role_label:'Gerente',department:'Gerencia',photo_path:'delegate-11/'+('c'.repeat(64))+'.png',carousel_visible:true,assigned_properties:0,functions:[]},
+     {id:'delegate-54',name:'aa',role_label:'Auxiliar',department:'Tecnología',photo_path:null,carousel_visible:true,assigned_properties:0,functions:[]}
+   ];
+   const photo='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><rect width="12" height="12" fill="#eee"/></svg>');
+   await mountCorporateStaff(root,{repo:{
+      corporateStaffDirectory:async()=>people,
+      corporateStaffCanManage:async()=>true,
+      corporateStaffHistory:async()=>[],
+      corporateStaffPhoto:async()=>photo,
+      corporateStaffUploadPhoto:async(id,file)=>{
+        window.batchWrites.push([id,file.name]);
+        return id+'/'+('a'.repeat(64))+'.jpg';
+      }
+   }});
+ });
+ const photos=page.getByLabel('Seleccionar múltiples fotografías corporativas');
+ await expect(photos).toBeVisible();
+ const jpg=Buffer.from([255,216,255,1,2,3,4,5,6,7,8,9,10,11]);
+ await photos.setInputFiles([
+   {name:'16. Ruby Ramos.jpg',mimeType:'image/jpeg',buffer:jpg},
+   {name:'37. Yeaneth Rey.jpg',mimeType:'image/jpeg',buffer:jpg},
+   {name:'11. José Guzmán Castilla.jpg',mimeType:'image/jpeg',buffer:jpg},
+   {name:'54. James Riaño.jpg',mimeType:'image/jpeg',buffer:jpg}
+ ]);
+ await expect(page.getByText('2 fotos preparadas · 2 descartadas')).toBeVisible();
+ await expect(page.getByText('16. Ruby Ramos.jpg → Ruby Luz Ramos')).toBeVisible();
+ expect(await page.evaluate(()=>window.batchWrites)).toEqual([]);
+ await page.getByRole('button',{name:'Importar 2 fotografías verificadas'}).click();
+ await expect(page.getByText('2 de 2 fotografías confirmadas en almacenamiento privado.')).toBeVisible();
+ expect(await page.evaluate(()=>window.batchWrites)).toEqual([
+   ['delegate-16','16. Ruby Ramos.jpg'],['delegate-37','37. Yeaneth Rey.jpg']
+ ]);
+ await expect(page.locator('.staff-company-card').filter({hasText:'Ruby Luz Ramos'}).getByRole('img',{name:'Fotografía de Ruby Luz Ramos'})).toBeVisible();
+});
+test('non-admin never receives batch importer or import permission',async({page})=>{
+ await mount(page,false);
+ await expect(page.getByLabel('Seleccionar múltiples fotografías corporativas')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:/Importar .*fotografías verificadas/})).toHaveCount(0);
+});

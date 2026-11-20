@@ -19,6 +19,48 @@ const photoFileMatches = (person,file) => {
   const source=match[2].split(/[^a-z0-9]+/).filter(x=>x.length>=3);
   return source.some(x=>parts.includes(x));
 };
+
+/**
+ * Prepare an auditable, collision-free selection. Never infer identities from
+ * a face or a loose filename, and never replace an existing staff portrait.
+ * The Supabase service still checks actual image bytes, AAL2 and admin rights.
+ */
+export function planCorporatePhotoBatch(people,files) {
+  const selected=[],rejected=[];
+  const input=Array.from(files||[]);
+  if(input.length>20)return {selected,rejected:[{name:'Selección',reason:'Selecciona 20 imágenes o menos por lote.'}]};
+  const known=new Map((Array.isArray(people)?people:[]).map(p=>[p.id,p]));
+  const seen=new Set();
+  for(const file of input) {
+    const name=String(file?.name||'');
+    const match=name.match(/^0*([0-9]{1,3})[.\s_-]+.+\.(jpg|jpeg|png|webp)$/i);
+    if(!match){rejected.push({name,reason:'Archivo sin número de colaborador y extensión reconocida.'});continue;}
+    const id='delegate-'+String(Number(match[1]));
+    const person=known.get(id);
+    if(!person||!person.name?.trim()||person.name.trim().length<3){
+      rejected.push({name,reason:'Colaborador no identificado en el directorio autorizado.'});continue;
+    }
+    if(person.photo_path){
+      rejected.push({name,reason:'Esta persona ya tiene una fotografía; se conserva.'});continue;
+    }
+    if(seen.has(id)){
+      rejected.push({name,reason:'Hay otro archivo seleccionado para esta persona.'});continue;
+    }
+    const mimeExtension={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
+    const ext=match[2].toLowerCase();
+    if(file?.type!==mimeExtension[ext]||!Number.isFinite(file?.size)
+      ||file.size<12||file.size>10485760){
+      rejected.push({name,reason:'Formato o tamaño de imagen inválido (máximo 10 MB).'});continue;
+    }
+    if(!photoFileMatches(person,file)){
+      rejected.push({name,reason:'El número o nombre del archivo no concuerda con la ficha.'});continue;
+    }
+    seen.add(id);
+    selected.push({person,file,name});
+  }
+  return {selected,rejected};
+}
+
 const portrait = (card, person, repo, alive) => {
   // Lazy images must be attached to the document before the browser will fetch them.
   // Keep initials underneath until the private signed image is fully decoded.
@@ -211,6 +253,79 @@ export async function mountCorporateStaff(root,{repo}) {
     }
     cards.push({person,card});carousel.append(card);
   }
+
+  // Only a verified corporate admin can see this helper, while the server
+  // rechecks authorization, AAL2, file bytes, and immutable storage for EACH file.
+  if(canManage && typeof repo.corporateStaffUploadPhoto==='function'){
+    const batch=make('section','','staff-company-batch');
+    batch.append(make('h2','Importación múltiple de fotografías'));
+    const instructions=make('p','Extrae primero el ZIP original de José. Selecciona hasta 20 imágenes y verifica las asociaciones antes de guardar. No se reemplazarán fotos existentes.','muted');
+    const label=make('label','Seleccionar fotografías corporativas pendientes','staff-company-batch-label');
+    const picker=document.createElement('input');
+    picker.type='file';picker.multiple=true;picker.accept='image/jpeg,image/png,image/webp';
+    picker.setAttribute('aria-label','Seleccionar múltiples fotografías corporativas');
+    label.append(picker);
+    const preview=make('div','','staff-company-batch-preview');
+    preview.setAttribute('role','status');preview.setAttribute('aria-live','polite');
+    const save=make('button','Importar fotografías verificadas','btn secondary');
+    save.type='button';save.disabled=true;
+    let plan={selected:[],rejected:[]},busy=false;
+    const display=()=>{
+      if(busy)return;
+      plan=planCorporatePhotoBatch(people,picker.files);
+      preview.replaceChildren();
+      preview.append(make('p',String(plan.selected.length)+' fotos preparadas · '+String(plan.rejected.length)+' descartadas'));
+      const list=make('ul','','staff-company-batch-review');
+      for(const {person,name} of plan.selected)
+        list.append(make('li',name+' → '+person.name));
+      for(const item of plan.rejected)
+        list.append(make('li',item.name+' — NO IMPORTAR: '+item.reason));
+      preview.append(list);
+      save.disabled=plan.selected.length===0;
+      save.textContent=plan.selected.length
+        ?'Importar '+String(plan.selected.length)+' fotografías verificadas'
+        :'Importar fotografías verificadas';
+    };
+    picker.addEventListener('change',display);
+    save.addEventListener('click',async()=>{
+      if(busy || !plan.selected.length || !alive())return;
+      busy=true;picker.disabled=true;save.disabled=true;
+      const toUpload=[...plan.selected];
+      let count=0,failed=null;
+      for(const {person,file} of toUpload){
+        if(!alive())break;
+        preview.replaceChildren(make('p','Importando '+String(count+1)+' de '+String(toUpload.length)+': '+person.name));
+        try {
+          const path=await repo.corporateStaffUploadPhoto(person.id,file);
+          if(typeof path!=='string' || !path.startsWith(person.id+'/'))
+            throw Error('La asociación privada no fue confirmada.');
+          person.photo_path=path;count++;
+          if(!alive())break;
+          const entry=cards.find(({person:p})=>p.id===person.id);
+          if(entry){
+            entry.card.querySelector('.staff-company-photo-frame')?.remove();
+            portrait(entry.card,person,repo,alive);
+            entry.card.querySelector('.staff-company-upload')?.remove();
+          }
+        }catch(e){
+          failed={person:person.name,reason:e?.message||'No se pudo guardar esta fotografía.'};
+          break; // Stop safely; never continue after an MFA/network error.
+        }
+      }
+      if(alive()){
+        busy=false;picker.disabled=false;
+        picker.value='';
+        plan={selected:[],rejected:[]};
+        save.disabled=true;save.textContent='Importar fotografías verificadas';
+        const summary=count+' de '+toUpload.length+' fotografías confirmadas en almacenamiento privado.';
+        preview.replaceChildren(make('p',summary+(failed?' Proceso detenido en '+failed.person+': '+failed.reason:'')));
+        refresh();
+      }
+    });
+    batch.append(instructions,label,preview,save);
+    header.append(batch);
+  }
+
   const noMatch=make('p','Ningún colaborador coincide con estos filtros.','muted');
   noMatch.hidden=true;collection.append(noMatch);
   const filter=()=>{refresh();noMatch.hidden=cards.some(({card})=>!card.hidden);carousel.scrollLeft=0;};
