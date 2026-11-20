@@ -1,4 +1,4 @@
-import {today,STATES} from '../core/workflow.js';
+import {today,STATES,isManager} from '../core/workflow.js';
 
 // Read-only projection over the existing persisted maintenance bitacora.
 // No new source, synthetic recurrent task or Google Calendar write is created.
@@ -15,10 +15,12 @@ export function addOperationalDays(value,days){
  return date.toISOString().slice(0,10);
 }
 
-export function buildOperationalAgenda(tickets,{projectId,userId,asOf=today()}={}){
+export function buildOperationalAgenda(tickets,{projectId,userId,role='viewer',scope='mine',asOf=today()}={}){
  if(!Array.isArray(tickets)||typeof projectId!=='string'||!projectId.trim()||
    typeof userId!=='string'||!userId.trim()||!validOperationalDate(asOf))
   throw Error('No se puede consultar la agenda sin un usuario y copropiedad autorizados.');
+ if(!['mine','team'].includes(scope)||(scope==='team'&&!isManager(role)))
+  throw Error('La supervisión del equipo requiere un rol autorizado.');
  const d7=addOperationalDays(asOf,7),d15=addOperationalDays(asOf,15);
  const definitions=[
   ['overdue','Vencidos'],['today','Hoy'],['week','Próximos 7 días'],
@@ -30,7 +32,7 @@ export function buildOperationalAgenda(tickets,{projectId,userId,asOf=today()}={
  for(const row of tickets){
   // Only assignments for the authenticated actor and selected tenant are projected.
   // Server RLS remains the authorization boundary; do not add cross-property links.
-  if(row?.project_id!==projectId||row.assignee!==userId||row.status==='Cerrada')continue;
+  if(row?.project_id!==projectId||(scope==='mine'&&row.assignee!==userId)||row.status==='Cerrada')continue;
   if(typeof row.id!=='string'||!row.id.trim()||typeof row.title!=='string'||
      !row.title.trim()||!STATES.includes(row.status)||!validOperationalDate(row.due_date)){
    unclassified++;continue;
@@ -40,11 +42,12 @@ export function buildOperationalAgenda(tickets,{projectId,userId,asOf=today()}={
   byKey[key].items.push({
    id:row.id,title:row.title,due_date:row.due_date,status:row.status,
    priority:typeof row.priority==='string'?row.priority:'',
-   area:typeof row.area==='string'?row.area:''
+   area:typeof row.area==='string'?row.area:'',
+   assignee:typeof row.assignee==='string'?row.assignee:''
   });
  }
  for(const group of groups)group.items.sort((a,b)=>
   a.due_date.localeCompare(b.due_date)||a.title.localeCompare(b.title,'es'));
  const total=groups.reduce((sum,group)=>sum+group.items.length,0);
- return {asOf,groups,total,unclassified,source:'persisted-tickets',scope:'mine'};
+ return {asOf,groups,total,unclassified,source:'persisted-tickets',scope};
 }
