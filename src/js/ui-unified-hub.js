@@ -16,7 +16,7 @@ export function unifiedModuleStatus({mode='demo',portoEnabled=false}={}) {
     available: true,
     note: m.id==='meetings'&&!portoEnabled ?
       'Formulario y carrusel disponibles; sin calendario real ni reservas persistentes' :
-      m.id==='pqrs'&&!portoEnabled ? 'Propietarios, consulta y empleados: abre el Portal original conectado mediante /exec; sin enlace no hay radicación' :
+      m.id==='pqrs'&&!portoEnabled ? 'Propietarios, consulta y empleados: consulta el portal original; sin enlace no hay radicación por esa vía' :
       m.id==='recorridos' ? 'Miss ADPHOR · Recorridos registra hallazgos. Para una visita, confirma copropiedad, tipo, fecha y responsable. El formulario independiente y la persistencia de Visitas siguen pendientes.' :
       m.id==='tickets' ? 'Fotografías de mantenimiento; biblioteca multimedia pendiente' :
       m.id==='dashboard' ? 'Panel de datos autorizados' :
