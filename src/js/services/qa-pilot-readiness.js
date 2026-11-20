@@ -49,7 +49,6 @@ export function auditPilotReadiness({properties, delegates, directory = [], gran
     grantsByProject.get(projectId).push(grant);
   }
   const entries = [];
-  const approvedPairs = new Set();
   const projected = new Map();
   for (const property of properties) {
     const projectId = norm(property.projectId);
@@ -87,7 +86,6 @@ export function auditPilotReadiness({properties, delegates, directory = [], gran
         status = 'GRANT_REVIEW_REQUIRED';
       else {
         status = 'READY_FOR_FUNCTIONAL_TEST';
-        approvedPairs.add(projectId + '|' + userId);
       }
       if (userId && enabled.has(state) && delegateRoles.has(role)) {
         if (!projected.has(userId)) projected.set(userId, new Set());
@@ -105,7 +103,7 @@ export function auditPilotReadiness({properties, delegates, directory = [], gran
     source: 'qa-private-preflight', readonly: true, canProvision: false,
     totalProperties: entries.length, counts: Object.freeze(counts),
     entries: Object.freeze(entries), outOfScopeGrants,
-    readyToTest: (counts.READY_FOR_FUNCTIONAL_TEST || 0),
+    readyToTest: outOfScopeGrants ? 0 : (counts.READY_FOR_FUNCTIONAL_TEST || 0),
     certified: false,
     warning: 'Requiere validación de fuente, autorización de propietario, IAM servidor, MFA y RLS.'
   });
