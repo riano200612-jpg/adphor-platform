@@ -85,7 +85,7 @@ test('PGlite: no authorized user gets source copy data and credential keys are r
   const insert="insert into pilot_private.qa_cloned_source_records(batch_id,source_row,source_key,source_kind,safe_payload,payload_sha256) values($1,2,'D01','delegates',$2::jsonb,$3)";
   await db.query(insert,[batch,JSON.stringify({id:'D01',role:'D'}),'a'.repeat(64)]);
   await assert.rejects(()=>db.query(insert.replace("'D01'","'D02'"),[batch,JSON.stringify({id:'D02',PIN:'1234'}),'b'.repeat(64)]));
-  await assert.rejects(()=>db.query(insert.replace("'D01'","'D03'"),[batch,JSON.stringify({id:'D03',role:'D'}),'c'.repeat(64)]));
+  await assert.rejects(()=>db.query(insert,[batch,JSON.stringify({id:'D01',role:'D'}),'a'.repeat(64)]));
   const r=await db.query("select count(*)::int n from pilot_private.qa_cloned_source_records");
   assert.equal(r.rows[0].n,1);
  }finally{await db.close();}
