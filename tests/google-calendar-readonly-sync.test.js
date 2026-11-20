@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeGoogleSourceEvent,readGoogleSourceWindow,planSourceMirrorDelta} from '../src/js/services/google-calendar-readonly-sync.js';
-const cal='corporativo@example.org',min='2026-11-01T00:00:00-05:00',max='2026-12-01T00:00:00-05:00';
+const cal='c_corporativo@group.calendar.google.com',min='2026-11-01T00:00:00-05:00',max='2026-12-01T00:00:00-05:00';
 const e=(id='a')=>({id,summary:'Consejo ADPHOR',status:'confirmed',start:{dateTime:'2026-11-20T09:00:00-05:00'},end:{dateTime:'2026-11-20T10:00:00-05:00'},attendees:[{email:'private@invalid'}],description:'Dato confidencial'});
 const reqFor=(json)=>async(url,options)=>{
  const u=new URL(url);
  assert.equal(u.origin,'https://www.googleapis.com');
- assert.equal(u.pathname,'/calendar/v3/calendars/corporativo%40example.org/events');
+ assert.equal(u.pathname,'/calendar/v3/calendars/c_corporativo%40group.calendar.google.com/events');
  assert.equal(options.method,'GET');
  assert.ok(!url.includes('secret')&&!url.includes('token-value'));
  assert.equal(options.headers.Authorization,'Bearer token-value');

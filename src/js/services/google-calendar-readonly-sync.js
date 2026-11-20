@@ -8,6 +8,10 @@ const instant=(value)=>{
  if(typeof value!=='string'||!OFFSET.test(value))throw Error('Timestamp con zona requerido.');
  const ms=Date.parse(value);
  if(!Number.isFinite(ms))throw Error('Timestamp inválido.');
+ const parts=/^(\d{4})-(\d{2})-(\d{2})T/.exec(value);
+ const civil=new Date(Date.UTC(Number(parts[1]),Number(parts[2])-1,Number(parts[3])));
+ if(civil.getUTCFullYear()!==Number(parts[1])||civil.getUTCMonth()+1!==Number(parts[2])||civil.getUTCDate()!==Number(parts[3]))
+  throw Error('Fecha imposible.');
  return ms;
 };
 const safeId=(v,max=512)=>{
@@ -48,6 +52,8 @@ export async function readGoogleSourceWindow({
  calendarId,accessToken,timeMin,timeMax,request=fetch,maxPages=40
 }){
  safeId(calendarId,255);
+ if(!/^[A-Za-z0-9._+%-]+@group\.calendar\.google\.com$/.test(calendarId))
+  throw Error('Solo se permite un calendario corporativo de grupo.');
  if(typeof accessToken!=='string'||!accessToken||/[\s\r\n]/.test(accessToken))
   throw Error('Autorización corporativa de lectura ausente.');
  checkedWindow(timeMin,timeMax);
@@ -92,6 +98,8 @@ export function planSourceMirrorDelta(snapshot,mirrorRows){
  if(!snapshot||!Array.isArray(snapshot.events)||!Array.isArray(mirrorRows))
   throw Error('Copia o lectura Google inválida.');
  const calendarId=safeId(snapshot.calendarId,255);
+ if(!/^[A-Za-z0-9._+%-]+@group\.calendar\.google\.com$/.test(calendarId))
+  throw Error('Solo se permite un calendario corporativo de grupo.');
  const {start:min,end:max}=checkedWindow(snapshot.timeMin,snapshot.timeMax);
  const stored=new Map();
  for(const row of mirrorRows){
