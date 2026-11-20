@@ -18,7 +18,8 @@ test('QA home puts operational commitments first and does not falsely deny PQRS 
     return Boolean(modules&&(element.compareDocumentPosition(modules)&Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(appearsBeforeModules).toBe(true);
-  await expect(page.locator('.module-grid')).toContainText('Radica y consulta solicitudes con seguimiento');
+  // Demo mode overlays service-derived case counts; the connected-QA copy is separately contract-tested.
+  await expect(page.locator('.module-grid')).toContainText('Atención a la comunidad');
   await expect(page.locator('.module-grid')).not.toContainText('radicación real pendiente');
   expect(pageErrors).toEqual([]);
 });
