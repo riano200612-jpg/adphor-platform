@@ -26,6 +26,22 @@ export async function evidenceObjectId(file,projectId,caseId,userId){
  return [h.slice(0,8),h.slice(8,12),h.slice(12,16),h.slice(16,20),h.slice(20,32)].join('-');
 }
 
+
+// Fail closed before exposing private evidence or requesting a signed URL.
+// These values must match the full storage object path, not a partial prefix.
+export function validateQaCaseEvidenceRow(row,projectId,caseId) {
+ scoped(projectId,caseId);
+ const size=Number(row?.file_bytes);
+ if(!uuid.test(row?.id??'')||row?.project_id!==projectId||row?.case_id!==caseId||
+    row?.storage_bucket!==BUCKET||!uuid.test(row?.uploaded_by??'')||
+    !Object.hasOwn(EXT,row?.media_type)||!Number.isSafeInteger(size)||
+    size<1||size>20971520||
+    row.storage_path!==[projectId,'pqrs',caseId,row.uploaded_by,
+      row.id+'.'+EXT[row.media_type]].join('/'))
+   throw Error('La evidencia no coincide con la copropiedad, el radicado o el archivo privado.');
+ return row;
+}
+
 // This repository only ever operates under the signed-in user's JWT + RLS.
 // No admin key, no cross-property browsing and no public Storage URLs.
 export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
@@ -46,10 +62,10 @@ export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
   const rows=checked(await client.from('qa_case_evidence')
    .select('id,project_id,case_id,storage_bucket,storage_path,media_type,file_bytes,created_at,uploaded_by')
    .eq('project_id',projectId).eq('case_id',caseId).eq('id',id).limit(1));
-  if(!Array.isArray(rows)||rows.length!==1)return null;
-  const row=rows[0];
-  if(row.id!==id||row.project_id!==projectId||row.case_id!==caseId||row.storage_bucket!==BUCKET
-     ||!row.storage_path.startsWith(projectId+'/pqrs/'+caseId+'/'))throw Error('La evidencia no corresponde al radicado.');
+  if(!Array.isArray(rows)||rows.length>1)throw Error('El registro privado de evidencias es ambiguo.');
+  if(!rows.length)return null;
+  const row=validateQaCaseEvidenceRow(rows[0],projectId,caseId);
+  if(row.id!==id)throw Error('El archivo solicitado no corresponde a la evidencia.');
   return row;
  }
  return {
@@ -96,12 +112,15 @@ export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
   async listEvidence(projectId,caseId){
    await authorize(projectId,caseId);
    const rows=checked(await client.from('qa_case_evidence')
-    .select('id,project_id,case_id,storage_bucket,storage_path,media_type,file_bytes,created_at')
+    .select('id,project_id,case_id,storage_bucket,storage_path,media_type,file_bytes,created_at,uploaded_by')
     .eq('project_id',projectId).eq('case_id',caseId)
     .order('created_at',{ascending:true}).order('id',{ascending:true}).limit(51));
-   if(!Array.isArray(rows)||rows.length>50||rows.some(row=>row.project_id!==projectId||row.case_id!==caseId||row.storage_bucket!==BUCKET))
+   if(!Array.isArray(rows)||rows.length>50)
     throw Error('La consulta de evidencias es incompleta o no autorizada.');
-   return rows;
+   const verified=rows.map(row=>validateQaCaseEvidenceRow(row,projectId,caseId));
+   if(new Set(verified.map(row=>row.id)).size!==verified.length)
+    throw Error('El listado de evidencias contiene identificadores duplicados.');
+   return verified;
   },
   async signedEvidence(projectId,caseId,id){
    await authorize(projectId,caseId);
@@ -111,7 +130,7 @@ export function createQaCaseEvidenceRepository(client,{url=QA_URL}={}){
    const signed=checked(await client.storage.from(BUCKET).createSignedUrl(row.storage_path,90));
    if(!signed?.signedUrl)throw Error('No se pudo generar un enlace privado.');
    const url=new URL(signed.signedUrl,QA_URL);
-   if(url.origin!==QA_URL||!url.pathname.startsWith('/storage/v1/object/sign/'+BUCKET+'/'))
+   if(url.origin!==QA_URL||url.username||url.password||url.pathname!=='/storage/v1/object/sign/'+BUCKET+'/'+row.storage_path)
     throw Error('Destino de archivo no autorizado.');
    return url.toString();
   }
