@@ -5,9 +5,10 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 
-export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',scope='mine',asOf,compact=false}={}){
+export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',scope='mine',members=[],asOf,compact=false}={}){
  const snapshot=buildOperationalAgenda(tickets,{projectId,userId,role,scope:compact?'mine':scope,asOf});
  const team=snapshot.scope==='team';
+ const names=new Map(members.filter(m=>m.project_id===projectId).map(m=>[m.user_id,m.name]));
  const keyGroups=snapshot.groups.slice(0,4);
  const highlight=keyGroups.map(g=>
   '<div class="operational-agenda-stat"><span>'+esc(g.label)+'</span><strong>'+g.items.length+'</strong></div>'
@@ -20,7 +21,8 @@ export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',
     '<li><button type="button" data-ticket="'+esc(item.id)+'">'+
     '<strong>'+esc(item.title)+'</strong><small>'+esc(item.due_date)+' · '+
     esc(item.status)+(item.area?' · '+esc(item.area):'')+
-    (team&&!item.assignee?' · Sin responsable asignado':'')+'</small></button></li>'
+    (item.priority?' · Prioridad: '+esc(item.priority):'')+
+    (team?(item.assignee?' · Responsable: '+esc(names.get(item.assignee)||'Nombre no disponible'):' · Sin responsable asignado'):'')+'</small></button></li>'
    ).join('')+'</ul>':'<p class="muted">Sin pendientes registrados.</p>')+
    (group.items.length>visible.length?'<small class="muted">'+
     (group.items.length-visible.length)+' adicionales: consulta la bitácora.</small>':'')+

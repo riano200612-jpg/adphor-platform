@@ -73,3 +73,14 @@ test('QA Integral hooks the view into Home and Mis tareas; corporate agenda rema
  assert.ok(app.includes("state.page === 'agenda'"));
  assert.ok(app.includes("mountVerifiedAgenda"));
 });
+
+test('team agenda shows priority and resolves the assignee only within the selected property',()=>{
+ const rows=[item('urgent','2026-11-19',{priority:'Urgente'})];
+ const html=renderOperationalAgenda(rows,{...config,scope:'team',role:'coordinator',members:[
+  {project_id:'p2',user_id:'user-a',name:'Otro conjunto'},
+  {project_id:'p1',user_id:'user-a',name:'Delegada <QA>'}
+ ]});
+ assert.match(html,/Prioridad: Urgente/);
+ assert.match(html,/Responsable: Delegada &lt;QA&gt;/);
+ assert.ok(!html.includes('Otro conjunto'));
+});
