@@ -207,6 +207,11 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   }
   const review = root.querySelector('[data-review]');
   const summary = root.querySelector('[data-summary]');
+  const savedBuilding=document.createElement('p');
+  savedBuilding.className='visit-building-context';
+  savedBuilding.dataset.visitSavedBuilding='';
+  savedBuilding.hidden=true;
+  summary.after(savedBuilding);
   const formHint=root.querySelector('[data-visit-form-hint]');
   const draft = () => ({
       projectId, kind: fields.querySelector('[name=kind]').value,
@@ -278,6 +283,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       reviewState.invalidate();
       save.hidden = true;
       openSavedVisit.hidden=true;
+      savedBuilding.hidden=true;
     });
     save.addEventListener('click', async () => {
       if (!reviewState.current() || saving) return;
@@ -295,8 +301,10 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
         reviewState.confirmed(request);
         savedRequestId=request.requestId;
         if (summary.isConnected) summary.textContent = shared
-          ? 'Visita guardada en '+(projectName||'la copropiedad seleccionada')+'. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.'
+          ? 'Programación guardada en SQL. La visita aún no tiene ingreso ni salida. Abre su seguimiento para adjuntar documentos.'
           : 'Borrador de prueba guardado y confirmado.';
+        savedBuilding.textContent='Visita guardada para: '+(projectName||'Copropiedad seleccionada');
+        savedBuilding.hidden=false;
         save.hidden = true;
         if(canList) await loadList();
         openSavedVisit.hidden=!(shared&&canList&&repository.lifecycleEnabled&&rows.some(x=>x.request_id===savedRequestId)&&listLoaded);
