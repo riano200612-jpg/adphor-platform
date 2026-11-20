@@ -54,6 +54,7 @@ import { createDemoRepository, DEMO_USERS } from './services/demo.js';
 import { createCloudRepository } from './services/supabase.js';
 import {applicationRepositoryMode} from './services/qa-auth-policy.js';
 import {delegateAdminLabel,verifyGeneralAdmin,corporatePageAllowed} from './services/delegate-scope.js';
+import {readWithinDeadline,qaMeetingReadFeedback} from './services/qa-readonly-deadline.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -369,7 +370,7 @@ function renderPage() {
       meetingCard.textContent = status.textContent;
       section.append(heading, status);
       meetingCard.closest('.module-grid').after(section);
-      repo.listVerifiedQaMeetings(projectId).then(rows => {
+      readWithinDeadline(()=>repo.listVerifiedQaMeetings(projectId)).then(rows => {
         if (!section.isConnected || state.projectId !== projectId) return;
         const meetings = rows.filter(row => row.project_id === projectId);
         status.textContent = meetings.length ? 'Horarios de Colombia' : 'Sin reuniones verificadas para esta copropiedad.';
@@ -386,9 +387,9 @@ function renderPage() {
           list.append(item);
         }
         section.append(list);
-      }).catch(() => {
+      }).catch(error => {
         if (!section.isConnected || state.projectId !== projectId) return;
-        status.textContent = 'No se pudieron consultar las reuniones verificadas.';
+        status.textContent = qaMeetingReadFeedback(error);
         meetingCard.textContent = status.textContent;
       });
     }
