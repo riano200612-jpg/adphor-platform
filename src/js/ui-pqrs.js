@@ -278,7 +278,7 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
       pendingCase=null;
       requestId=crypto.randomUUID();
       form.reset();clearPreviews();evidenceList.replaceChildren();clearEvidence.hidden=true;
-      const confirmation=`Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${files.length?files.length+' evidencias privadas confirmadas. ':''}${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;
+      const confirmation=`Radicado: ${saved.id} · ${statusLabels[saved.status]||saved.status}. ${files.length?(files.length===1?'1 evidencia privada confirmada. ':files.length+' evidencias privadas confirmadas. '):''}${repository.localDemo?'Guardado solo en este navegador. No se modificó PostgreSQL.':'Registro confirmado por PostgreSQL.'}`;
       try{await load();}catch{return confirmation+' No se pudo actualizar la lista. Pulsa Actualizar lista para consultar el radicado.';}
       return confirmation;
     }).finally(()=>{if(!pendingCase){for(const control of lockedControls)control.disabled=false;lockedControls=[];}submitting=false;button.disabled=false;});

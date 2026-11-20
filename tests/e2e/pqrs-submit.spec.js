@@ -34,7 +34,12 @@ test('PQRS retries incomplete evidence using the confirmed case without duplicat
   window.creates=0;window.uploads=0;
   mountPqrs(document.querySelector('#test-root'),{projectId:'qa-test',repository:{
    localDemo:true,list:async()=>[],create:async()=>{window.creates++;return {id:'QA-456',status:'open'};},
-   uploadEvidence:async()=>{if(++window.uploads===1)throw Error('Conexión interrumpida');return [{id:'file-1'}];}
+   uploadEvidence:async({projectId,caseId,files,onProgress})=>{
+    if(++window.uploads===1)throw Error('Conexión interrumpida');
+    onProgress?.({completed:1,total:files.length});
+    return [{id:'file-1',project_id:projectId,case_id:caseId,
+      visibility:'private',storage_written:true,metadata_linked:true}];
+   }
   }});
  });
  await page.locator('[name=subject]').fill('Solicitud con evidencia QA');
@@ -50,4 +55,27 @@ test('PQRS retries incomplete evidence using the confirmed case without duplicat
  expect(await page.evaluate(()=>window.uploads)).toBe(2);
  await expect(page.locator('[name=subject]')).toBeEnabled();
  await page.screenshot({path:'qa/corrective-20261104/pqrs-retry.png',fullPage:true});
+});
+
+test('PQRS refuses a fabricated file receipt without private storage and metadata',async({page})=>{
+ await page.goto('./');
+ await page.evaluate(async()=>{
+   const {mountPqrs}=await import('/adphor-platform/src/js/ui-pqrs.js');
+   document.body.innerHTML='<main id="test-root"></main>';
+   window.evidenceCreateCalls=0;
+   mountPqrs(document.querySelector('#test-root'),{projectId:'qa-test',repository:{
+     localDemo:true,
+     list:async()=>[],
+     create:async()=>{window.evidenceCreateCalls++;return{id:'QA-FAKE-RECEIPT',status:'open'};},
+     uploadEvidence:async()=>[{id:'only-an-id'}]
+   }});
+ });
+ await page.locator('[name=subject]').fill('Evidencia no confirmada');
+ await page.locator('form [name=description]').fill('Comprobación sintética de recibo incompleto');
+ await page.locator('input[type=file]').setInputFiles({name:'proof.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7 synthetic')});
+ await page.locator('[type=submit]').click();
+ await expect(page.locator('[role=status]')).toContainText('Radicado: QA-FAKE-RECEIPT');
+ await expect(page.locator('[role=status]')).toContainText('Evidencias incompletas');
+ await expect(page.locator('[name=subject]')).toBeDisabled();
+ expect(await page.evaluate(()=>window.evidenceCreateCalls)).toBe(1);
 });
