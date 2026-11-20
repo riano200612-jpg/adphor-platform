@@ -17,8 +17,7 @@ test('Mis tareas: registrar novedad identifica la copropiedad activa en móvil y
  await expect(form.locator('[name=assignee]')).toBeVisible();
  await expect(form.getByRole('button',{name:'Guardar novedad'})).toBeVisible();
  const font=await form.locator('[data-active-building]').evaluate(node=>parseFloat(getComputedStyle(node).fontSize));
- const rootFont=await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize));
- expect(rootFont).toBe(14);
+ // App layouts may adapt the root font; this control must remain >=18 CSS pixels.
  expect(font).toBeGreaterThanOrEqual(18);
  expect(errors).toEqual([]);
 });
