@@ -234,7 +234,7 @@ function stats(list) {
 function card(t) {
   return `<button class="ticket-card" data-ticket="${esc(t.id)}"><div class="card-top">${priority(t)}<span class="ticket-id">${esc(t.id.slice(0,8))}</span></div><h3>${esc(t.title)}</h3><p class="card-area">${esc(t.area)}</p><p class="card-location">${icon('location-dot')} ${esc(t.location)}</p><div class="card-bottom"><span class="mini-user" title="${esc(person(t.assignee))}"><span class="avatar small">${esc(initials(person(t.assignee)))}</span>${esc(person(t.assignee).split(' ')[0])}</span><span class="due ${overdue(t) ? 'late' : ''}">${icon('calendar-day')} ${fmt(t.due_date)}</span></div></button>`;
 }
-function operationalAgenda(compact=false) { return renderOperationalAgenda(state.tickets,{projectId:state.projectId,userId:state.user.id,role:role(),scope:!compact&&isManager(role())?state.sprintScope:'mine',compact}); }
+function operationalAgenda(compact=false) { return renderOperationalAgenda(state.tickets,{members:team(),projectId:state.projectId,userId:state.user.id,role:role(),scope:!compact&&isManager(role())?state.sprintScope:'mine',compact}); }
 function sprintBoard() { return renderSprintBoard(state.tickets,{projectId:state.projectId,userId:state.user.id,role:role(),offset:state.sprintOffset,scope:isManager(role())?state.sprintScope:'mine'}); }
 function dashboard() {
   const list = rows();
