@@ -88,3 +88,16 @@ test('Edge adapter verifies current account, AAL2, session, active admin and del
  assert.equal(body.admin_state.active,1);
  assert.deepEqual(calls.map(x=>x.name),['qa_iam_is_operator','qa_iam_snapshot','qa_iam_legacy_review']);
 });
+
+test('IAM proxy never follows upstream redirects or exposes their destination',async()=>{
+ let calls=0;
+ const result=await iamPagesProxy({request:req(),env:ENV},async(url,options)=>{
+  calls++;
+  assert.equal(url,API);
+  assert.equal(options.redirect,'manual');
+  return Response.redirect('https://example.invalid/private',307);
+ });
+ assert.equal(calls,1);
+ assert.equal(result.status,502);
+ assert.equal(result.headers.get('Location'),null);
+});

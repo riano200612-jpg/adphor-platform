@@ -28,7 +28,7 @@ export async function iamPagesProxy({request,env},transport=fetch){
   const r=await transport(EDGE_URL,{method:request.method,
     headers:{'Authorization':auth,'apikey':env.VITE_SUPABASE_ANON_KEY,'Origin':ORIGIN,
       'Content-Type':'application/json','Accept':'application/json'},
-    body,redirect:'error',cache:'no-store'});
+    body,redirect:'manual',cache:'no-store'});
   if(![200,201,202,400,401,403,405,409,413,503].includes(r.status))return response(502);
   if(!r.headers.get('Content-Type')?.toLowerCase().includes('application/json'))return response(502);
   const text=await r.text();
