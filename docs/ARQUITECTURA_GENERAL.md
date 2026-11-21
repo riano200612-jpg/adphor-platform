@@ -12,10 +12,10 @@ flowchart TD
   S --> DB["Supabase: Auth, PostgreSQL/RLS, Storage privado"]
   CF --> EF["Funciones Supabase supabase/functions"]
   EF --> DB
-  CF -. "integración según módulo" .-> AI["Python y asistentes backend/"]
-  S -. "acceso sujeto a autorización" .-> EXT["Fuentes externas del cliente"]
+  CF -.->|integración según módulo| AI["Python y asistentes backend/"]
+  S -.->|acceso sujeto a autorización| EXT["Fuentes externas del cliente"]
   TEST["Pruebas JS, SQL, Python, Playwright"] -. "contratos" .-> S
-  TEST -. "contratos" .-> CF
+  TEST -.->|contratos| CF
 ```
 
 *Las líneas discontinuas indican integración condicionada; no representan una conexión en vivo verificada.*
