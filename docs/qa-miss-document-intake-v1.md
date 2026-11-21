@@ -7,6 +7,13 @@
 - El formulario utiliza exactamente el proyecto y usuario actuales; descarta confirmaciones visuales de operaciones que terminen tras cambiar de usuario, rol o copropiedad.
 - La pantalla «Documentos para Miss ADPHOR» permite consultar únicamente los 50 aportes recientes del propio usuario en cuarentena; las deduplicaciones buscan el identificador exacto sin depender de esa paginación.
 
+## Acciones seguras desde Miss ADPHOR (incremento de interfaz móvil)
+- El chat autenticado presenta «¿Qué necesitas hacer?» con acciones para **preparar** PQRS, visitas, novedades, reuniones e informes. Cada botón dirige al módulo ya existente, presenta el formulario correspondiente y aplica las comprobaciones de permisos del módulo. **No realiza envíos, cierres, aprobaciones, asignaciones ni reservas por sí mismo.**
+- La entrada de lenguaje natural «radicar una PQRS», «programar una visita», «registrar una novedad», «solicitar una reunión», «generar informe semanal» o «subir un documento» ofrece una ruta verificada, con guardia de usuario, copropiedad, rol y página habilitada.
+- Para documentos, el acceso directo abre el formulario de cuarentena desde el mismo chat solo si el feature flag está habilitado y se cumplen los gates previos. Si permanece desactivado, se muestra el estado pendiente sin iniciar cargas ni pedir credenciales.
+- En móvil, se agrupan consultas de ayuda bajo «Consultas rápidas y guías», se limita la altura relativa a la ventana y los botones de tareas quedan accesibles sin desplazar toda la página.
+- Las acciones ejecutables **siempre** son un clic explícito del usuario dentro del módulo autorizado; no hay nueva función de backend con privilegios, ni exposición de tokens, ni autoenvío de datos. La funcionalidad de IA generativa/automática sigue pendiente de evaluación separada.
+
 ## Qué implementa
 - Todo usuario **autenticado, MFA AAL2 y miembro de una copropiedad** puede aportar archivos PDF, DOCX y XLSX (máx. 15 MiB) de su propio dispositivo o registrar un **enlace directo** a un archivo de Google Drive. Un enlace NO concede permiso de lectura al sistema y NO descarga el archivo.
 - Archivos locales quedan privados en el bucket `qa-miss-documents`; metadatos quedan en `qa_miss_document_submissions`, siempre en estado `quarantined` y vinculados a `project_id`, `uploaded_by` y hash.

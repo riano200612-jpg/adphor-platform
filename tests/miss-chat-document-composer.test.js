@@ -31,7 +31,7 @@ test('chat feature is gated from real QA repository, not demo, and never uses a 
  const chat=readFileSync(new URL('../src/js/ui-miss-adphor-chat.js',import.meta.url),'utf8');
  const composer=readFileSync(new URL('../src/js/ui-miss-chat-document-composer.js',import.meta.url),'utf8');
  assert.match(app,/documentsEnabled:repo.mode==='cloud'&&repo.missDocumentsEnabled===true/);
- assert.match(chat,/if\(documentsEnabled\)mountMissChatDocumentComposer/);
+ assert.match(chat,/const composer=documentsEnabled\?mountMissChatDocumentComposer/);
  assert.match(composer,/No se descargó el archivo de Drive/);
  assert.doesNotMatch(composer,/service_role|access_token|google\.accounts|oauth/i);
 });
