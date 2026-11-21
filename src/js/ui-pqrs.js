@@ -206,10 +206,25 @@ export function mountPqrs(root,{repository,projectId,members=[],role,projectName
                   if(!item.isConnected)return;
                   const old=item.querySelector('a[data-private-url]');
                   if(old)old.remove();
+                  for(const notice of item.querySelectorAll('[data-private-expired]'))notice.remove();
                   const anchor=el('a','Abrir archivo privado');
                   anchor.href=url;anchor.target='_blank';anchor.rel='noopener noreferrer';
                   anchor.dataset.privateUrl='';
+                  // Server signs for 90 seconds. Retire the browser link earlier so
+                  // network latency and a background tab do not offer a stale URL.
+                  const expiresAt=Date.now()+80000;
+                  const expire=()=>{
+                    if(!anchor.isConnected)return;
+                    anchor.removeAttribute('href');anchor.remove();
+                    const notice=el('small','Enlace temporal retirado por seguridad. Prepara uno nuevo.');
+                    notice.dataset.privateExpired='';
+                    item.append(notice);
+                  };
+                  anchor.addEventListener('click',event=>{
+                    if(Date.now()>=expiresAt){event.preventDefault();expire();}
+                  });
                   item.append(anchor);
+                  setTimeout(expire,80000);
                 }catch{
                   if(item.isConnected)item.append(el('small','No se pudo generar el enlace. Solicita nuevamente el acceso.'));
                 }finally{generating=false;if(fetchButton.isConnected)fetchButton.disabled=false;}
