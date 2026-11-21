@@ -32,3 +32,47 @@ test('PQRS shows stored QA evidence after remount and only creates a short-lived
  expect(await page.evaluate(()=>window.qaEvidenceListCalls)).toBe(1);
  expect(await page.evaluate(()=>window.qaSignedCalls)).toBe(1);
 });
+
+
+test('GAUNTLET: browser retires the private signed link before its 90-second server TTL and can issue another',async({page})=>{
+ await page.goto('./');
+ await page.clock.install();
+ await page.evaluate(async()=>{
+  const {mountPqrs}=await import('/adphor-platform/src/js/ui-pqrs.js');
+  document.body.replaceChildren();
+  const root=document.createElement('main');
+  document.body.append(root);
+  window.qaSignedReissues=0;
+  const caseId='13ae039e-99ca-4f17-ab41-75a401f0d0ee';
+  mountPqrs(root,{projectId:'qa-p',role:'admin',members:[],repository:{
+   list:async()=>[{id:caseId,project_id:'qa-p',subject:'Evidencia temporal',
+     description:'Prueba sintética',status:'open',priority:'medio',version:1}],
+   listEvidence:async()=>[{id:'c8709acb-9e96-8dfa-b3d1-53f42528315b',
+      project_id:'qa-p',case_id:caseId,media_type:'image/png',file_bytes:1280,
+      created_at:'2026-11-20T14:00:00Z'}],
+   signedEvidence:async()=>{
+    window.qaSignedReissues++;
+    return 'https://qfctnnnnltghepwujpdm.supabase.co/storage/v1/object/sign/qa-case-evidence/synthetic?token=synthetic'+window.qaSignedReissues;
+   }
+  }});
+ });
+ const card=page.locator('.pqrs-cases article').first();
+ await card.getByRole('button',{name:'Consultar evidencias privadas'}).click();
+ const prepare=card.getByRole('button',{name:/Preparar enlace privado/});
+ await prepare.click();
+ await expect(card.locator('a[data-private-url]')).toHaveCount(1);
+ await page.clock.fastForward(40000);
+ await prepare.click();
+ await expect(card.locator('a[data-private-url]')).toHaveCount(1);
+ await expect(card.locator('a[data-private-url]')).toHaveAttribute('href',/synthetic2/);
+ // The first URL's timer must not retire the newer replacement link.
+ await page.clock.fastForward(40001);
+ await expect(card.locator('a[data-private-url]')).toHaveCount(1);
+ await page.clock.fastForward(40001);
+ await expect(card.locator('a[data-private-url]')).toHaveCount(0);
+ await expect(card.locator('[data-private-expired]')).toContainText('retirado por seguridad');
+ await prepare.click();
+ await expect(card.locator('a[data-private-url]')).toHaveAttribute('href',/synthetic3/);
+ await expect(card.locator('[data-private-expired]')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.qaSignedReissues)).toBe(3);
+});
