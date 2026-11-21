@@ -1,0 +1,50 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> adphor-platform@3.0.0 test
+> node --test tests/*.test.js
+
+✔ HTTP is restricted to development loopback (1.278731ms)
+✔ request uses the session token, scopes the query and rejects mixed properties (0.762157ms)
+✔ authentication failures cannot appear as empty success (0.216159ms)
+✔ database strings are escaped before rendering (0.450906ms)
+✔ rule execution sends only project and idempotency key, never an approval (1.042731ms)
+✔ detail rejects a different property and escapes draft HTML (0.318291ms)
+✔ review writes only decision fields; actor and timestamp come from database (2.016221ms)
+✔ invalid decision and oversized notes never reach database (0.5346ms)
+✔ permission and concurrent decision failures do not report success or overwrite (0.476845ms)
+✔ review controls require enabled human review and disappear after decision (13.13766ms)
+Informe de 10.000 casos sintéticos en PostgreSQL local: 96 ms
+✔ PostgreSQL: enforce isolation, actor identity, evidence, transitions and concurrency (3297.967715ms)
+✔ production is blocked even with enabled flag (1.256638ms)
+✔ unconfigured QA remains disabled (0.127538ms)
+✔ different reference is rejected (0.147649ms)
+✔ exact staging gate (0.487791ms)
+✔ gate rejects before touching client (0.793633ms)
+✔ no session cannot query data (0.209029ms)
+✔ closed months compare the same measures, not unique cases vs closure events (31.144999ms)
+✔ Colombia month boundary prevents comparing a partial month as complete (2.34681ms)
+✔ zero baseline, missing reference and year change do not invent percentages (2.566624ms)
+✔ synthetic tenant summary is accepted (1.625293ms)
+✔ cross-tenant response is rejected (0.376998ms)
+✔ real source is rejected (0.249369ms)
+✔ agent enabled response is rejected (0.211252ms)
+✔ invalid totals are rejected (0.186866ms)
+✔ invalid project id is rejected before fetch (0.176321ms)
+✔ missing JWT denied before fetch (0.1213ms)
+✔ 403 is not converted to empty results (0.202179ms)
+✔ 503 stays blocked (0.185965ms)
+✔ 401 requires authentication (2.136419ms)
+✔ full workflow requires photographic intervention and coordinator verification (15.977884ms)
+✔ viewer and unassigned technician cannot advance a case (1.0013ms)
+✔ assignment validates project membership and deadlines (0.847664ms)
+✔ filters normalize accents, scope mine and count actual records (1.117983ms)
+✔ creation rejects empty text, invalid areas and outsiders (1.149169ms)
+✔ uploads limit count, size and media types (0.455233ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3434.342151

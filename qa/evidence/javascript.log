@@ -1,0 +1,44 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> adphor-platform@3.0.0 test
+> node --test tests/*.test.js
+
+✔ HTTP is restricted to development loopback (1.295751ms)
+✔ request uses the session token, scopes the query and rejects mixed properties (1.044492ms)
+✔ authentication failures cannot appear as empty success (0.356177ms)
+✔ database strings are escaped before rendering (0.401715ms)
+✔ rule execution sends only project and idempotency key, never an approval (1.259556ms)
+✔ detail rejects a different property and escapes draft HTML (0.460283ms)
+✔ review writes only decision fields; actor and timestamp come from database (2.174484ms)
+✔ invalid decision and oversized notes never reach database (0.543098ms)
+✔ permission and concurrent decision failures do not report success or overwrite (0.545852ms)
+✔ review controls require enabled human review and disappear after decision (18.561527ms)
+Informe de 10.000 casos sintéticos en PostgreSQL local: 110 ms
+✔ PostgreSQL: enforce isolation, actor identity, evidence, transitions and concurrency (5419.738479ms)
+✔ closed months compare the same measures, not unique cases vs closure events (22.299124ms)
+✔ Colombia month boundary prevents comparing a partial month as complete (2.108385ms)
+✔ zero baseline, missing reference and year change do not invent percentages (1.675282ms)
+✔ synthetic tenant summary is accepted (2.495697ms)
+✔ cross-tenant response is rejected (0.452261ms)
+✔ real source is rejected (0.380133ms)
+✔ agent enabled response is rejected (0.319751ms)
+✔ invalid totals are rejected (0.386252ms)
+✔ invalid project id is rejected before fetch (0.462987ms)
+✔ missing JWT denied before fetch (0.202765ms)
+✔ 403 is not converted to empty results (0.313582ms)
+✔ 503 stays blocked (0.322445ms)
+✔ 401 requires authentication (0.471279ms)
+✔ full workflow requires photographic intervention and coordinator verification (26.608603ms)
+✔ viewer and unassigned technician cannot advance a case (2.063237ms)
+✔ assignment validates project membership and deadlines (1.074168ms)
+✔ filters normalize accents, scope mine and count actual records (0.871382ms)
+✔ creation rejects empty text, invalid areas and outsiders (1.13542ms)
+✔ uploads limit count, size and media types (0.255465ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5580.903545

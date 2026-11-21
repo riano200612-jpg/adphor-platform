@@ -1,0 +1,22 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> adphor-platform@3.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 58 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                  0.78 kB │ gzip:  0.46 kB
+dist/assets/fa-v4compatibility-BajFMAgw.woff2    4.56 kB
+dist/assets/fa-v4compatibility-Ac5Ki1KR.ttf     10.17 kB
+dist/assets/fa-regular-400-TCCU0xbi.woff2       24.95 kB
+dist/assets/fa-regular-400-BSSd-Tma.ttf         63.95 kB
+dist/assets/fa-brands-400-C-jaCRNI.woff2       108.02 kB
+dist/assets/fa-solid-900-tLH6XCuf.woff2        150.12 kB
+dist/assets/fa-brands-400-D7HcTrzQ.ttf         187.21 kB
+dist/assets/fa-solid-900-f4MajOib.ttf          394.63 kB
+dist/assets/index-Cc3uCPy4.css                 121.70 kB │ gzip: 30.31 kB
+dist/assets/index-j9NYRI3c.js                   53.47 kB │ gzip: 18.55 kB
+✓ built in 857ms

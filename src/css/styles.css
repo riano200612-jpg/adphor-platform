@@ -24,3 +24,40 @@ dialog{padding:0;border:0;border-radius:16px;width:min(740px,calc(100vw - 28px))
 @media print{html,body{background:white!important}.executive-detail .executive-columns{margin-bottom:15px}.executive-detail h4{margin:10px 0;font-weight:700}.executive-detail .executive-bar{margin:9px 0}.executive-detail .executive-section-title{margin-top:15px}.executive-detail .executive-reconcile{margin:14px 0;padding:9px 14px}.executive-detail .executive-reconcile strong{margin:5px 0;font-size:21px}.executive-detail .executive-notes{font-size:9px}.executive-detail .executive-notes>span{margin-top:10px}.executive-comparison{break-inside:avoid;margin-bottom:14px}}
 .executive-chart-data{font-size:12px;margin:12px 0}.executive-chart-data summary{cursor:pointer;color:#087e82;font-weight:650;padding:8px 0}.executive-chart-data summary:focus-visible{outline:3px solid #1aa5a5;outline-offset:3px}
 @media print{@page{@bottom-right{content:"Página " counter(page) " / " counter(pages);font-family:Arial,sans-serif;font-size:8pt;color:#526871}}}
+
+/* Authorized project catalog: keep the existing institutional palette. */
+.project-control{display:flex;flex-direction:column;gap:3px;max-width:350px}
+.project-control input[type=search]{min-width:0;width:100%;padding:5px 8px;font-size:12px}
+.project-control small{font-size:10px;color:#526670}
+@media(max-width:600px){.project-control{max-width:190px}.project-control select{max-width:190px;width:100%}}
+
+
+/* ADPHOR PQRS: blue/gold client identity, minimalist responsive layout */
+.pqrs-page{--pqrs-blue:#264b6b;--pqrs-gold:#b59c21;display:grid;gap:22px;max-width:1120px;margin:0 auto}
+.pqrs-header{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:18px}
+.pqrs-header h2{font-size:clamp(20px,2.4vw,27px);color:var(--pqrs-blue);margin:3px 0 8px}
+.pqrs-kicker{font-size:10px;font-weight:800;letter-spacing:1.6px;color:var(--pqrs-gold)}
+.pqrs-subtitle,.pqrs-form-title p,.pqrs-list-head p,.pqrs-upload-note{color:#637782;font-size:13px}
+.pqrs-new,.pqrs-submit{border:0;background:var(--pqrs-blue);color:#fff;border-radius:10px;padding:12px 20px;min-height:46px;font-weight:750;box-shadow:0 2px 6px #264b6b25}
+.pqrs-new:hover,.pqrs-submit:hover{background:#193d5c}
+.pqrs-toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.pqrs-toolbar label{min-width:190px;max-width:260px}
+.pqrs-refresh{padding:12px 15px;background:#edf3f7;color:var(--pqrs-blue);border:1px solid #d7e2e9;border-radius:9px;min-height:43px;font-weight:650}
+.pqrs-form{background:#fff;border:1px solid #dbe4e9;border-radius:16px;padding:24px;box-shadow:0 8px 26px #264b6b0b;display:grid;gap:20px;scroll-margin-top:24px}
+.pqrs-form-title{border-left:4px solid var(--pqrs-gold);padding-left:14px}
+.pqrs-form-title h3,.pqrs-list-head h3{font-size:17px;color:var(--pqrs-blue);margin-bottom:6px}
+.pqrs-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.pqrs-fields label{font-size:12px;color:#284a60}
+.pqrs-fields input,.pqrs-fields select,.pqrs-fields textarea{border-radius:9px;border:1px solid #d3dfe7;background:#fbfcfd;min-width:0}
+.pqrs-fields input:focus,.pqrs-fields select:focus,.pqrs-fields textarea:focus{border-color:var(--pqrs-gold)}
+.pqrs-wide{grid-column:1/-1}
+.pqrs-upload-note{border:1px dashed #e3d7aa;background:#fffcf2;border-radius:9px;padding:10px 13px}
+.pqrs-actions{display:flex;justify-content:flex-end;border-top:1px solid #e7ebee;padding-top:17px}
+.pqrs-submit{min-width:205px;background:#264b6b;border-bottom:3px solid var(--pqrs-gold)}
+.pqrs-message:not(:empty){border-left:3px solid var(--pqrs-gold);padding:10px 13px;background:#f7f7f2;border-radius:5px}
+.pqrs-list-head{display:grid;gap:3px}
+.pqrs-cases{display:grid;gap:13px}
+.pqrs-cases article{border:1px solid #dbe4e9;border-radius:12px;background:white;padding:16px;display:grid;gap:10px}
+.pqrs-cases article h3{font-size:15px;color:var(--pqrs-blue)}
+.pqrs-cases article button{background:#edf3f7;color:var(--pqrs-blue);border-radius:8px;padding:10px 13px;font-weight:650;justify-self:start}
+@media(max-width:680px){.pqrs-fields{grid-template-columns:1fr}.pqrs-form{padding:17px}.pqrs-submit,.pqrs-new{width:100%}.pqrs-actions{display:block}.pqrs-header{align-items:stretch}}

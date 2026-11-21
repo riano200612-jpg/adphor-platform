@@ -1,0 +1,75 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> adphor-platform@3.0.0 test
+> node --test tests/*.test.js
+
+✔ HTTP is restricted to development loopback (1.609473ms)
+✔ request uses the session token, scopes the query and rejects mixed properties (0.989499ms)
+✔ authentication failures cannot appear as empty success (0.367081ms)
+✔ database strings are escaped before rendering (0.624711ms)
+✔ rule execution sends only project and idempotency key, never an approval (1.43758ms)
+✔ detail rejects a different property and escapes draft HTML (0.607506ms)
+✔ review writes only decision fields; actor and timestamp come from database (2.483352ms)
+✔ invalid decision and oversized notes never reach database (0.761353ms)
+✔ permission and concurrent decision failures do not report success or overwrite (0.774973ms)
+✔ review controls require enabled human review and disappear after decision (38.209254ms)
+Informe de 10.000 casos sintéticos en PostgreSQL local: 115 ms
+✔ PostgreSQL: enforce isolation, actor identity, evidence, transitions and concurrency (6087.898805ms)
+✔ conserva rutas legadas del portal (1.423739ms)
+✔ normaliza prioridad de administradoras (0.385399ms)
+✔ no autoriza otra copropiedad (0.254515ms)
+✔ inventario de origen incluye exactamente 32 fuentes (1.777701ms)
+✔ un solo archivo faltante bloquea la migración (0.458336ms)
+✔ ningún control de seguridad puede quedar implícitamente aprobado (0.306812ms)
+✔ empty and malformed codes never reach provider (2.838196ms)
+✔ successful managed verification is consumed once (0.517944ms)
+✔ provider expired response is rejected (0.62383ms)
+✔ provider incorrect response is rejected (0.50232ms)
+✔ provider reused response is rejected (0.499837ms)
+✔ aal1 response cannot complete login (0.475051ms)
+✔ session switch cannot verify another user (0.487218ms)
+✔ no enrollment or reset for users without factors (0.455982ms)
+✔ production is blocked even with enabled flag (1.308109ms)
+✔ unconfigured QA remains disabled (0.221126ms)
+✔ different reference is rejected (0.234466ms)
+✔ exact staging gate (0.496382ms)
+✔ gate rejects before touching client (1.387025ms)
+✔ no session cannot query data (0.444375ms)
+✔ 40 dynamic projects: search and retained selection (1.638566ms)
+✔ revoked or forged selection cannot add a property (0.330257ms)
+✔ preferences isolated per user, never treated as authorization (0.263588ms)
+✔ unavailable browser storage does not break navigation (0.206955ms)
+✔ unapproved cloud build blocked: CF_PAGES (250.427082ms)
+✔ unapproved cloud build blocked: WORKERS_CI (203.559749ms)
+✔ closed months compare the same measures, not unique cases vs closure events (44.61665ms)
+✔ Colombia month boundary prevents comparing a partial month as complete (5.938495ms)
+✔ zero baseline, missing reference and year change do not invent percentages (2.817987ms)
+✔ synthetic tenant summary is accepted (3.61291ms)
+✔ cross-tenant response is rejected (0.856533ms)
+✔ real source is rejected (0.424456ms)
+✔ agent enabled response is rejected (0.614526ms)
+✔ invalid totals are rejected (0.432639ms)
+✔ invalid project id is rejected before fetch (0.407631ms)
+✔ missing JWT denied before fetch (5.025007ms)
+✔ 403 is not converted to empty results (0.580947ms)
+✔ 503 stays blocked (0.43363ms)
+✔ 401 requires authentication (0.900418ms)
+✔ full workflow requires photographic intervention and coordinator verification (23.538665ms)
+✔ viewer and unassigned technician cannot advance a case (1.358654ms)
+✔ assignment validates project membership and deadlines (1.30097ms)
+✔ filters normalize accents, scope mine and count actual records (1.818222ms)
+✔ creation rejects empty text, invalid areas and outsiders (1.106392ms)
+✔ uploads limit count, size and media types (0.336877ms)
+ℹ tests 56
+ℹ suites 0
+ℹ pass 56
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6424.004352
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

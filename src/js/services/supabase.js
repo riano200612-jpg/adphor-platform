@@ -1,9 +1,17 @@
+import { createManagedMfa } from './managed-mfa.js';
+import { portoEnabled, createPortoRepository } from './porto.js';
 import { submitAgentReview } from './agent-review.js';
 import { createClient } from '@supabase/supabase-js';
 import { agentApiOrigin, fetchAgentRuns, agentRuleRequest } from './agent-api.js';
+import { fetchTenantSummary } from './tenant-consultation.js';
 export function createCloudRepository(url, key) {
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
   let user = null;
+  const mfa = createManagedMfa(client.auth);
+  async function finishLogin(id) {
+    const profile=check(await client.from('profiles').select('name').eq('id',id).single());
+    user={id,name:profile.name};return user;
+  }
   const check = result => { if (result.error) throw new Error(result.error.message); return result.data; };
   async function allPages(query) {
     const rows = [];
@@ -14,6 +22,28 @@ export function createCloudRepository(url, key) {
     }
   }
   return {
+    porto: createPortoRepository(client, {url, enabled:import.meta.env.VITE_PORTO_QA_ENABLED, stagingRef:import.meta.env.VITE_PORTO_STAGING_REF}),
+    async assessMeeting(projectId, fields) {
+      if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Evaluación solo disponible en QA aislado.');
+      const origin=agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL,import.meta.env.DEV);
+      if(!origin) throw Error('API no configurada.');
+      const {session}=check(await client.auth.getSession());
+      if(!session?.access_token) throw Error('Sesión requerida.');
+      const response=await fetch(new URL('/meetings/assess',origin),{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},
+        body:JSON.stringify({subject:fields.subject,notes:fields.notes,management_requested:fields.management_requested,project_id:projectId}),credentials:'omit',redirect:'error',
+        cache:'no-store',signal:AbortSignal.timeout(12000)});
+      if(!response.ok) throw Error(`Evaluación rechazada (${response.status}).`);
+      const data=await response.json();
+      if(data.project_id!==projectId || data.engine_kind!=='rules' || data.persisted!==false || data.booking_authorized!==false || data.notifications_sent!==false) throw Error('Respuesta de evaluación inválida.');
+      return data;
+    },
+    async consultationSummary(projectId) {
+      const origin = agentApiOrigin(import.meta.env.VITE_AGENTS_API_URL, import.meta.env.DEV);
+      if (!origin) throw new Error("El servicio de consultas no está conectado.");
+      const { session } = check(await client.auth.getSession());
+      return fetchTenantSummary({ origin, token: session?.access_token, projectId });
+    },
     async reviewAgentRun(projectId, runId, resultHash, decision, note) {
       return submitAgentReview(client, {projectId, runId, resultHash, decision, note});
     },
@@ -42,12 +72,16 @@ export function createCloudRepository(url, key) {
     async login({ email, password }) {
       const loginEmail = email.trim().toLowerCase() === 'adphor' ? 'demo-adphor@example.invalid' : email.trim();
       const data = check(await client.auth.signInWithPassword({ email: loginEmail, password }));
-      const profile = check(await client.from('profiles').select('name').eq('id', data.user.id).single());
-      user = { id: data.user.id, name: profile.name };
-      return user;
+      user=null;
+      try {
+        if(await mfa.begin(data.user.id))return {mfaRequired:true};
+        return await finishLogin(data.user.id);
+      } catch(error) {await client.auth.signOut();throw error;}
     },
-    async logout() { check(await client.auth.signOut()); user = null; },
+    async completeMfa(code) {return finishLogin(await mfa.complete(code));},
+    async logout() { mfa.clear();check(await client.auth.signOut()); user = null; },
     async load() {
+      if(!user)throw Error('Completa la autenticación.');
       const results = await Promise.all([
         allPages(() => client.from('projects').select('*').order('id')),
         allPages(() => client.from('memberships').select('project_id,user_id,role,profiles(name)').order('project_id').order('user_id')),
