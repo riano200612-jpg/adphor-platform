@@ -24,14 +24,27 @@ export async function verifyGeneralAdmin(iam, {eligible=false,reportStatus=null}
       Array.isArray(evidence.accounts) && Array.isArray(evidence.audit);
     inform(verified?'verified':'unverified');
     return verified;
-  } catch {
+  } catch (error) {
     // A disabled service, AAL1 or restricted property admin always fails closed.
-    inform('unavailable');
+    const status=error?.status;
+    if(Number.isInteger(status) && status>=400 && status<=599) inform('http-'+status);
+    else if(error?.code==='IAM_TRANSPORT') inform('transport');
+    else if(error?.code==='IAM_SESSION') inform('session');
+    else inform('unavailable');
     return false;
   }
 }
 export function corporateAccessNotice(status) {
-  return status==='unavailable'
+ if(status==='transport') return 'El navegador no recibió una respuesta del servicio de usuarios. Usa «Actualizar datos» para reintentar.';
+ if(status==='session') return 'El servicio de usuarios necesita una sesión iniciada. Verifica tu ingreso a QA.';
+ if (/^http-[45][0-9]{2}$/.test(status)) {
+   const code=status.slice(5);
+   const explanation=code==='401' ? 'La sesión necesita validación.' :
+     code==='403' ? 'El servicio denegó el acceso de esta sesión.' :
+     'El servicio de usuarios no pudo completar la consulta.';
+   return explanation+' (HTTP '+code+'). Usa «Actualizar datos» para reintentar.';
+ }
+ return status==='unavailable'
     ? 'No se pudo verificar la gestión general. Usa «Actualizar datos» para volver a comprobar tu sesión y MFA.'
     : status==='unverified'
       ? 'El servicio no confirmó la administración general para esta sesión.'

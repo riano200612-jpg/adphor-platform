@@ -29,3 +29,16 @@ test('IAM client fails closed without a session or authorized API',async()=>{
    async()=>new Response('{}',{status:403}));
  await assert.rejects(blocked.read(),/permiso administrativo general/);
 });
+
+test('la lectura IAM conserva el código HTTP y descarta los detalles privados',async()=>{
+ const {verifyGeneralAdmin,corporateAccessNotice}=await import('../src/js/services/delegate-scope.js');
+ for(const status of [401,403,502,503]){
+  const auth={getSession:async()=>({data:{session:{access_token:'synthetic'}}})};
+  const iam=createIamClient(auth,async()=>new Response('{"error":"private-detail"}',{status}));
+  let state;
+  assert.equal(await verifyGeneralAdmin(iam,{eligible:true,reportStatus:value=>{state=value;}}),false);
+  assert.equal(state,'http-'+status);
+  assert.ok(corporateAccessNotice(state).includes('HTTP '+status));
+  assert.ok(!corporateAccessNotice(state).includes('private-detail'));
+ }
+});
