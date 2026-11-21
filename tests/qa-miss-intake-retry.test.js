@@ -79,3 +79,15 @@ test('Miss refuses an altered upload result and a forged PDF signature',async()=
  await assert.rejects(createQaMissDocumentIntake(m.client).addLocalFile(tenant,forgedFile),/encabezado/);
  assert.equal(m.calls.uploads,0);
 });
+
+test('la bandeja sigue disponible después de 51 aportes propios',async()=>{
+ const {client,complete}=mock();
+ const original=client.from;
+ const rows=Array.from({length:51},(_,i)=>({...complete,id:String(i)}));
+ client.from=table=>table==='memberships'?original(table):{
+  select(){return this},eq(){return this},order(){return this},
+  limit:async count=>({data:rows.slice(0,count)})
+ };
+ const result=await createQaMissDocumentIntake(client).listOwn(tenant);
+ assert.deepEqual(result,rows.slice(0,50));
+});

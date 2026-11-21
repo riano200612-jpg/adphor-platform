@@ -88,7 +88,7 @@ export function createQaMissDocumentIntake(client,{url=QA_URL}={}) {
  }
  async function fetchOwn(projectId,userId) {
   const data=unwrap(await client.from(MISS_DOCUMENT_TABLE).select(fields).eq('project_id',projectId)
-    .eq('uploaded_by',userId).order('created_at',{ascending:false}).limit(51),'No se pudo leer la bandeja privada.');
+    .eq('uploaded_by',userId).order('created_at',{ascending:false}).limit(50),'No se pudo leer la bandeja privada.');
   if(!Array.isArray(data)||data.length>50||data.some(x=>x?.project_id!==projectId||x?.uploaded_by!==userId||
     x?.review_state!=='quarantined'))
    throw Error('La bandeja devolvió registros no verificables.');
