@@ -1,47 +1,50 @@
-# ADPHOR — Arquitectura general
+# ADPHOR — Arquitectura técnica
 
-Esta vista documenta el reparto de responsabilidades observado en el código y el árbol del repositorio. No es una afirmación de disponibilidad de sistemas externos.
+**Naturaleza:** inventario arquitectónico observado en código. **No acredita** servicios externos activos o certificados.
 
-## Vista por capas
+## Capas principales
 
 ```mermaid
 flowchart TD
-  A[Interfaz web Vite y JavaScript] --> B[Servicios y adaptadores de cliente]
-  B --> C[Supabase: Auth, RLS, datos y Storage privado]
-  B --> D[Funciones de servidor y APIs QA]
-  D --> E[Servicios Python y lógica de asistentes]
-  B --> F[Conectores a sistemas del cliente cuando autorizados]
-  G[Pruebas JS, SQL y E2E] -. valida contratos .-> A
-  G -. valida contratos .-> D
+  U["Usuarios con identidad autorizada"] --> UI["Frontend Vite y JavaScript"]
+  UI --> S["Servicios y adaptadores src/js/services"]
+  S --> CF["Funciones Cloudflare Pages functions/"]
+  S --> DB["Supabase: Auth, PostgreSQL/RLS, Storage privado"]
+  CF --> EF["Funciones Supabase supabase/functions"]
+  EF --> DB
+  CF -. "integración según módulo" .-> AI["Python y asistentes backend/"]
+  S -. "acceso sujeto a autorización" .-> EXT["Fuentes externas del cliente"]
+  TEST["Pruebas JS, SQL, Python, Playwright"] -. "contratos" .-> S
+  TEST -. "contratos" .-> CF
 ```
 
-## Carpetas y responsabilidades
+*Las líneas discontinuas indican integración condicionada; no representan una conexión en vivo verificada.*
 
-| Componente | Ubicación | Lectura técnica |
+## Separación de responsabilidades
+
+| Capa | Ubicación | Responsabilidad |
 | --- | --- | --- |
-| Entrada de frontend | `index.html`, `src/js/app.js` | Inicialización y composición de la interfaz |
-| Interfaz funcional | `src/js/ui-*.js`, `src/css/` | Presentación por pantallas |
-| Servicios de dominio | `src/js/services/` | Contratos de acceso, operaciones y adaptadores |
-| Funciones web | `functions/` | Rutas de servidor y control de entrada |
-| Núcleo Python | `backend/src/adphor_ai/`, `backend/src/worker.py` | Orquestación, reglas y contratos de asistencia |
-| Base de datos | `supabase/migrations/`, `supabase/functions/` | Esquema, RLS y funciones de QA |
-| Validación | `tests/`, `backend/tests/`, `supabase/tests/`, `qa/` | Pruebas y evidencia aislada |
-| Automatización | `.github/workflows/` | Comprobaciones CI y gates |
+| UI | `src/js/app.js`, `src/js/ui-*.js`, `src/css/` | Pantallas, interacción y estados |
+| Cliente | `src/js/services/` | Lectura, comandos y contratos de transporte |
+| Servidor | `functions/`, `supabase/functions/` | Validaciones y operaciones del lado servidor |
+| IA | `backend/src/adphor_ai/` | Contratos, reglas, orquestación y aprobación |
+| Persistencia | `supabase/migrations/` | Modelo SQL, políticas y evolución |
+| Verificación | `tests/`, `backend/tests/`, `qa/` | Casos aislados y evidencia reproducible |
 
-## Fronteras de seguridad
+## Ejemplo de trazado de una operación
 
-- La identidad y los permisos deben validarse en el servidor y en las políticas RLS; no confiar únicamente en la interfaz.
-- El acceso a copropiedades debe respetar membresías y nivel MFA/AAL2 cuando aplique.
-- Los documentos privados y evidencias nunca deben publicarse como archivos del repositorio o recursos estáticos de la web.
-- Las claves sensibles pertenecen al servidor o al proveedor de secretos, nunca a variables `VITE_*` ni a commits.
-- Las fuentes originales privadas del cliente deben permanecer separadas de los componentes públicos.
+**IAM:** `src/js/ui-iam-live.js` → `src/js/services/iam-client.js` → `functions/api/iam.js` / `supabase/functions/adphor-iam/` → pruebas `tests/qa-iam-api.test.js`.
 
-## Integración y fases
+**PQRS:** `src/js/ui-pqrs.js` → `src/js/services/qa-case-evidence.js` → políticas de almacenamiento y `tests/e2e/pqrs-evidence-persistence.spec.js`.
 
-La base de seguimiento de mantenimiento está descrita en el [README histórico](../README.md). La rama [QA Integral](https://github.com/riano200612-jpg/adphor-platform/tree/qa/integral-claude-reviewed-20261111) añade componentes para reuniones, PQRS, visitas, asistencia virtual, IAM, directorios y herramientas de pruebas. Algunas integraciones con servicios del cliente pueden seguir pendientes o ser simuladas; consulte el mapa de módulos, PR y pruebas antes de considerarlas operativas.
+Esos recorridos son puntos de inspección, no garantía de que el tráfico real recorra todas las piezas en cada despliegue.
 
-## Cómo validar una funcionalidad
+## Fronteras de diseño
 
-Localice primero la pantalla, su servicio, el contrato de datos, las políticas de seguridad y los tests. Después confirme qué tipo de evidencia existe: prueba sintética, prueba aislada, validación autenticada o aceptación del cliente. No mezcle esas categorías.
+- Toda autorización debe comprobarse en servidor y RLS, no solamente ocultando UI.
+- El alcance por copropiedad y el nivel AAL2 se validan según la política de acceso.
+- Las evidencias y los documentos privados no son recursos estáticos del repositorio.
+- Los asistentes no deben ejecutar cambios no autorizados por una persona.
+- Integraciones de calendario, documentos y sistemas originales requieren acceso separado y validación.
 
-Los cambios de arquitectura requieren revisión técnica independiente; este documento no introduce dependencias ni modifica las originales.
+Más detalle: [Seguridad](SEGURIDAD_Y_DATOS.md), [Integraciones](CONTRATOS_E_INTEGRACIONES.md), [Módulos](MAPA_DE_MODULOS.md).

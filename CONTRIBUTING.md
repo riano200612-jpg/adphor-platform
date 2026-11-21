@@ -1,18 +1,20 @@
-# Colaborar en ADPHOR
+# Contribuir a ADPHOR
 
-Este repositorio es público para consulta. **El acceso de lectura no concede permisos de escritura.** Los permisos de colaboración los administra el propietario en GitHub.
+Repositorio público para consulta; los cambios requieren permisos de GitHub y revisión.
 
-## Antes de abrir un cambio
+## Antes de proponer cambios
 
-1. Identifique el módulo y la rama base correcta; no dé por vigente `main` para trabajo de QA Integral.
-2. Revise los PR del área para evitar duplicar correcciones.
-3. Presente el alcance, riesgos, archivos afectados y criterios de aceptación.
-4. Mantenga un cambio lógico acotado por propuesta. Aporte pruebas de regresión cuando cambie comportamiento.
-5. Documente claramente qué está probado localmente y qué depende de validación con servicios autorizados.
+1. Revisar [la orientación para ingeniería](docs/GUIA_PARA_JOSE.md) y [arquitectura](docs/ARQUITECTURA_GENERAL.md).
+2. Seleccionar la rama de referencia y registrar SHA; `main` no refleja necesariamente QA Integral.
+3. Buscar propuestas abiertas del mismo módulo.
+4. Aislar un cambio lógico por PR e incorporar pruebas de regresión cuando corresponda.
+5. No publicar archivos originales privados del cliente, datos personales, secretos ni capturas sensibles.
 
-## Calidad y pruebas locales
+## Estructura de un PR
 
-Para la aplicación JavaScript/Vite, use Node.js 22 o la versión que indique la rama que revise:
+**Objetivo · Base/HEAD SHA · Archivos · Pruebas y entorno · Riesgos · Seguridad/roles/RLS · Limitaciones · Reversión · Aprobación requerida.**
+
+## Revisión local de código en un clon aislado
 
 ```bash
 npm ci
@@ -20,28 +22,13 @@ npm test
 npm run build
 npx playwright install chromium
 npm run test:e2e
-```
-
-Para las pruebas Python cuando corresponda:
-
-```bash
 PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
 ```
 
-Las pruebas adicionales de QA, PostgreSQL y seguridad se describen en sus workflows y guías específicas. **Los comandos anteriores son instrucciones, no pruebas ejecutadas por esta documentación.**
+Antes de ejecutar revise scripts/variables de la rama. Los comandos no sustituyen pruebas autenticadas. Consulte [Inicio rápido](docs/INICIO_RAPIDO_INGENIERIA.md) y [Calidad](docs/CALIDAD_Y_PRUEBAS.md).
 
-## Seguridad y privacidad
+## No realizar por limpieza
 
-- No incluir secretos, tokens, contraseñas, PIN, `.env`, datos personales o expedientes reales en commits/PR.
-- No copiar al repositorio público los originales privados de José o documentos de Drive.
-- Mantener aislados datos de una copropiedad respecto de otra; requerir MFA AAL2 donde corresponda.
-- No activar migraciones, operaciones externas ni cambios productivos como parte de una reorganización.
-- La evidencia simulada debe etiquetarse como simulada; las capturas y logs se revisan antes de publicarse.
+No borrar backups, forzar ramas, cerrar PR, mover el código original, modificar migraciones, secretos ni conectar sistemas externos. Todo cambio de funcionamiento necesita revisión y aprobación separadas de la documentación.
 
-## Pull requests
-
-Cada PR debe indicar: **objetivo**, **rama base**, **archivos modificados**, **pruebas realizadas**, **riesgos de seguridad**, **funciones externas aún no verificadas** y **plan de reversión**. No se fusiona un PR solo porque exista o se haya construido exitosamente.
-
-## Documentación y navegación
-
-Empiece por [la guía del repositorio](docs/GUIA_DEL_REPOSITORIO.md) y [el mapa de módulos](docs/MAPA_DE_MODULOS.md). Los historiales de auditoría se conservan como evidencia de su fecha; no deben confundirse con el estado operativo actual.
+**Definición de evidencia:** código presente ≠ PR integrado ≠ validación aislada ≠ aceptación del cliente.

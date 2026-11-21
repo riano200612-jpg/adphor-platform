@@ -1,14 +1,50 @@
-> **ADPHOR | Guía de navegación para colaboradores e ingeniería — 20 de noviembre de 2026**
->
-> Este repositorio contiene una **base histórica en `main`** y desarrollo posterior en la **rama de integración `qa/integral-claude-reviewed-20261111`**. La portada histórica que aparece a continuación describe la base de mantenimiento: **no representa por sí sola todas las funcionalidades de QA Integral**. El desarrollo continúa y las referencias de GitHub pueden cambiar después de esta fecha.
->
-> **Empieza aquí:** [Mapa del repositorio](docs/GUIA_DEL_REPOSITORIO.md) · [Arquitectura](docs/ARQUITECTURA_GENERAL.md) · [Módulos y evidencia](docs/MAPA_DE_MODULOS.md) · [Estado y fuentes de verdad](docs/ESTADO_DEL_DESARROLLO.md) · [Guía para colaborar](CONTRIBUTING.md).
->
-> **Consulta directamente:** [Rama QA Integral](https://github.com/riano200612-jpg/adphor-platform/tree/qa/integral-claude-reviewed-20261111) · [Pull requests](https://github.com/riano200612-jpg/adphor-platform/pulls) · [Historial de commits](https://github.com/riano200612-jpg/adphor-platform/commits/qa/integral-claude-reviewed-20261111).
->
-> **Importante:** presencia de código o pruebas sintéticas no equivale a operación certificada. Ningún contenido público del repositorio debe incluir credenciales, documentos privados de copropiedades o fuentes originales no autorizadas del cliente.
+# ADPHOR | Plataforma integral
+
+**Centro de navegación para ingeniería y revisión técnica del cliente**
+
+ADPHOR reúne módulos de mantenimiento, tareas, gestión de copropiedades, reuniones y agenda, PQRS, visitas, informes y **Miss ADPHOR**. Este documento permite localizar código, contratos, pruebas y trabajos en curso **sin presentar funciones pendientes como certificadas**.
+
+> **Dos referencias, un solo repositorio.** La rama `main` es la base histórica y rama predeterminada; [QA Integral](https://github.com/riano200612-jpg/adphor-platform/tree/qa/integral-claude-reviewed-20261111) contiene el desarrollo funcional más reciente consultado. Las ramas y los PR evolucionan mientras el equipo continúa trabajando. No confunda rama con entorno ni presencia de código con funcionamiento certificado.
+
+## Guía de navegación
+
+| Pregunta | Ir a |
+| --- | --- |
+| ¿Qué debería revisar primero José? | [Guía de cinco minutos](docs/GUIA_PARA_JOSE.md) |
+| ¿Dónde está cada archivo? | [Mapa del repositorio](docs/GUIA_DEL_REPOSITORIO.md) |
+| ¿Cuál es la arquitectura? | [Arquitectura técnica](docs/ARQUITECTURA_GENERAL.md) |
+| ¿Dónde está cada módulo y cómo se prueba? | [Matriz de módulos](docs/MAPA_DE_MODULOS.md) |
+| ¿Cómo hago una revisión local sin tocar datos reales? | [Inicio rápido](docs/INICIO_RAPIDO_INGENIERIA.md) |
+| ¿Qué pruebas existen y qué demuestran? | [Calidad y evidencias](docs/CALIDAD_Y_PRUEBAS.md) |
+| ¿Cómo se protegen usuarios y documentos? | [Seguridad y privacidad](docs/SEGURIDAD_Y_DATOS.md) |
+| ¿Cómo están conectados los sistemas? | [Contratos e integraciones](docs/CONTRATOS_E_INTEGRACIONES.md) |
+| ¿Qué está propuesto, integrado o pendiente? | [Estado del desarrollo](docs/ESTADO_DEL_DESARROLLO.md) |
+| ¿Cómo se registra una revisión? | [Trazabilidad](docs/TRAZABILIDAD_DE_CAMBIOS.md) |
+| ¿Cómo puede colaborar un ingeniero? | [CONTRIBUTING](CONTRIBUTING.md) |
+| ¿Qué hacer ante una vulnerabilidad? | [SECURITY](SECURITY.md) |
+| Índice completo | [Documentación](docs/README.md) |
+
+## Vista técnica
+
+```text
+src/js/       Interfaz y servicios frontend
+backend/      Núcleo Python y contratos de asistentes
+functions/    Funciones del lado servidor (QA)
+supabase/     SQL, funciones, datos y políticas
+tests/        Pruebas JavaScript y E2E
+qa/           Contratos y evidencias de calidad
+docs/         Arquitectura, índices e informes históricos
+.github/      CI y controles automatizados
+```
+
+**Explorar el código:** [QA Integral](https://github.com/riano200612-jpg/adphor-platform/tree/qa/integral-claude-reviewed-20261111) · [PR abiertos](https://github.com/riano200612-jpg/adphor-platform/pulls) · [Historial QA](https://github.com/riano200612-jpg/adphor-platform/commits/qa/integral-claude-reviewed-20261111).
+
+**Protección de originales:** no publicar archivos privados de José, documentos de Drive, datos personales, credenciales ni expedientes. La documentación no controla ni certifica despliegues.
 
 ---
+
+> **Archivo histórico preservado:** a continuación se mantiene íntegro el README de la etapa de mantenimiento, tal como estaba, para conservar su contexto. Las guías anteriores describen la navegación del proyecto integral.
+
 # ADPHOR · Seguimiento de mantenimiento
 
 Aplicación web adaptable para registrar novedades por copropiedad, asignar responsables, documentar la intervención y verificar el cierre. La demostración pública usa ocho copropiedades completamente ficticias. Las copropiedades reales se configuran en la base privada.
