@@ -91,3 +91,14 @@ test('la bandeja sigue disponible después de 51 aportes propios',async()=>{
  const result=await createQaMissDocumentIntake(client).listOwn(tenant);
  assert.deepEqual(result,rows.slice(0,50));
 });
+
+test('document intake rejects an Excel workbook named as Word before upload',async()=>{
+ const {syntheticVisitOfficeBytes}=await import('../src/js/services/qa-visit-synthetic-office.js');
+ const workbook=syntheticVisitOfficeBytes('xlsx');
+ const m=mock();
+ await assert.rejects(createQaMissDocumentIntake(m.client).addLocalFile(tenant,{
+  name:'Archivo.docx',type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  size:workbook.byteLength,arrayBuffer:async()=>Uint8Array.from(workbook).buffer
+ }),/Office|OOXML|documento/i);
+ assert.equal(m.calls.uploads,0);
+});

@@ -1,3 +1,4 @@
+import {validateQaVisitOfficePackage} from './qa-visit-ooxml-inspector.js';
 // Miss ADPHOR QA Integral: private, per-property intake into quarantine only.
 // Google Drive URLs are references, never proof that the app can download the file.
 // No AI ingestion, report publishing, automatic permissions or Google writes.
@@ -56,7 +57,7 @@ async function digestFile(file,extension) {
   ? bytes.length>=5 && [37,80,68,70,45].every((b,i)=>bytes[i]===b)
   : bytes.length>=4 && [80,75,3,4].every((b,i)=>bytes[i]===b);
  if(!signature)throw Error('El encabezado del archivo no coincide con su formato.');
- // Office ZIP structure and malware scanning are separate mandatory review gates.
+ if(!isPdf)await validateQaVisitOfficePackage(bytes,extension);
  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
  return Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
 }
