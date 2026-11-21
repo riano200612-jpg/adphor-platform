@@ -29,6 +29,7 @@ import { mountClientSourceReview } from './ui-client-source-review.js';
 import { portoEnabled } from './services/porto.js';
 import { monthlyReportView, monthlyCsvRows } from './ui-reports.js';
 import { mountAgentHistory } from './ui-agent-history.js';
+import {mountMissDocumentIntake} from './ui-miss-document-intake.js';
 import {mountMissQaWeekly} from './ui-miss-qa-weekly.js';
 import {mountQaDiagnosticAgents} from './ui-qa-agent-diagnostics.js';
 import { mountTenantConsultation } from './ui-tenant-consultation.js';
@@ -201,6 +202,7 @@ function shell() {
   const nav = [['dashboard','chart-simple','Resumen'],['unified','grip','Centro integrado'],['properties','building','Copropiedades'],['tickets','clipboard-list','Bitácora'],['recorridos','route','Recorridos'],['mine','list-check','Mis tareas'],['areas','layer-group','Áreas'],['reports','file-lines','Informes'],['agent-history','clock-rotate-left','Historial del enjambre']];
   // Meeting assessment is read-only in cloud mode; expose it without enabling Porto transactions.
   nav.splice(1,0,['meetings','calendar','Reuniones'],['agenda','calendar-days','Agenda'],['visits','route','Visitas'],['pqrs','inbox','PQRS']);
+  if(repo.missDocumentsEnabled)nav.push(['miss-documents','folder-open','Documentos para Miss ADPHOR']);
   if(repo.staffDirectoryEnabled)nav.splice(3,0,['staff','users','Equipo administrativo'],['corporate-staff','people-group','Equipo corporativo']);
   if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['qa-source','users','Auditoría histórica']);
   if (repo.mode === 'cloud' && role()==='admin' && state.corporateAdmin) nav.push(['access-audit','user-shield','Usuarios y permisos']);
@@ -218,8 +220,12 @@ function shell() {
     context:()=>({
       project:project(),projectId:state.projectId,tickets:state.tickets,
       userId:state.user?.id,role:role(),mode:repo.mode,
-      page:state.page,availablePages:nav.map(([id])=>id)
+      page:state.page,availablePages:nav.map(([id])=>id),
+      documentsEnabled:repo.mode==='cloud'&&repo.missDocumentsEnabled===true
     }),
+    documentsEnabled:repo.mode==='cloud'&&repo.missDocumentsEnabled===true,
+    uploadDocument:repo.missDocumentsEnabled===true?(id,file)=>repo.submitMissLocalDocument(id,file):undefined,
+    submitDriveLink:repo.missDocumentsEnabled===true?(id,url,name)=>repo.submitMissDriveLink(id,url,name):undefined,
     loadMeetings:repo.mode==='cloud' && typeof repo.listVerifiedQaMeetings==='function'
       ? id=>repo.listVerifiedQaMeetings(id) : undefined,
     loadPqrs:repo.mode==='cloud' && repo.porto ? id=>repo.porto.listAttention(id) : undefined,
@@ -228,7 +234,29 @@ function shell() {
     loadCalendarBusy:repo.mode==='cloud' && repo.calendarAvailabilityConfigured &&
       typeof repo.meetingAvailability==='function'
       ? (id,start,end)=>repo.meetingAvailability(id,start,end) : undefined,
-    onNavigate(page){if(!nav.some(([id])=>id===page))return;state.page=page;state.filters={};shell();$('main')?.focus();}
+    onNavigate(page,task){
+      if(!nav.some(([id])=>id===page))return;
+      const routes={pqrs:'pqrs',visit:'visits',incident:'recorridos',
+        meeting:'meetings',weekly:'reports',document:'miss-documents'};
+      if(task && routes[task]!==page)return;
+      state.page=page;state.filters={};shell();
+      // Only reveal an existing authorized form. Never submit a form, make a
+      // reservation, emit a notification or bypass its normal permission checks.
+      const content=$('page-content');
+      if(task==='incident'){
+        const newCaseButton=content?.querySelector('button[data-action="new"]');
+        if(newCaseButton && canWrite(role()))newCaseButton.click();
+      }else{
+        const focusTargets={pqrs:'#pqrs-create-form [name="subject"]',
+          visit:'.visit-editor [name="kind"]',
+          meeting:'.meeting-page input, .meeting-page select',
+          weekly:'.miss-qa-weekly button, .miss-qa-weekly [name]',
+          document:'.qa-miss-document-intake input[type="file"]'};
+        const field=focusTargets[task]?content?.querySelector(focusTargets[task]):null;
+        if(field){field.scrollIntoView?.({block:'nearest'});field.focus?.();}
+        else $('main')?.focus();
+      }
+    }
   });
 }
 function heading(title, subtitle, actions = '') { return `<div class="page-heading"><div><p class="eyebrow">${esc(project()?.name || 'ADPHOR')}</p><h1>${title}</h1><p class="muted">${subtitle}</p></div><div class="heading-actions">${actions}</div></div>`; }
@@ -284,6 +312,10 @@ function renderPage() {
   if(state.page==='unified') { mountUnifiedHub($('page-content'), {project:project(),tickets:state.tickets,members:team(),mode:repo.mode,portoEnabled:portoVisible(),role:role()});return; }
   if(state.page==='properties'){mountPropertyCatalog($('page-content'),{projects:state.projects,tickets:state.tickets,members:state.members,photoUrlForProject:repo.mode==='cloud'?(id,filename)=>repo.propertyPhotoUrl(id,filename):undefined,onSelect(id){if(!state.projects.some(p=>p.id===id))return;state.projectId=id;state.page='dashboard';state.filters={};state.sprintOffset=0;state.sprintScope='mine';monthlyResult=null;monthlyKey='';projectPreference(sessionStorage,state.user?.id,id);shell();}});return;}
   if (!project()) { $('page-content').innerHTML = empty('No tienes copropiedades asignadas. Contacta al administrador.'); return; }
+  if(state.page==='miss-documents'){
+    if(!repo.missDocumentsEnabled){state.page='dashboard';renderPage();return;}
+    mountMissDocumentIntake($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
+  }
   if(state.page==='task-catalog'){
     if(!repo.qaTaskCatalogEnabled||!isManager(role())){state.page='mine';renderPage();return;}
     mountQaTaskCatalog($('page-content'),{repo,projectId:state.projectId,projectName:project().name,userId:state.user.id});return;

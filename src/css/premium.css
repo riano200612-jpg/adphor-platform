@@ -310,3 +310,45 @@
 .access-security-note{background:#f7f8f5;border-left:3px solid #b69b36;padding:17px 20px;border-radius:10px;line-height:1.65;color:#435969}
 @media(max-width:960px){.access-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.access-hero{padding:20px;flex-direction:column}.access-metrics,.access-actions{grid-template-columns:1fr}.access-console{gap:18px}.access-action{padding:18px}}
+
+/* Miss ADPHOR: compact attachment composer (enabled only in isolated QA). */
+.miss-chat-documents{border:1px solid #dbe3ea;border-radius:12px;background:#f7fafc;padding:8px 10px;max-height:215px;overflow-y:auto;flex-shrink:0}
+.miss-chat-documents summary{cursor:pointer;color:#264b6b;font-size:13px;font-weight:700;list-style-position:inside}
+.miss-chat-documents-note{font-size:12px;line-height:1.45;color:#506579;margin:8px 0}
+.miss-chat-document-form{display:grid;gap:6px;padding:8px 0;border-top:1px solid #dbe3ea;font-size:12px}
+.miss-chat-document-form label{display:grid;gap:4px;font-weight:600}
+.miss-chat-document-form input{display:block;box-sizing:border-box;width:100%;min-width:0;font-size:12px}
+.miss-chat-document-form button{border:0;border-radius:8px;background:#264b6b;color:#fff;cursor:pointer;padding:9px;font-weight:650}
+.miss-chat-document-form button:disabled{opacity:.65;cursor:wait}
+.miss-chat-document-form p[role=status]{margin:0;font-size:12px;overflow-wrap:anywhere}
+
+/* Miss ADPHOR QA: compact, accessible action hub and long-question disclosure. */
+.miss-task-hub{border:1px solid #dae4ed;border-radius:13px;padding:10px;background:#f6f9fb;flex:0 0 auto}
+.miss-task-hub h3{font-size:14px;color:#244b68;margin:0 0 5px}
+.miss-task-help{font-size:11px;line-height:1.45;margin:0 0 9px;color:#51677b}
+.miss-task-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.miss-task-button{border:1px solid #b89f31;border-radius:9px;padding:9px 7px;background:#fff;color:#21435f;font-weight:650;font-size:12px;line-height:1.3;text-align:center;cursor:pointer;min-height:42px}
+.miss-task-button:focus-visible,.miss-chat-more summary:focus-visible,.miss-chat-documents summary:focus-visible{outline:3px solid #bc9a2b;outline-offset:2px}
+.miss-task-button:hover{background:#f5edce}
+.miss-chat-more{border:1px solid #dce4e9;border-radius:9px;flex:0 0 auto;padding:6px 8px}
+.miss-chat-more summary{font-size:12px;font-weight:700;color:#254c6b;cursor:pointer}
+.miss-chat-more .miss-chat-quick{margin-top:9px;max-height:135px;overflow-y:auto}
+.miss-chat-panel{min-width:0;overflow-y:auto;overscroll-behavior:contain}
+.miss-chat-panel .miss-chat-form,.miss-chat-panel .miss-task-hub,.miss-chat-panel .miss-chat-more{flex-shrink:0}
+@media(max-width:600px){
+ #miss-adphor-chat-root{right:8px;left:8px;bottom:max(8px,env(safe-area-inset-bottom,8px))}
+ .miss-chat{width:100%;align-items:stretch}
+ .miss-chat-toggle{align-self:flex-end;max-width:100%;box-sizing:border-box;justify-content:center}
+ .miss-chat-panel{box-sizing:border-box;width:100%;max-height:min(77dvh,calc(100dvh - 100px));padding:12px;gap:8px;border-radius:16px}
+ .miss-chat-messages{min-height:40px;max-height:23dvh;flex:0 1 auto}
+ .miss-chat-form{gap:6px}
+ .miss-task-grid{gap:6px}
+ .miss-task-button{font-size:12px;padding:8px 5px}
+ .miss-chat-quick button{font-size:12px;padding:7px 8px}
+ .miss-chat-documents{max-height:36dvh}
+}
+@media(max-width:360px){
+ .miss-chat-toggle{padding:6px 9px;font-size:12px}
+ .miss-chat-panel h2{font-size:18px}
+ .miss-task-button{font-size:11px}
+}

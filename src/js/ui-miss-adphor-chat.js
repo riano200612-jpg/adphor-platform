@@ -1,4 +1,7 @@
 import {bogotaAgendaDate} from './services/verified-agenda.js';
+import {mountMissChatDocumentComposer} from './ui-miss-chat-document-composer.js';
+import {mountMissTaskHub} from './ui-miss-task-hub.js';
+import {missTaskIntent,missTaskPlan} from './services/miss-task-actions.js';
 import {guideMissJourney,isMissJourneyRequest} from './services/miss-journey-guardian.js';
 import {validateCalendarBusyIntervals,calendarInstant} from './services/calendar-availability.js';
 import {isMissOperationalQuestion,summarizeMissOperations,describeMissOperations} from './services/miss-operations-summary.js';
@@ -26,6 +29,16 @@ export function answerMissAdphor(question, context={}) {
  const name=String(project.name||'la copropiedad');
  const prefix=mode==='demo'?'Estos son datos demostrativos del navegador. ':'Esta respuesta utiliza únicamente los registros actualmente cargados para tu copropiedad. ';
  const go=(page,text)=>({text,page:availablePages.includes(page)?page:null});
+ // Task intents return a review-first form, never a backend mutation.
+ // Keep the existing read-only questions and safety refusals unchanged.
+ if(mode==='cloud'&&typeof context.userId==='string'&&context.userId){
+  const task=missTaskIntent(question);
+  if(task){
+   const plan=missTaskPlan(context,task,{documentsEnabled:context.documentsEnabled===true});
+   return plan.ok ? {text:plan.message,page:plan.page,task:plan.id}
+    : {text:plan.message,page:null};
+  }
+ }
  if(/^(?:como uso este modulo|ayuda de este modulo|que puedo hacer aqui)$/.test(q.replace(/[¿?]/g,'').trim())){
   const guidance=availablePages.includes(context.page) && Object.hasOwn(moduleGuidance,context.page)
    ? moduleGuidance[context.page] : 'Elige un módulo visible en la navegación para consultar su guía.';
@@ -75,6 +88,8 @@ export function answerMissAdphor(question, context={}) {
 
   if(/centro integrado|centro de operaciones/.test(q))
     return go('unified','Te acompaño al Centro integrado de ADPHOR.');
+ if(/(?:drive|subir (?:un )?(?:archivo|documento)|cargar (?:un )?(?:archivo|documento)|biblioteca documental)/.test(q))
+  return go('miss-documents','En «Documentos para Miss ADPHOR» puedes aportar referencias de Drive o copias de PDF, Word y Excel cuando el módulo QA esté habilitado para tu sesión. Por seguridad, quedan en cuarentena; todavía no generan respuestas ni informes con IA.');
  if(/pqrs|peticion|reclamo|queja|sugerencia/.test(q))return go('pqrs','Abre PQRS para registrar o consultar solicitudes. Los archivos solo se consideran adjuntos cuando Storage privado confirma su guardado; una selección de archivos no acredita una carga.');
  if(/\bagenda\b/.test(q)&&availablePages.includes('agenda'))return go('agenda','Abre Agenda para consultar las reuniones verificadas de tu copropiedad. La importación es puntual; no confirma cambios recientes del calendario.');
  if(/reunion|calendario|agenda|meet/.test(q))return go('meetings','Abre Reuniones para ver la agenda disponible. Las reuniones importadas no son una sincronización en vivo; la consulta de disponibilidad corporativa requiere autorización y MFA.');
@@ -159,10 +174,15 @@ export function summarizePqrsAttention(rows,projectId,now=Date.now()){
  const opened=open.filter(row=>row.status==='open').length;
  return {open:opened,inProgress:open.length-opened,overdue:overdue.length,overdueIds:overdue.map(row=>row.id)};
 }
-export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings,loadVisits,loadCalendarBusy}){
+export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetings,loadVisits,loadCalendarBusy,documentsEnabled=false,uploadDocument,submitDriveLink}){
  const img='/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp';
- host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Asistencia contextual de lectura · No ejecuta acciones ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="Guíame paso a paso">Guía paso a paso</button><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="PQRS pendientes">PQRS en gestión</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Visitas de hoy">Visitas hoy</button><button type="button" data-miss-question="Agenda operativa de hoy">Agenda operativa hoy</button><button type="button" data-miss-question="Próximas visitas">Próximas visitas</button><button type="button" data-miss-question="Próximas reuniones">Próximas reuniones</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="Informe gerencial semanal">Informe semanal</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button><button type="button" data-miss-question="¿Qué puede hacer Miss ADPHOR?">Ecosistema Miss</button><button type="button" data-miss-question="Se dañó el ascensor">Reportar avería</button></p></section></aside>';
+ host.innerHTML='<aside class="miss-chat" aria-label="Asistente Miss ADPHOR"><button type="button" class="miss-chat-toggle" aria-expanded="false"><img src="'+img+'" alt="" aria-hidden="true"> <span>Miss ADPHOR · Asistente</span></button><section class="miss-chat-panel" hidden><h2>Miss ADPHOR</h2><p class="miss-chat-disclaimer">Consultas y preparación de trámites con revisión humana · No aprueba, envía ni entrena modelos.</p><div class="miss-chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div><form class="miss-chat-form"><label for="miss-chat-question">¿En qué puedo ayudarte?</label><input id="miss-chat-question" maxlength="350" autocomplete="off" placeholder="Ej. ¿Cuántos casos pendientes hay?" required><button type="submit">Consultar</button></form><p class="miss-chat-quick"><button type="button" data-miss-question="Guíame paso a paso">Guía paso a paso</button><button type="button" data-miss-question="¿Cómo uso este módulo?">Ayuda de este módulo</button><button type="button" data-miss-question="¿Cuántos casos pendientes hay?">Pendientes</button><button type="button" data-miss-question="¿Qué asuntos importantes requieren mi atención hoy?">Atención hoy</button><button type="button" data-miss-question="¿Cómo consulto PQRS?">PQRS</button><button type="button" data-miss-question="PQRS pendientes">PQRS en gestión</button><button type="button" data-miss-question="¿Cuántas visitas tiene esta copropiedad?">Visitas reales</button><button type="button" data-miss-question="Visitas de hoy">Visitas hoy</button><button type="button" data-miss-question="Agenda operativa de hoy">Agenda operativa hoy</button><button type="button" data-miss-question="Próximas visitas">Próximas visitas</button><button type="button" data-miss-question="Próximas reuniones">Próximas reuniones</button><button type="button" data-miss-question="Disponibilidad corporativa">Disponibilidad corporativa</button><button type="button" data-miss-question="Panorama operativo">Panorama integral</button><button type="button" data-miss-question="Informe gerencial semanal">Informe semanal</button><button type="button" data-miss-question="¿Qué hace el enjambre?">Enjambre</button><button type="button" data-miss-question="¿Qué puede hacer Miss ADPHOR?">Ecosistema Miss</button><button type="button" data-miss-question="Se dañó el ascensor">Reportar avería</button></p></section></aside>';
  const toggle=host.querySelector('.miss-chat-toggle'),panel=host.querySelector('.miss-chat-panel'),log=host.querySelector('.miss-chat-messages'),form=host.querySelector('form'),input=form.querySelector('input');
+ const composer=documentsEnabled?mountMissChatDocumentComposer(panel,{context,uploadDocument,submitDriveLink}):null;
+ mountMissTaskHub(panel,{
+  context,documentsEnabled,composer,onNavigate,
+  onInfo:message=>append(message,'assistant')
+ });
  let latestQuestion=0;
  toggle.addEventListener('click',()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)input.focus();});
  function append(text,who){const p=document.createElement('p');p.className='miss-chat-msg '+who;p.textContent=text;log.append(p);log.scrollTop=log.scrollHeight;}
@@ -325,7 +345,7 @@ export function mountMissAdphorChat(host,{context,onNavigate,loadPqrs,loadMeetin
      latest.role!==current.role||latest.mode!==current.mode)return;
   append(result.text,'assistant');
   if(result.page && current.availablePages.includes(result.page)){
-   const button=document.createElement('button');button.type='button';button.textContent='Abrir '+result.page;button.className='miss-chat-jump';button.onclick=()=>onNavigate(result.page);log.append(button);
+   const button=document.createElement('button');button.type='button';button.textContent=result.task?'Preparar en '+result.page:'Abrir '+result.page;button.className='miss-chat-jump';button.onclick=()=>onNavigate(result.page,result.task);log.append(button);
   }
  }
  form.addEventListener('submit',event=>{event.preventDefault();ask(input.value);});

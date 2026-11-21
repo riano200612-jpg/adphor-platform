@@ -22,6 +22,7 @@ import {validateTaskCandidate,validateQaCandidateRows} from './task-catalog.js';
 import { agentApiOrigin, fetchAgentRuns, fetchAgentReadiness, agentRuleRequest } from './agent-api.js';
 import {qaAgentRegistryReadiness,qaAgentRuns,qaAgentRunDetail} from './qa-agent-registry.js';
 import {qaMissWeeklyReader} from './qa-miss-weekly-report.js';
+import {createQaMissDocumentIntake} from './qa-miss-drive-intake.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
 const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
@@ -71,6 +72,8 @@ export function createCloudRepository(url, key) {
     allowDemoAlias:import.meta.env.VITE_ALLOW_DEMO_LOGIN_ALIAS==='true',
     allowSessionResume,
     allowEnrollment:authPolicy.isolatedQa || portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)});
+  const missDocuments=authPolicy.isolatedQa && import.meta.env.VITE_QA_MISS_DOCUMENT_INTAKE_ENABLED==='true'
+    ?createQaMissDocumentIntake(client,{url}):null;
   const staff=authPolicy.isolatedQa?createStaffDirectory(client):null;
   const corporateStaff=authPolicy.isolatedQa?createCorporateStaff(client):null;
   const qaCalendarEdgeEnabled=authPolicy.isolatedQa && import.meta.env.VITE_QA_CALENDAR_EDGE_ENABLED==='true';
@@ -90,6 +93,10 @@ export function createCloudRepository(url, key) {
     accountAvatar,
     iam:authPolicy.isolatedQa?createIamClient(client.auth):null,
     qaTaskCatalogEnabled,
+    missDocumentsEnabled:Boolean(missDocuments),
+    async listMissDocuments(projectId){if(!missDocuments||!user)throw Error('Bandeja documental QA no habilitada.');return missDocuments.listOwn(projectId);},
+    async submitMissDriveLink(projectId,link,name){if(!missDocuments||!user)throw Error('Recepción documental QA no habilitada.');return missDocuments.addDriveLink(projectId,link,name);},
+    async submitMissLocalDocument(projectId,file){if(!missDocuments||!user)throw Error('Recepción documental QA no habilitada.');return missDocuments.addLocalFile(projectId,file);},
     missWeeklyPreview:qaMissWeeklyReader(client,{url,hostname:globalThis.location?.hostname,getActor:()=>user}),
     async listQaTaskCandidates(projectId){
       if(!qaTaskCatalogEnabled||!user)throw Error('Catálogo de propuestas requiere una sesión QA autorizada.');
