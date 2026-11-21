@@ -16,6 +16,7 @@ import {createClient} from '@supabase/supabase-js';
 import {loginAvatarMarkup} from './services/branding.js';
 import {ADPHOR_DEPLOY_LABEL} from './services/deployment-version.js';
 import {mountMissAdphorChat} from './ui-miss-adphor-chat.js';
+import {missTaskPlan} from './services/miss-task-actions.js';
 import {mountMissAdphorWelcome,shouldOfferMissWelcome} from './ui-miss-adphor-welcome.js';
 import {MISS_ADPHOR_GUIDANCE} from './services/miss-adphor-guidance.js';
 import {listDemoMeetings} from './services/demo-calendar.js';
@@ -228,7 +229,46 @@ function shell() {
     loadCalendarBusy:repo.mode==='cloud' && repo.calendarAvailabilityConfigured &&
       typeof repo.meetingAvailability==='function'
       ? (id,start,end)=>repo.meetingAvailability(id,start,end) : undefined,
-    onNavigate(page){if(!nav.some(([id])=>id===page))return;state.page=page;state.filters={};shell();$('main')?.focus();}
+    onNavigate(page,task,draft){
+      if(!nav.some(([id])=>id===page))return;
+      const routes={pqrs:'pqrs',visit:'visits',incident:'recorridos',
+        meeting:'meetings',weekly:'reports'};
+      if(task){
+        if(routes[task]!==page)return;
+        const authorized=missTaskPlan({
+          mode:repo.mode,userId:state.user?.id,projectId:state.projectId,
+          project:project(),role:role(),availablePages:nav.map(([id])=>id)
+        },task);
+        if(!authorized.ok)return;
+      }
+      state.page=page;state.filters={};shell();
+      // Navigation is user-initiated. No submission, booking or approval.
+      const content=$('page-content');
+      if(task==='incident'){
+        const button=content?.querySelector('button[data-action="new"]');
+        if(button && canWrite(role()))button.click();
+      }else if(task==='pqrs'){
+        const field=content?.querySelector('#pqrs-create-form [name="subject"]');
+        const desc=content?.querySelector('#pqrs-create-form [name="description"]');
+        if(field && desc && draft?.projectId===state.projectId &&
+           draft?.userId===state.user?.id && draft?.role===role() &&
+           typeof draft.subject==='string' && typeof draft.description==='string'){
+          field.value=draft.subject.slice(0,120);
+          desc.value=draft.description.slice(0,240);
+          field.dispatchEvent(new Event('input',{bubbles:true}));
+          desc.dispatchEvent(new Event('input',{bubbles:true}));
+        }
+        field?.scrollIntoView?.({block:'nearest'});
+        (field||$('main'))?.focus?.();
+      }else{
+        const focusTargets={visit:'.visit-editor [name="kind"]',
+          meeting:'.meeting-page input, .meeting-page select',
+          weekly:'.miss-qa-weekly button, .miss-qa-weekly [name]'};
+        const field=focusTargets[task]?content?.querySelector(focusTargets[task]):null;
+        field?.scrollIntoView?.({block:'nearest'});
+        (field||$('main'))?.focus?.();
+      }
+    }
   });
 }
 function heading(title, subtitle, actions = '') { return `<div class="page-heading"><div><p class="eyebrow">${esc(project()?.name || 'ADPHOR')}</p><h1>${title}</h1><p class="muted">${subtitle}</p></div><div class="heading-actions">${actions}</div></div>`; }
