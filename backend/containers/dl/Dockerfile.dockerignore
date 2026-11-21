@@ -1,0 +1,6 @@
+**
+!backend/
+!backend/requirements-dl.txt
+!backend/src/
+!backend/src/adphor_ai/
+!backend/src/adphor_ai/*.py

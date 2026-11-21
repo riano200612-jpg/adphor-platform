@@ -1,0 +1,2 @@
+# Experimental offline image validation; no inference provider.
+Pillow==13.0.0
