@@ -1,0 +1,15 @@
+.porto-calendar{font-family:system-ui,sans-serif;color:#113744;background:#f6fafb;border-radius:1.25rem;padding:1.5rem}
+.porto-calendar__header{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.porto-calendar__eyebrow{color:#157888;font-size:.85rem;font-weight:700}
+.porto-calendar button{background:#155a6b;color:white;border:0;border-radius:.6rem;padding:.65rem 1rem;cursor:pointer}
+.porto-calendar button:focus-visible{outline:3px solid #e4ad32;outline-offset:2px}
+.porto-calendar__notice{border-left:4px solid #e4ad32;padding:.6rem;background:white}
+.porto-calendar__grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(14rem,1fr);gap:1.5rem}
+.porto-calendar__list{list-style:none;padding:0}
+.porto-calendar__meeting{display:flex;justify-content:space-between;align-items:center;gap:.8rem;background:white;border:1px solid #d9e7e9;border-radius:.8rem;margin:.75rem 0;padding:1rem}
+.porto-calendar__meeting p{margin:.25rem 0;color:#49616a}
+.porto-calendar__actions{display:flex;gap:.4rem;flex-wrap:wrap}
+.porto-calendar__priority{display:flex;justify-content:space-between;gap:.5rem;margin:.5rem 0;padding:1rem;border-radius:.7rem;background:white;border-left:5px solid #9da9af}
+.porto-calendar__priority--alto{border-color:#c64c4c}.porto-calendar__priority--medio{border-color:#d99b26}.porto-calendar__priority--bajo{border-color:#439f8c}
+@media(max-width:740px){.porto-calendar__grid{grid-template-columns:1fr}.porto-calendar__meeting{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.porto-calendar *{animation:none!important;transition:none!important}}

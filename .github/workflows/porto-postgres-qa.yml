@@ -1,0 +1,35 @@
+name: Porto QA PostgreSQL integration
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'tests/porto-**'
+      - '.github/workflows/porto-postgres-qa.yml'
+      - 'qa/postgres/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-fixture:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: porto_test_only
+          POSTGRES_DB: porto_qa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d porto_qa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Validate isolated meeting exclusion rule
+        env:
+          PGPASSWORD: porto_test_only
+        run: psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d porto_qa -f qa/postgres/schedule-fixture.sql
