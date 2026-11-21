@@ -1,3 +1,14 @@
+> **ADPHOR | Guía de navegación para colaboradores e ingeniería — 20 de noviembre de 2026**
+>
+> Este repositorio contiene una **base histórica en `main`** y desarrollo posterior en la **rama de integración `qa/integral-claude-reviewed-20261111`**. La portada histórica que aparece a continuación describe la base de mantenimiento: **no representa por sí sola todas las funcionalidades de QA Integral**. El desarrollo continúa y las referencias de GitHub pueden cambiar después de esta fecha.
+>
+> **Empieza aquí:** [Mapa del repositorio](docs/GUIA_DEL_REPOSITORIO.md) · [Arquitectura](docs/ARQUITECTURA_GENERAL.md) · [Módulos y evidencia](docs/MAPA_DE_MODULOS.md) · [Estado y fuentes de verdad](docs/ESTADO_DEL_DESARROLLO.md) · [Guía para colaborar](CONTRIBUTING.md).
+>
+> **Consulta directamente:** [Rama QA Integral](https://github.com/riano200612-jpg/adphor-platform/tree/qa/integral-claude-reviewed-20261111) · [Pull requests](https://github.com/riano200612-jpg/adphor-platform/pulls) · [Historial de commits](https://github.com/riano200612-jpg/adphor-platform/commits/qa/integral-claude-reviewed-20261111).
+>
+> **Importante:** presencia de código o pruebas sintéticas no equivale a operación certificada. Ningún contenido público del repositorio debe incluir credenciales, documentos privados de copropiedades o fuentes originales no autorizadas del cliente.
+
+---
 # ADPHOR · Seguimiento de mantenimiento
 
 Aplicación web adaptable para registrar novedades por copropiedad, asignar responsables, documentar la intervención y verificar el cierre. La demostración pública usa ocho copropiedades completamente ficticias. Las copropiedades reales se configuran en la base privada.
