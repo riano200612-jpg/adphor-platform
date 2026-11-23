@@ -98,7 +98,7 @@ test('Supabase authorization verifies the bearer before using its AAL2 claim and
   assert.equal(rest.searchParams.get('project_id'), 'eq.pilot');
   assert.equal(rest.searchParams.get('user_id'), 'eq.qa-user');
   assert.equal(options.headers.Authorization, 'Bearer ' + bearer);
-  assert.equal(options.redirect, 'error');
+  assert.equal(options.redirect, 'manual');
   membership = [{role: 'admin'}, {role: 'coordinator'}];
   assert.equal(await adapter.lookupRole(input), null);
   authStatus = 401;
