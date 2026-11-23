@@ -4,7 +4,8 @@
     "/agent-readiness",
     "/agent-runs",
     "/agent-runs/*",
-    "/api/iam"
+    "/api/iam",
+    "/api/integrations/google-calendar/oauth/*"
   ],
   "exclude": []
 }

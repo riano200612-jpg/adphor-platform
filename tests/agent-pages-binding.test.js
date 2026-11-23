@@ -125,9 +125,9 @@ test('upstream errors, redirects, invalid JSON and excessive bodies remain opaqu
  const huge=make(undefined,{body:{...READY,payload:'x'.repeat(260000)}});
  assert.equal((await run(huge.context)).status,502);
 });
-test('routes manifest restricts Pages Functions invocation to agent endpoints',()=>{
+test('routes manifest restricts Pages Functions invocation to approved endpoints',()=>{
  const m=JSON.parse(readFileSync(new URL('../public/_routes.json',import.meta.url),'utf8'));
  assert.equal(m.version,1);
- assert.deepEqual(m.include,['/agent-readiness','/agent-runs','/agent-runs/*','/api/iam']);
+ assert.deepEqual(m.include,['/agent-readiness','/agent-runs','/agent-runs/*','/api/iam','/api/integrations/google-calendar/oauth/*']);
  assert.deepEqual(m.exclude,[]);
 });
