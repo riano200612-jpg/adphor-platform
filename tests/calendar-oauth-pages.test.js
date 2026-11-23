@@ -59,3 +59,42 @@ test('Pages pins the QA database and TLS, and releases the handle on failed Acce
   assert.equal(opened, 1);
   assert.equal(closed, 1);
 });
+
+test('the OAuth pooler probe requires Access, AAL2 and current scope before a metadata-only query', async () => {
+  const {probeCalendarDatabase} = await import('../backend/src/calendar-oauth/pages-runtime.mjs');
+  const path = '/api/integrations/google-calendar/oauth/readiness?project=pilot';
+  const request = new Request(QA_URL + path, {method:'POST',headers:{
+    Origin:QA_URL, Authorization:'Bearer fixture',
+  }});
+  let calls=0;
+  const checks = {dedicated:true,rls:true,can_store:true,cannot_read:true,browser_denied:true};
+  const dependencies = {
+    verifyAccess:async()=>({subject:'access-owner'}),
+    verifySession:async()=>({userId:'user',aal:'aal2'}),
+    lookupRole:async({projectId})=>projectId==='pilot'?'coordinator':null,
+    connect:()=>({unsafe:async sql=>{
+      calls++;
+      assert.match(sql,/^SELECT/);
+      assert.doesNotMatch(sql,/\b(?:INSERT INTO|DELETE FROM|UPDATE)\b/);
+      return [checks];
+    }}),
+  };
+  for(const overrides of [
+    {verifyAccess:async()=>null},
+    {verifySession:async()=>({userId:'user',aal:'aal1'})},
+    {lookupRole:async()=>null},
+  ]) assert.equal((await probeCalendarDatabase(request.clone(), {...dependencies,...overrides})).status,403);
+  assert.equal(calls,0);
+  assert.equal((await probeCalendarDatabase(request.clone(),dependencies)).status,204);
+  checks.cannot_read=false;
+  assert.equal((await probeCalendarDatabase(request.clone(),dependencies)).status,503);
+  assert.equal(calls,2);
+});
+
+test('readiness remains reachable for protected diagnostics while the OAuth feature is off', async () => {
+  const request=new Request(QA_URL+'/api/integrations/google-calendar/oauth/readiness?project=pilot',
+    {method:'POST',headers:{Origin:QA_URL}});
+  const response=await calendarOAuthPages({request,env:{ADPHOR_CALENDAR_OAUTH_ENABLED:'false'}},
+    ()=>assert.fail('No Access assertion means no database handle.'));
+  assert.equal(response.status,403);
+});

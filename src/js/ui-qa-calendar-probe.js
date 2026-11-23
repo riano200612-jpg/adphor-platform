@@ -30,6 +30,28 @@ export function mountQaCalendarProbe(host,{repo,projectId,role,isProjectCurrent=
   ?'No se ha ejecutado una comprobación de conexión en esta sesión.'
   :'El conector de Google Calendar QA no está habilitado. No se pueden certificar horarios.';
  panel.append(title,help,button,status);
+ if(typeof repo.checkCalendarOAuthDatabase==='function'){
+  const databaseButton=document.createElement('button');
+  const databaseStatus=document.createElement('p');
+  databaseButton.type='button';
+  databaseButton.className='btn secondary';
+  databaseButton.textContent='Comprobar conexión privada de OAuth (QA)';
+  databaseStatus.setAttribute('aria-live','polite');
+  databaseButton.addEventListener('click',async()=>{
+   if(databaseButton.disabled||!panel.isConnected||!isProjectCurrent())return;
+   databaseButton.disabled=true;
+   databaseStatus.textContent='Verificando el acceso a Supabase QA…';
+   try{
+    await repo.checkCalendarOAuthDatabase(projectId);
+    if(panel.isConnected&&isProjectCurrent()) databaseStatus.textContent='Conexión privada y permisos verificados. Esta prueba no conecta Google Calendar.';
+   }catch{
+    if(panel.isConnected&&isProjectCurrent()) databaseStatus.textContent='No se pudo verificar la conexión privada con tu sesión.';
+   }finally{
+    if(panel.isConnected&&isProjectCurrent()) databaseButton.disabled=false;
+   }
+  });
+  panel.append(databaseButton,databaseStatus);
+ }
  host.append(panel);
  let serial=0;
  button.addEventListener('click',async()=>{

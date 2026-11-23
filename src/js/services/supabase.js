@@ -155,6 +155,18 @@ export function createCloudRepository(url, key) {
         .select('id,project_id,source_id,subject,source_status,source_created_at')
         .eq('project_id',projectId).order('source_created_at',{ascending:false}).limit(200));
     },
+    ...(authPolicy.isolatedQa && {
+      async checkCalendarOAuthDatabase(projectId) {
+        const {session}=check(await client.auth.getSession());
+        if(!session?.access_token) throw Error('Sesión requerida.');
+        const query=new URLSearchParams({project:projectId});
+        const response=await fetch('/api/integrations/google-calendar/oauth/readiness?'+query,{
+          method:'POST',headers:{Authorization:`Bearer ${session.access_token}`},
+          credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000),
+        });
+        if(response.status!==204) throw Error('La conexión privada no pudo verificarse.');
+      },
+    }),
     async meetingAvailability(projectId, start, end) {
       if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Disponibilidad solo habilitada en QA.');
       if(qaCalendarEdgeEnabled){
