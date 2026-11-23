@@ -122,7 +122,7 @@ test('readiness returns only a fixed stage code when Access, session, membership
     const result=await probeCalendarDatabase(request.clone(),{...dependencies,...overrides});
     assert.equal(result.status,status);
     assert.equal(result.headers.get('X-ADPHOR-Calendar-Code'),expected);
-    assert.equal(result.headers.get('X-ADPHOR-Calendar-Reason'),null);
+    assert.equal(result.headers.get('X-ADPHOR-Calendar-Reason'),expected==='CAL_DB_TRANSPORT'?'OTHER':null);
     assert.equal(await result.text(),'');
     assert.doesNotMatch(JSON.stringify([...result.headers]),/private fixture/);
   }
