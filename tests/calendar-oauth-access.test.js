@@ -32,7 +32,7 @@ const access = {
   issuer, audience, clock: () => now,
   async transport(url, options) {
     assert.equal(url, issuer + '/cdn-cgi/access/certs');
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     return Response.json({keys: [key]});
   },
 };

@@ -48,7 +48,7 @@ test('Google exchange verifies identity and saves the refresh authorization encr
       clientId, clientSecret: 'fixture-secret', expectedEmail, clock: () => now * 1000,
       saveConnection: createCalendarOAuthConnectionStore({database, ...cipher}),
       async transport(url, request) {
-        assert.equal(request.redirect, 'error');
+        assert.equal(request.redirect, 'manual');
         if (url === 'https://oauth2.googleapis.com/token') {
           assert.equal(request.body.get('code_verifier'), authorization.verifier);
           assert.equal(request.body.get('redirect_uri'), authorization.redirectUri);

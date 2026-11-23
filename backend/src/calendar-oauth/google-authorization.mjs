@@ -21,7 +21,7 @@ export function createGoogleCalendarAuthorization({
       typeof saveConnection !== 'function') throw new Error('Google Calendar QA configuration unavailable.');
 
   async function fetchJson(url, options) {
-    const response = await transport(url, {...options, redirect: 'error', signal: AbortSignal.timeout(8000)});
+    const response = await transport(url, {...options, redirect: 'manual', signal: AbortSignal.timeout(8000)});
     if (!response.ok) throw new Error('Google OAuth request failed.');
     return response.json();
   }
