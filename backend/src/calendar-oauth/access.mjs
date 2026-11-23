@@ -43,7 +43,7 @@ export function createCalendarAccessVerifier({issuer, audience, transport = fetc
         typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 256) return null;
 
     const response = await transport(issuer + '/cdn-cgi/access/certs', {
-      redirect: 'error',
+      redirect: 'manual',
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) throw new Error('Access signing keys unavailable.');
