@@ -126,3 +126,20 @@ test('readiness returns only a fixed stage code when Access, session, membership
     assert.doesNotMatch(JSON.stringify([...result.headers]),/private fixture/);
   }
 });
+
+test('the OAuth Pages entrypoint dispatches all operations and denies an anonymous readiness probe', async () => {
+  const root = QA_URL + '/api/integrations/google-calendar/oauth/';
+  for (const [operation, method, expected] of [
+    ['readiness?project=source-28', 'POST', 403],
+    ['start?project=source-28', 'POST', 404],
+    ['callback', 'GET', 404],
+    ['finalize?project=source-28', 'POST', 404],
+  ]) {
+    const result = await onRequest({
+      request: new Request(root + operation, {method, headers: {Origin: QA_URL}}),
+      env: {ADPHOR_CALENDAR_OAUTH_ENABLED: 'false'},
+    });
+    assert.equal(result.status, expected, operation);
+    assert.equal(result.headers.get('Cache-Control'), 'no-store');
+  }
+});
