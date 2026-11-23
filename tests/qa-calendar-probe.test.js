@@ -97,6 +97,8 @@ test('private Calendar diagnostic displays only allowlisted error codes',async()
 test('private Calendar diagnostics reveal only allowlisted transport codes', async()=>{
  const {privateCalendarDiagnosticMessage}=await import('../src/js/ui-qa-calendar-probe.js');
  assert.match(privateCalendarDiagnosticMessage(Error('CAL_DB_TRANSPORT:ECONNRESET')),/CAL_DB_TRANSPORT.*ECONNRESET/);
+ assert.match(privateCalendarDiagnosticMessage(Error('CAL_DB_TRANSPORT:CONNECT_TIMEOUT')),/CAL_DB_TRANSPORT.*CONNECT_TIMEOUT/);
+ assert.match(privateCalendarDiagnosticMessage(Error('CAL_DB_TRANSPORT:CONNECTION_CLOSED')),/CAL_DB_TRANSPORT.*CONNECTION_CLOSED/);
  const unsafe=privateCalendarDiagnosticMessage(Error('CAL_DB_TRANSPORT:Bearer_SECRET'));
  assert.match(unsafe,/CAL_DB_TRANSPORT.*Falló la conexión al pooler/);
  assert.doesNotMatch(unsafe,/Bearer|SECRET/);

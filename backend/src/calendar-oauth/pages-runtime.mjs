@@ -27,19 +27,24 @@ function diagnosis(status, code, databaseReason) {
   return new Response(null, {status, headers});
 }
 
-const safeDatabaseTransportCodes = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN', 'ENOTFOUND', 'ERR_TLS_HANDSHAKE_TIMEOUT', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_TLS_UNSUPPORTED_PROTOCOL', 'ERR_TLS_INVALID_PROTOCOL_VERSION', 'ERR_STREAM_PREMATURE_CLOSE', 'ERR_WORKER_UNSUPPORTED_OPERATION', 'ERR_INVALID_ARG_TYPE', 'ERR_MODULE_NOT_FOUND', 'ERR_SSL_WRONG_VERSION_NUMBER', 'ERR_SSL_BAD_RECORD_MAC', 'TYPEERROR', 'RANGEERROR', 'OTHER']);
+const safeDatabaseTransportCodes = new Set(['CONNECT_TIMEOUT', 'CONNECTION_CLOSED', 'CONNECTION_ENDED', 'CONNECTION_DESTROYED', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN', 'ENOTFOUND', 'ERR_TLS_HANDSHAKE_TIMEOUT', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_TLS_UNSUPPORTED_PROTOCOL', 'ERR_TLS_INVALID_PROTOCOL_VERSION', 'ERR_STREAM_PREMATURE_CLOSE', 'ERR_WORKER_UNSUPPORTED_OPERATION', 'ERR_INVALID_ARG_TYPE', 'ERR_MODULE_NOT_FOUND', 'ERR_SSL_WRONG_VERSION_NUMBER', 'ERR_SSL_BAD_RECORD_MAC', 'TYPEERROR', 'RANGEERROR', 'OTHER']);
 
 function databaseTransportReason(error) {
-  const code = typeof error?.code === 'string' ? error.code : '';
-  if (safeDatabaseTransportCodes.has(code)) return code;
-  const name = typeof error?.name === 'string' ? error.name.toUpperCase() : '';
-  return safeDatabaseTransportCodes.has(name) ? name : 'OTHER';
+  // Inspect only structured error codes, including wrapped Postgres.js errors.
+  // Never read or return Error.message, host, address, stack or credentials.
+  for (const candidate of [error, error?.cause, error?.cause?.cause]) {
+    const code = typeof candidate?.code === 'string' ? candidate.code : '';
+    if (safeDatabaseTransportCodes.has(code)) return code;
+    const name = typeof candidate?.name === 'string' ? candidate.name.toUpperCase() : '';
+    if (safeDatabaseTransportCodes.has(name)) return name;
+  }
+  return 'OTHER';
 }
 
 function databaseFailure(error) {
   const code = typeof error?.code === 'string' ? error.code : '';
-  if (code.startsWith('28')) return 'CAL_DB_LOGIN';
-  if (code.startsWith('ERR_TLS_') || code.startsWith('CERT_') ||
+  if (code.startsWith('28') || code === 'SASL_SIGNATURE_MISMATCH') return 'CAL_DB_LOGIN';
+  if (code.startsWith('ERR_TLS_') || code.startsWith('ERR_SSL_') || code.startsWith('CERT_') ||
       ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'DEPTH_ZERO_SELF_SIGNED_CERT'].includes(code)) return 'CAL_DB_TLS';
   if (/^(?:[0-9][0-9A-Z]|P0|XX|F0|HV)[A-Z0-9]{3}$/.test(code)) return 'CAL_DB_SQL';
   return 'CAL_DB_TRANSPORT';
