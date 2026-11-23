@@ -12,7 +12,7 @@ export async function createCalendarOAuthRuntime({database, encryptionKey, acces
   const cipher = await createCalendarOAuthTransactionCipher(encryptionKey);
   const storage = {database, ...cipher};
   return createCalendarOAuthRoutes({
-    access, supabase, clientId: google.clientId,
+    access, supabase: {...supabase, pilotEmail: google.expectedEmail}, clientId: google.clientId,
     store: createCalendarOAuthTransactionStore(storage),
     pending: createCalendarOAuthPendingStore(storage),
     completeAuthorization: createGoogleCalendarAuthorization({

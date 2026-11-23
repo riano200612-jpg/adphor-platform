@@ -2,9 +2,13 @@ import {
   parseValidatedAal2, QA_PROJECT_URL,
 } from '../../../supabase/functions/qa-calendar-availability/core.js';
 
-export function createCalendarSupabaseAuthorization({publishableKey, transport = fetch}) {
+export function createCalendarSupabaseAuthorization({publishableKey, pilotEmail, transport = fetch}) {
   if (typeof publishableKey !== 'string' || !/^sb_publishable_[A-Za-z0-9_-]+$/.test(publishableKey)) {
     throw new Error('Calendar OAuth requires a Supabase QA publishable key.');
+  }
+
+  if (pilotEmail !== undefined && (typeof pilotEmail !== 'string' || !pilotEmail.trim())) {
+    throw new Error('Calendar OAuth requires the configured QA pilot.');
   }
 
   async function read(path, bearer) {
@@ -23,6 +27,8 @@ export function createCalendarSupabaseAuthorization({publishableKey, transport =
     async verifySession(bearer) {
       const user = await read('/auth/v1/user', bearer);
       if (typeof user?.id !== 'string' || !user.id) return null;
+      if (pilotEmail !== undefined && (typeof user.email !== 'string' ||
+          user.email.toLowerCase() !== pilotEmail.toLowerCase() || !user.email_confirmed_at)) return null;
       return {userId: user.id, aal: parseValidatedAal2(bearer, user.id) ? 'aal2' : null};
     },
     async lookupRole({bearer, userId, projectId}) {
