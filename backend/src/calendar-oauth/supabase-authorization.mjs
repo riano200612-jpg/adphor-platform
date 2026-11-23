@@ -14,7 +14,7 @@ export function createCalendarSupabaseAuthorization({publishableKey, pilotEmail,
   async function read(path, bearer) {
     const response = await transport(QA_PROJECT_URL + path, {
       headers: {apikey: publishableKey, Authorization: 'Bearer ' + bearer, Accept: 'application/json'},
-      redirect: 'error',
+      redirect: 'manual',
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     });
