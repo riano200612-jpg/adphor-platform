@@ -70,7 +70,9 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   const readiness=document.createElement('p');
   readiness.className='notice';
   readiness.setAttribute('role','status');
-  readiness.textContent='El calendario corporativo aún no está conectado en esta QA. No se pueden verificar horarios ni sugerir alternativas reales. Ninguna reunión se reserva desde este formulario.';
+  readiness.textContent=repo.privateCalendarOnly===true
+   ?'La disponibilidad requiere la conexión privada de Google Calendar. Para comprobar tu sesión, usa el diagnóstico de Reuniones.'
+   :'El calendario corporativo aún no está conectado en esta QA. No se pueden verificar horarios ni sugerir alternativas reales. Ninguna reunión se reserva desde este formulario.';
   form.append(readiness);
  }
  if(!demo && !canCheck && repo.verifiedCalendarEnabled===true && ['admin','coordinator'].includes(role) && typeof repo.listVerifiedQaMeetings==='function'){
