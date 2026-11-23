@@ -208,6 +208,22 @@ test('transport diagnostics expose only an allowlisted runtime code to the autho
   assert.equal(response.headers.get('X-ADPHOR-Calendar-Reason'),'ECONNRESET');
   assert.equal(await response.text(),'');
   assert.doesNotMatch(JSON.stringify([...response.headers]),/private host|password|token/);
+  for (const expected of ['CONNECT_TIMEOUT','CONNECTION_CLOSED','CONNECTION_ENDED','CONNECTION_DESTROYED']) {
+    const known=await probeCalendarDatabase(request,{
+      ...dependencies,
+      connect:()=>({unsafe:async()=>{throw Object.assign(Error('private host and credentials'),{code:expected});}}),
+    });
+    assert.equal(known.status,503);
+    assert.equal(known.headers.get('X-ADPHOR-Calendar-Code'),'CAL_DB_TRANSPORT');
+    assert.equal(known.headers.get('X-ADPHOR-Calendar-Reason'),expected);
+    assert.equal(await known.text(),'');
+    assert.doesNotMatch(JSON.stringify([...known.headers]),/private host|credentials/);
+  }
+  const wrapped=await probeCalendarDatabase(request,{
+    ...dependencies,
+    connect:()=>({unsafe:async()=>{throw Object.assign(Error('private'),{code:'UNRECOGNIZED',cause:Object.assign(Error('secret'),{code:'CONNECT_TIMEOUT'})});}}),
+  });
+  assert.equal(wrapped.headers.get('X-ADPHOR-Calendar-Reason'),'CONNECT_TIMEOUT');
   const unrecognized=await probeCalendarDatabase(request,{
     ...dependencies,
     connect:()=>({unsafe:async()=>{throw Object.assign(Error('Bearer SECRET'),{code:'Bearer_SECRET'});}}),
