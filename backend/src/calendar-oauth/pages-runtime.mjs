@@ -53,6 +53,19 @@ function keyBytes(value) {
   return Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0));
 }
 
+async function hasEmptyBody(request) {
+  if (request.body === null) return true;
+  try {
+    // Workerd can expose an empty POST as a stream. Stop at the first payload byte.
+    for await (const chunk of request.body) {
+      if (chunk.byteLength !== 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // The probe reads only server metadata. It never uses Google's OAuth credentials.
 export async function probeCalendarDatabase(request, {verifyAccess, verifySession, lookupRole, connect}) {
   const url = new URL(request.url);
@@ -60,7 +73,7 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
   const projectId = url.searchParams.get('project');
   if (request.headers.get('Origin') !== QA_URL) return diagnosis(403, 'CAL_ORIGIN');
   if (fields.length !== 1 || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(projectId ?? '') ||
-      request.body !== null) return diagnosis(400, 'CAL_REQUEST');
+      !(await hasEmptyBody(request))) return diagnosis(400, 'CAL_REQUEST');
   const bearer = /^Bearer ([A-Za-z0-9._-]{1,8192})$/.exec(request.headers.get('Authorization') ?? '')?.[1];
   if (!bearer) return diagnosis(401, 'CAL_SESSION');
 
