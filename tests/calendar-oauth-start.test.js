@@ -105,3 +105,19 @@ test('Supabase authorization verifies the bearer before using its AAL2 claim and
   assert.equal(await adapter.verifySession(bearer), null);
   assert.throws(() => createCalendarSupabaseAuthorization({publishableKey: 'sb_secret_fixture'}));
 });
+
+test('the Google pilot session allowlist checks server-verified email without weakening AAL2', async () => {
+  const {createCalendarSupabaseAuthorization} = await import('../backend/src/calendar-oauth/supabase-authorization.mjs');
+  const session = aal => 'fixture.' + Buffer.from(JSON.stringify({sub:'pilot-id',aal,role:'authenticated'})).toString('base64url') + '.signature';
+  let identity={id:'pilot-id',email:'PILOT@example.test',email_confirmed_at:'2026-11-23T00:00:00Z'};
+  const adapter=createCalendarSupabaseAuthorization({
+    publishableKey:'sb_publishable_fixture',pilotEmail:'pilot@example.test',
+    transport:async()=>Response.json(identity),
+  });
+  assert.equal((await adapter.verifySession(session('aal2'))).aal,'aal2');
+  assert.equal((await adapter.verifySession(session('aal1'))).aal,null);
+  identity={...identity,email:'different@example.test'};
+  assert.equal(await adapter.verifySession(session('aal2')),null);
+  identity={...identity,email:'pilot@example.test',email_confirmed_at:null};
+  assert.equal(await adapter.verifySession(session('aal2')),null);
+});

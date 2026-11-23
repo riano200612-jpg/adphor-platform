@@ -84,6 +84,17 @@ export function createCloudRepository(url, key) {
       if(page.length<500) return rows;
     }
   }
+  async function calendarPilotRequest(operation,projectId,status) {
+    const {session}=check(await client.auth.getSession());
+    if(!session?.access_token) throw Error('Sesión requerida.');
+    const query=new URLSearchParams({project:projectId});
+    const response=await fetch('/api/integrations/google-calendar/oauth/'+operation+'?'+query,{
+      method:'POST',headers:{Authorization:`Bearer ${session.access_token}`},
+      credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000),
+    });
+    if(response.status!==status) throw Error('La operación de Calendar QA no pudo completarse.');
+    return response;
+  }
   return {
     porto,
     visits,
@@ -157,14 +168,20 @@ export function createCloudRepository(url, key) {
     },
     ...(authPolicy.isolatedQa && {
       async checkCalendarOAuthDatabase(projectId) {
-        const {session}=check(await client.auth.getSession());
-        if(!session?.access_token) throw Error('Sesión requerida.');
-        const query=new URLSearchParams({project:projectId});
-        const response=await fetch('/api/integrations/google-calendar/oauth/readiness?'+query,{
-          method:'POST',headers:{Authorization:`Bearer ${session.access_token}`},
-          credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000),
-        });
-        if(response.status!==204) throw Error('La conexión privada no pudo verificarse.');
+        await calendarPilotRequest('readiness',projectId,204);
+      },
+      async startCalendarOAuthPilot(projectId) {
+        const response=await calendarPilotRequest('start',projectId,200);
+        const {authorizationUrl}=await response.json();
+        const destination=new URL(authorizationUrl);
+        if(destination.origin!=='https://accounts.google.com'||
+          destination.pathname!=='/o/oauth2/v2/auth'||destination.username||destination.password){
+          throw Error('Destino de autorización Google no válido.');
+        }
+        return destination.href;
+      },
+      async finalizeCalendarOAuthPilot(projectId) {
+        await calendarPilotRequest('finalize',projectId,204);
       },
     }),
     async meetingAvailability(projectId, start, end) {

@@ -52,6 +52,37 @@ export function mountQaCalendarProbe(host,{repo,projectId,role,isProjectCurrent=
   });
   panel.append(databaseButton,databaseStatus);
  }
+ if(typeof repo.startCalendarOAuthPilot==='function'&&typeof repo.finalizeCalendarOAuthPilot==='function'){
+  const pilotStatus=document.createElement('p');
+  pilotStatus.setAttribute('aria-live','polite');
+  const controls=[
+   ['Conectar Google Calendar (piloto)',async()=>{
+    const destination=await repo.startCalendarOAuthPilot(projectId);
+    if(panel.isConnected&&isProjectCurrent()) window.location.assign(destination);
+   }],
+   ['Finalizar conexión tras el consentimiento',async()=>{
+    await repo.finalizeCalendarOAuthPilot(projectId);
+    if(panel.isConnected&&isProjectCurrent()) pilotStatus.textContent='Autorización guardada. La lectura de eventos se verifica por separado.';
+   }],
+  ];
+  for(const [label,action] of controls){
+   const control=document.createElement('button');
+   control.type='button';
+   control.className='btn secondary';
+   control.textContent=label;
+   control.addEventListener('click',async()=>{
+    if(control.disabled||!panel.isConnected||!isProjectCurrent())return;
+    control.disabled=true;
+    pilotStatus.textContent='Verificando la sesión y el acceso piloto…';
+    try{await action();}
+    catch{
+     if(panel.isConnected&&isProjectCurrent()) pilotStatus.textContent='No se pudo completar el piloto. Comprueba que esté habilitado y que hayas vuelto a la misma copropiedad y sesión.';
+    }finally{control.disabled=false;}
+   });
+   panel.append(control);
+  }
+  panel.append(pilotStatus);
+ }
  host.append(panel);
  let serial=0;
  button.addEventListener('click',async()=>{
