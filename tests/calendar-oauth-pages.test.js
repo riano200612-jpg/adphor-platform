@@ -143,3 +143,49 @@ test('the OAuth Pages entrypoint dispatches all operations and denies an anonymo
     assert.equal(result.headers.get('Cache-Control'), 'no-store');
   }
 });
+
+test('readiness accepts an empty body stream and rejects payloads and invalid query parameters', async () => {
+  const {probeCalendarDatabase} = await import('../backend/src/calendar-oauth/pages-runtime.mjs');
+  const root = QA_URL + '/api/integrations/google-calendar/oauth/readiness?';
+  const init = {method:'POST', headers:{Origin:QA_URL,Authorization:'Bearer fixture'}};
+  let calls = 0;
+  const dependencies = {
+    verifyAccess:async()=>({subject:'fixture'}),
+    verifySession:async()=>({userId:'fixture',aal:'aal2'}),
+    lookupRole:async()=> 'admin',
+    connect:()=>({unsafe:async()=>{
+      calls++;
+      return [{dedicated:true,rls:true,can_store:true,cannot_read:true,browser_denied:true}];
+    }}),
+  };
+  const emptyStream = new Request(root+'project=source-28',{
+    ...init,body:new Uint8Array(),
+  });
+  assert.notEqual(emptyStream.body,null);
+  assert.equal((await probeCalendarDatabase(emptyStream,dependencies)).status,204);
+  assert.equal((await probeCalendarDatabase(new Request(root+'project=source-28',init),dependencies)).status,204);
+  for (const [query,body] of [
+    ['project=source-28','{}'],
+    ['project=source-28',' '],
+    ['project=../invalid',undefined],
+    ['project=source-28&project=source-28',undefined],
+    ['project=source-28&extra=1',undefined],
+    ['other=source-28',undefined],
+  ]) {
+    const result=await probeCalendarDatabase(new Request(root+query,{...init,body}),dependencies);
+    assert.equal(result.status,400,query);
+    assert.equal(result.headers.get('X-ADPHOR-Calendar-Code'),'CAL_REQUEST');
+  }
+  for (const [overrides,code] of [
+    [{verifyAccess:async()=>null},'CAL_ACCESS'],
+    [{verifySession:async()=>({userId:'fixture',aal:'aal1'})},'CAL_AAL2'],
+    [{lookupRole:async()=>null},'CAL_MEMBERSHIP'],
+  ]) {
+    const result=await probeCalendarDatabase(new Request(root+'project=source-28',{
+      ...init,body:new Uint8Array(),
+    }),{...dependencies,...overrides});
+    assert.equal(result.status,403);
+    assert.equal(result.headers.get('X-ADPHOR-Calendar-Code'),code);
+  }
+  assert.equal(calls,2);
+});
