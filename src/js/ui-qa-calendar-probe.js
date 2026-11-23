@@ -26,7 +26,7 @@ const privateDiagnosticMessages=new Map([
 
 export function privateCalendarDiagnosticMessage(error) {
  const message=typeof error?.message==='string'?error.message:'';
- const transport=/^CAL_DB_TRANSPORT(?::([A-Z0-9_]+))?$/.exec(message);
+ const transport=/^CAL_DB_TRANSPORT(?::([^:]{1,128}))?$/.exec(message);
  const reason=transport&&safeDatabaseTransportCodes.has(transport[1])?transport[1]:'';
  const code=transport?'CAL_DB_TRANSPORT':privateDiagnosticMessages.has(message)?message:'CAL_NO_DIAGNOSTIC';
  const detail=reason?' Código técnico del runtime: '+reason+'.':'';
