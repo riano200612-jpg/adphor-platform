@@ -122,6 +122,7 @@ test('readiness returns only a fixed stage code when Access, session, membership
     const result=await probeCalendarDatabase(request.clone(),{...dependencies,...overrides});
     assert.equal(result.status,status);
     assert.equal(result.headers.get('X-ADPHOR-Calendar-Code'),expected);
+    assert.equal(result.headers.get('X-ADPHOR-Calendar-Reason'),null);
     assert.equal(await result.text(),'');
     assert.doesNotMatch(JSON.stringify([...result.headers]),/private fixture/);
   }
@@ -188,4 +189,29 @@ test('readiness accepts an empty body stream and rejects payloads and invalid qu
     assert.equal(result.headers.get('X-ADPHOR-Calendar-Code'),code);
   }
   assert.equal(calls,2);
+});
+
+
+test('transport diagnostics expose only an allowlisted runtime code to the authorized readiness caller', async () => {
+  const {probeCalendarDatabase}=await import('../backend/src/calendar-oauth/pages-runtime.mjs');
+  const request=new Request(QA_URL+'/api/integrations/google-calendar/oauth/readiness?project=pilot',
+    {method:'POST',headers:{Origin:QA_URL,Authorization:'Bearer fixture'}});
+  const dependencies={
+    verifyAccess:async()=>({subject:'fixture'}),
+    verifySession:async()=>({userId:'fixture',aal:'aal2'}),
+    lookupRole:async()=> 'admin',
+    connect:()=>({unsafe:async()=>{throw Object.assign(Error('private host, password and token'),{code:'ECONNRESET'});}}),
+  };
+  const response=await probeCalendarDatabase(request,dependencies);
+  assert.equal(response.status,503);
+  assert.equal(response.headers.get('X-ADPHOR-Calendar-Code'),'CAL_DB_TRANSPORT');
+  assert.equal(response.headers.get('X-ADPHOR-Calendar-Reason'),'ECONNRESET');
+  assert.equal(await response.text(),'');
+  assert.doesNotMatch(JSON.stringify([...response.headers]),/private host|password|token/);
+  const unrecognized=await probeCalendarDatabase(request,{
+    ...dependencies,
+    connect:()=>({unsafe:async()=>{throw Object.assign(Error('Bearer SECRET'),{code:'Bearer_SECRET'});}}),
+  });
+  assert.equal(unrecognized.headers.get('X-ADPHOR-Calendar-Reason'),'OTHER');
+  assert.doesNotMatch(JSON.stringify([...unrecognized.headers]),/Bearer|SECRET/);
 });

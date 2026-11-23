@@ -25,6 +25,7 @@ import {qaMissWeeklyReader} from './qa-miss-weekly-report.js';
 import { fetchTenantSummary } from './tenant-consultation.js';
 const authPolicyForVisitEvidence=url=>
   url==='https://qfctnnnnltghepwujpdm.supabase.co';
+const safeCalendarDatabaseReasons = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN', 'ENOTFOUND', 'ERR_TLS_HANDSHAKE_TIMEOUT', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_TLS_UNSUPPORTED_PROTOCOL', 'ERR_TLS_INVALID_PROTOCOL_VERSION', 'ERR_STREAM_PREMATURE_CLOSE', 'ERR_WORKER_UNSUPPORTED_OPERATION', 'ERR_INVALID_ARG_TYPE', 'ERR_MODULE_NOT_FOUND', 'ERR_SSL_WRONG_VERSION_NUMBER', 'ERR_SSL_BAD_RECORD_MAC', 'TYPEERROR', 'RANGEERROR', 'OTHER']);
 
 export function createCloudRepository(url, key) {
   // Only the known, Cloudflare-Access-protected QA Integral origin can keep
@@ -94,7 +95,9 @@ export function createCloudRepository(url, key) {
     });
     if(response.status!==status) {
       const code=response.headers.get('X-ADPHOR-Calendar-Code');
-      throw Error(code||'CAL_NO_DIAGNOSTIC');
+      const reason=response.headers.get('X-ADPHOR-Calendar-Reason');
+      throw Error(code==='CAL_DB_TRANSPORT'&&safeCalendarDatabaseReasons.has(reason)
+        ?code+':'+reason:(code||'CAL_NO_DIAGNOSTIC'));
     }
     return response;
   }
