@@ -98,3 +98,31 @@ test('readiness remains reachable for protected diagnostics while the OAuth feat
     ()=>assert.fail('No Access assertion means no database handle.'));
   assert.equal(response.status,403);
 });
+
+test('readiness returns only a fixed stage code when Access, session, membership or PostgreSQL fails', async () => {
+  const {probeCalendarDatabase} = await import('../backend/src/calendar-oauth/pages-runtime.mjs');
+  const request=new Request(QA_URL+'/api/integrations/google-calendar/oauth/readiness?project=pilot',
+    {method:'POST',headers:{Origin:QA_URL,Authorization:'Bearer fixture'}});
+  const dependencies={
+    verifyAccess:async()=>({subject:'fixture'}),
+    verifySession:async()=>({userId:'fixture',aal:'aal2'}),
+    lookupRole:async()=> 'admin',
+    connect:()=>({unsafe:async()=>[]}),
+  };
+  for(const [overrides,expected,status] of [
+    [{verifyAccess:async()=>null},'CAL_ACCESS',403],
+    [{verifySession:async()=>({userId:'fixture',aal:'aal1'})},'CAL_AAL2',403],
+    [{lookupRole:async()=>null},'CAL_MEMBERSHIP',403],
+    [{connect:()=>{throw Error('private fixture');}},'CAL_DB_CONFIG',503],
+    ...[['28P01','CAL_DB_LOGIN'],['ERR_TLS_CERT_ALTNAME_INVALID','CAL_DB_TLS'],['42501','CAL_DB_SQL'],
+       ['CONNECT_TIMEOUT','CAL_DB_TRANSPORT']].map(([code,expect])=>[
+      {connect:()=>({unsafe:async()=>{throw Object.assign(Error('private fixture'),{code});}})},expect,503]),
+    [{},'CAL_DB_PERMISSIONS',503],
+  ]){
+    const result=await probeCalendarDatabase(request.clone(),{...dependencies,...overrides});
+    assert.equal(result.status,status);
+    assert.equal(result.headers.get('X-ADPHOR-Calendar-Code'),expected);
+    assert.equal(await result.text(),'');
+    assert.doesNotMatch(JSON.stringify([...result.headers]),/private fixture/);
+  }
+});

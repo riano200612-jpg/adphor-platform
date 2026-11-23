@@ -83,3 +83,12 @@ test('Live diagnostic is wired to QA Edge flag rather than a generic agents API,
  assert.match(diagnostic,/dataset\.qaCalendarProbe/); // replaced below
  assert.doesNotMatch(logic,/fetch\(|service_role|refresh_token|localStorage|calendarId|\.insert\(|\.update\(|\.delete\(/);
 });
+
+test('private Calendar diagnostic displays only allowlisted error codes',async()=>{
+ const {privateCalendarDiagnosticMessage}=await import('../src/js/ui-qa-calendar-probe.js');
+ assert.match(privateCalendarDiagnosticMessage(Error('CAL_DB_LOGIN')), /CAL_DB_LOGIN.*login dedicado/);
+ assert.match(privateCalendarDiagnosticMessage(Error('CAL_AAL2')), /CAL_AAL2.*MFA AAL2/);
+ const message=privateCalendarDiagnosticMessage(Error('fixture unsafe connection data'));
+ assert.match(message,/CAL_NO_DIAGNOSTIC/);
+ assert.doesNotMatch(message,/unsafe connection data/);
+});

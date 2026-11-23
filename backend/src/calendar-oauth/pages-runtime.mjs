@@ -16,6 +16,24 @@ function response(status) {
   return new Response(null, {status, headers: {'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'}});
 }
 
+function diagnosis(status, code) {
+  console.warn(code);
+  return new Response(null, {status, headers: {
+    'Cache-Control': 'no-store',
+    'Referrer-Policy': 'no-referrer',
+    'X-ADPHOR-Calendar-Code': code,
+  }});
+}
+
+function databaseFailure(error) {
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (code.startsWith('28')) return 'CAL_DB_LOGIN';
+  if (code.startsWith('ERR_TLS_') || code.startsWith('CERT_') ||
+      ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'DEPTH_ZERO_SELF_SIGNED_CERT'].includes(code)) return 'CAL_DB_TLS';
+  if (/^(?:[0-9][0-9A-Z]|P0|XX|F0|HV)[A-Z0-9]{3}$/.test(code)) return 'CAL_DB_SQL';
+  return 'CAL_DB_TRANSPORT';
+}
+
 function databaseOptions(connectionString) {
   const url = new URL(connectionString);
   if (url.protocol !== 'postgresql:' || !/^aws-[0-9]+-us-east-1\.pooler\.supabase\.com$/.test(url.hostname) ||
@@ -40,20 +58,32 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
   const url = new URL(request.url);
   const fields = [...url.searchParams];
   const projectId = url.searchParams.get('project');
-  if (request.headers.get('Origin') !== QA_URL) return response(403);
+  if (request.headers.get('Origin') !== QA_URL) return diagnosis(403, 'CAL_ORIGIN');
   if (fields.length !== 1 || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(projectId ?? '') ||
-      request.body !== null) return response(400);
+      request.body !== null) return diagnosis(400, 'CAL_REQUEST');
   const bearer = /^Bearer ([A-Za-z0-9._-]{1,8192})$/.exec(request.headers.get('Authorization') ?? '')?.[1];
-  if (!bearer) return response(401);
-  if (!(await verifyAccess(request))?.subject) return response(403);
-  const session = await verifySession(bearer);
-  if (!session?.userId) return response(401);
-  if (session.aal !== 'aal2') return response(403);
-  const role = await lookupRole({bearer, userId: session.userId, projectId});
-  if (!['admin', 'coordinator'].includes(role)) return response(403);
+  if (!bearer) return diagnosis(401, 'CAL_SESSION');
 
-  const sql = connect();
-  const rows = await sql.unsafe(`SELECT
+  let access;
+  try { access = await verifyAccess(request); }
+  catch { return diagnosis(503, 'CAL_ACCESS_UNAVAILABLE'); }
+  if (!access?.subject) return diagnosis(403, 'CAL_ACCESS');
+  let session;
+  try { session = await verifySession(bearer); }
+  catch { return diagnosis(503, 'CAL_AUTH_UNAVAILABLE'); }
+  if (!session?.userId) return diagnosis(401, 'CAL_SESSION');
+  if (session.aal !== 'aal2') return diagnosis(403, 'CAL_AAL2');
+  let role;
+  try { role = await lookupRole({bearer, userId: session.userId, projectId}); }
+  catch { return diagnosis(503, 'CAL_MEMBERSHIP_UNAVAILABLE'); }
+  if (!['admin', 'coordinator'].includes(role)) return diagnosis(403, 'CAL_MEMBERSHIP');
+
+  let sql;
+  try { sql = connect(); }
+  catch { return diagnosis(503, 'CAL_DB_CONFIG'); }
+  let rows;
+  try {
+    rows = await sql.unsafe(`SELECT
     current_user = 'adphor_qa_calendar_oauth_login' AS dedicated,
     (SELECT count(*) = 3 FROM pg_catalog.pg_tables
       WHERE schemaname = 'calendar_oauth_private' AND rowsecurity
@@ -61,9 +91,15 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
     has_column_privilege(current_user, 'calendar_oauth_private.connections', 'payload', 'INSERT') AS can_store,
     NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'SELECT') AS cannot_read,
     NOT has_schema_privilege('authenticated', 'calendar_oauth_private', 'USAGE') AS browser_denied`);
+  } catch (error) {
+    return diagnosis(503, databaseFailure(error));
+  }
   const [row] = rows;
-  return response(rows.length === 1 && row.dedicated === true && row.rls === true &&
-    row.can_store === true && row.cannot_read === true && row.browser_denied === true ? 204 : 503);
+  if (rows.length !== 1 || row?.dedicated !== true || row.rls !== true ||
+      row.can_store !== true || row.cannot_read !== true || row.browser_denied !== true) {
+    return diagnosis(503, 'CAL_DB_PERMISSIONS');
+  }
+  return response(204);
 }
 
 export async function calendarOAuthPages(context, openDatabase) {
@@ -72,7 +108,9 @@ export async function calendarOAuthPages(context, openDatabase) {
   const operation = operations.get(url.pathname);
   if (url.origin !== QA_URL || !operation || (operation !== 'readiness' && env?.ADPHOR_CALENDAR_OAUTH_ENABLED !== 'true')) return response(404);
   if (request.method !== (operation === 'callback' ? 'GET' : 'POST')) return response(405);
-  if (!request.headers.get('Cf-Access-Jwt-Assertion')) return response(403);
+  if (!request.headers.get('Cf-Access-Jwt-Assertion')) {
+    return operation === 'readiness' ? diagnosis(403, 'CAL_ACCESS') : response(403);
+  }
 
   let sql;
   try {
@@ -97,7 +135,7 @@ export async function calendarOAuthPages(context, openDatabase) {
     });
     return await routes[operation](request);
   } catch {
-    return response(503);
+    return operation === 'readiness' ? diagnosis(503, 'CAL_RUNTIME_CONFIG') : response(503);
   } finally {
     if (sql) await sql.end({timeout: 2}).catch(() => {});
   }

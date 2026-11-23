@@ -86,13 +86,16 @@ export function createCloudRepository(url, key) {
   }
   async function calendarPilotRequest(operation,projectId,status) {
     const {session}=check(await client.auth.getSession());
-    if(!session?.access_token) throw Error('Sesión requerida.');
+    if(!session?.access_token) throw Error('CAL_SESSION');
     const query=new URLSearchParams({project:projectId});
     const response=await fetch('/api/integrations/google-calendar/oauth/'+operation+'?'+query,{
       method:'POST',headers:{Authorization:`Bearer ${session.access_token}`},
       credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000),
     });
-    if(response.status!==status) throw Error('La operación de Calendar QA no pudo completarse.');
+    if(response.status!==status) {
+      const code=response.headers.get('X-ADPHOR-Calendar-Code');
+      throw Error(code||'CAL_NO_DIAGNOSTIC');
+    }
     return response;
   }
   return {
@@ -133,7 +136,8 @@ export function createCloudRepository(url, key) {
     verifiedCalendarEnabled:portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF),
     // This only reports whether an API origin was configured at build time.
     // It is not evidence that OAuth, Access or the corporate calendar is live.
-    calendarAvailabilityConfigured:qaCalendarEdgeEnabled || Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim()),
+    calendarAvailabilityConfigured:!allowSessionResume && (qaCalendarEdgeEnabled || Boolean(import.meta.env.VITE_AGENTS_API_URL?.trim())),
+    privateCalendarOnly:allowSessionResume,
     // Distinguish an enabled Supabase QA Edge freeBusy adapter from an unverified agents API.
     qaCalendarEdgeEnabled,
     // A configured URL does not prove the agent API is deployed or ready.
@@ -185,6 +189,7 @@ export function createCloudRepository(url, key) {
       },
     }),
     async meetingAvailability(projectId, start, end) {
+      if (allowSessionResume) throw Error('La disponibilidad de Calendar queda pendiente de la conexión OAuth privada.');
       if (!portoEnabled(url,import.meta.env.VITE_PORTO_QA_ENABLED,import.meta.env.VITE_PORTO_STAGING_REF)) throw Error('Disponibilidad solo habilitada en QA.');
       if(qaCalendarEdgeEnabled){
         const {session}=check(await client.auth.getSession());

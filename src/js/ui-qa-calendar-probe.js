@@ -3,6 +3,30 @@ import {
  describeQaCorporateCalendarProbe,qaCorporateCalendarProbeError
 } from './services/qa-calendar-probe.js';
 
+const privateDiagnosticMessages=new Map([
+ ['CAL_ACCESS','Cloudflare Access no verificó la solicitud.'],
+ ['CAL_ACCESS_UNAVAILABLE','No se pudo consultar la validación de Cloudflare Access.'],
+ ['CAL_ORIGIN','El origen de la solicitud no coincide con QA Integral.'],
+ ['CAL_REQUEST','La solicitud del diagnóstico no es válida.'],
+ ['CAL_SESSION','La sesión de Supabase falta o ya no es válida.'],
+ ['CAL_AAL2','La sesión todavía no tiene MFA AAL2.'],
+ ['CAL_AUTH_UNAVAILABLE','No se pudo consultar la validación de la sesión en Supabase.'],
+ ['CAL_MEMBERSHIP','La sesión no tiene un rol administrativo vigente en la copropiedad seleccionada.'],
+ ['CAL_MEMBERSHIP_UNAVAILABLE','No se pudo consultar la membresía en Supabase.'],
+ ['CAL_DB_CONFIG','El runtime rechazó la configuración de conexión al pooler QA.'],
+ ['CAL_DB_LOGIN','PostgreSQL rechazó el login dedicado.'],
+ ['CAL_DB_TLS','No se pudo validar TLS con el pooler.'],
+ ['CAL_DB_TRANSPORT','Falló la conexión al pooler antes de obtener un código SQL verificable.'],
+ ['CAL_DB_SQL','PostgreSQL rechazó la consulta de diagnóstico.'],
+ ['CAL_DB_PERMISSIONS','El login, los permisos o RLS no coinciden con el perfil esperado.'],
+ ['CAL_RUNTIME_CONFIG','El runtime de QA no pudo preparar los controles del diagnóstico.'],
+]);
+
+export function privateCalendarDiagnosticMessage(error) {
+ const code=privateDiagnosticMessages.has(error?.message)?error.message:'CAL_NO_DIAGNOSTIC';
+ return '['+code+'] '+(privateDiagnosticMessages.get(code)??'La respuesta no incluyó un diagnóstico del backend de QA.');
+}
+
 // Place the diagnostic outside the booking wizard: it never submits a form.
 export function mountQaCalendarProbe(host,{repo,projectId,role,isProjectCurrent=()=>true}){
  host.replaceChildren();
@@ -29,7 +53,14 @@ export function mountQaCalendarProbe(host,{repo,projectId,role,isProjectCurrent=
  status.textContent=enabled
   ?'No se ha ejecutado una comprobación de conexión en esta sesión.'
   :'El conector de Google Calendar QA no está habilitado. No se pueden certificar horarios.';
- panel.append(title,help,button,status);
+ if(repo.privateCalendarOnly===true){
+  title.textContent='Google Calendar privado (QA)';
+  panel.setAttribute('aria-label','Google Calendar privado (QA)');
+  help.textContent='La comprobación usa la conexión privada de QA. La disponibilidad requiere completar la autorización de Google.';
+  panel.append(title,help);
+ }else{
+  panel.append(title,help,button,status);
+ }
  if(typeof repo.checkCalendarOAuthDatabase==='function'){
   const databaseButton=document.createElement('button');
   const databaseStatus=document.createElement('p');
@@ -44,8 +75,8 @@ export function mountQaCalendarProbe(host,{repo,projectId,role,isProjectCurrent=
    try{
     await repo.checkCalendarOAuthDatabase(projectId);
     if(panel.isConnected&&isProjectCurrent()) databaseStatus.textContent='Conexión privada y permisos verificados. Esta prueba no conecta Google Calendar.';
-   }catch{
-    if(panel.isConnected&&isProjectCurrent()) databaseStatus.textContent='No se pudo verificar la conexión privada con tu sesión.';
+   }catch(error){
+    if(panel.isConnected&&isProjectCurrent()) databaseStatus.textContent=privateCalendarDiagnosticMessage(error);
    }finally{
     if(panel.isConnected&&isProjectCurrent()) databaseButton.disabled=false;
    }
