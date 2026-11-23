@@ -3,6 +3,8 @@ import {
  describeQaCorporateCalendarProbe,qaCorporateCalendarProbeError
 } from './services/qa-calendar-probe.js';
 
+const safeDatabaseTransportCodes = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN', 'ENOTFOUND', 'ERR_TLS_HANDSHAKE_TIMEOUT', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_TLS_UNSUPPORTED_PROTOCOL', 'ERR_TLS_INVALID_PROTOCOL_VERSION', 'ERR_STREAM_PREMATURE_CLOSE', 'ERR_WORKER_UNSUPPORTED_OPERATION', 'ERR_INVALID_ARG_TYPE', 'ERR_MODULE_NOT_FOUND', 'ERR_SSL_WRONG_VERSION_NUMBER', 'ERR_SSL_BAD_RECORD_MAC', 'TYPEERROR', 'RANGEERROR', 'OTHER']);
+
 const privateDiagnosticMessages=new Map([
  ['CAL_ACCESS','Cloudflare Access no verificó la solicitud.'],
  ['CAL_ACCESS_UNAVAILABLE','No se pudo consultar la validación de Cloudflare Access.'],
@@ -23,8 +25,12 @@ const privateDiagnosticMessages=new Map([
 ]);
 
 export function privateCalendarDiagnosticMessage(error) {
- const code=privateDiagnosticMessages.has(error?.message)?error.message:'CAL_NO_DIAGNOSTIC';
- return '['+code+'] '+(privateDiagnosticMessages.get(code)??'La respuesta no incluyó un diagnóstico del backend de QA.');
+ const message=typeof error?.message==='string'?error.message:'';
+ const transport=/^CAL_DB_TRANSPORT(?::([^:]{1,128}))?$/.exec(message);
+ const reason=transport&&safeDatabaseTransportCodes.has(transport[1])?transport[1]:'';
+ const code=transport?'CAL_DB_TRANSPORT':privateDiagnosticMessages.has(message)?message:'CAL_NO_DIAGNOSTIC';
+ const detail=reason?' Código técnico del runtime: '+reason+'.':'';
+ return '['+code+'] '+(privateDiagnosticMessages.get(code)??'La respuesta no incluyó un diagnóstico del backend de QA.')+detail;
 }
 
 // Place the diagnostic outside the booking wizard: it never submits a form.

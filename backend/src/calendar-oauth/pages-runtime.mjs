@@ -16,13 +16,24 @@ function response(status) {
   return new Response(null, {status, headers: {'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'}});
 }
 
-function diagnosis(status, code) {
+function diagnosis(status, code, databaseReason) {
   console.warn(code);
-  return new Response(null, {status, headers: {
+  const headers = {
     'Cache-Control': 'no-store',
     'Referrer-Policy': 'no-referrer',
     'X-ADPHOR-Calendar-Code': code,
-  }});
+  };
+  if (databaseReason) headers['X-ADPHOR-Calendar-Reason'] = databaseReason;
+  return new Response(null, {status, headers});
+}
+
+const safeDatabaseTransportCodes = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN', 'ENOTFOUND', 'ERR_TLS_HANDSHAKE_TIMEOUT', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_TLS_UNSUPPORTED_PROTOCOL', 'ERR_TLS_INVALID_PROTOCOL_VERSION', 'ERR_STREAM_PREMATURE_CLOSE', 'ERR_WORKER_UNSUPPORTED_OPERATION', 'ERR_INVALID_ARG_TYPE', 'ERR_MODULE_NOT_FOUND', 'ERR_SSL_WRONG_VERSION_NUMBER', 'ERR_SSL_BAD_RECORD_MAC', 'TYPEERROR', 'RANGEERROR', 'OTHER']);
+
+function databaseTransportReason(error) {
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (safeDatabaseTransportCodes.has(code)) return code;
+  const name = typeof error?.name === 'string' ? error.name.toUpperCase() : '';
+  return safeDatabaseTransportCodes.has(name) ? name : 'OTHER';
 }
 
 function databaseFailure(error) {
@@ -105,7 +116,8 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
     NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'SELECT') AS cannot_read,
     NOT has_schema_privilege('authenticated', 'calendar_oauth_private', 'USAGE') AS browser_denied`);
   } catch (error) {
-    return diagnosis(503, databaseFailure(error));
+    const code = databaseFailure(error);
+    return diagnosis(503, code, code === 'CAL_DB_TRANSPORT' ? databaseTransportReason(error) : undefined);
   }
   const [row] = rows;
   if (rows.length !== 1 || row?.dedicated !== true || row.rls !== true ||
