@@ -84,3 +84,21 @@ test('team agenda shows priority and resolves the assignee only within the selec
  assert.match(html,/Responsable: Delegada &lt;QA&gt;/);
  assert.ok(!html.includes('Otro conjunto'));
 });
+
+test('full agenda opens tasks after day 15 within the selected scope',()=>{
+ const rows=[
+  item('own-later','2026-12-05'),
+  item('team-later','2026-12-06',{assignee:'user-b'}),
+  item('foreign-later','2026-12-07',{project_id:'p2'})
+ ];
+ const team={...config,scope:'team',role:'coordinator'};
+ const html=renderOperationalAgenda(rows,team);
+ assert.match(html,/data-operational-group="later"/);
+ assert.match(html,/data-ticket="own-later"/);
+ assert.match(html,/data-ticket="team-later"/);
+ assert.doesNotMatch(html,/foreign-later/);
+ assert.doesNotMatch(renderOperationalAgenda(rows,config),/team-later/);
+ const home=renderOperationalAgenda(rows,{...team,compact:true});
+ assert.doesNotMatch(home,/data-operational-group="later"|data-ticket="own-later"|team-later/);
+ assert.match(home,/1 tareas posteriores a 15 días/);
+});

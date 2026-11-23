@@ -9,11 +9,11 @@ export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',
  const snapshot=buildOperationalAgenda(tickets,{projectId,userId,role,scope:compact?'mine':scope,asOf});
  const team=snapshot.scope==='team';
  const names=new Map(members.filter(m=>m.project_id===projectId).map(m=>[m.user_id,m.name]));
- const keyGroups=snapshot.groups.slice(0,4);
- const highlight=keyGroups.map(g=>
+ const summaryGroups=snapshot.groups.slice(0,4);
+ const highlight=summaryGroups.map(g=>
   '<div class="operational-agenda-stat"><span>'+esc(g.label)+'</span><strong>'+g.items.length+'</strong></div>'
  ).join('');
- const columns=keyGroups.map(group=>{
+ const columns=(compact?summaryGroups:snapshot.groups).map(group=>{
   const visible=group.items.slice(0,compact?2:8);
   return '<div class="operational-agenda-window" data-operational-group="'+esc(group.key)+'">'+
    '<h3>'+esc(group.label)+' <span>'+group.items.length+'</span></h3>'+
@@ -43,7 +43,7 @@ export function renderOperationalAgenda(tickets,{projectId,userId,role='viewer',
   scopeButtons+'<div class="operational-agenda-stats" aria-label="Resumen de vencimientos">'+highlight+'</div>'+
   '<div class="operational-agenda-windows">'+(snapshot.total?columns:
     '<p class="muted">'+(team?'Sin tareas abiertas del equipo registradas en esta copropiedad.':'Sin pendientes registrados en la bitácora de esta copropiedad.')+'</p>')+'</div>'+
-  '<p class="muted operational-agenda-foot">'+later+' tareas posteriores a 15 días. '+
+  '<p class="muted operational-agenda-foot">'+(compact?later+' tareas posteriores a 15 días. ':'')+
   (snapshot.unclassified?snapshot.unclassified+' registros no verificables se omitieron. ':'')+
   'Fuente: bitácora persistente; no incluye aún actividades recurrentes, '+
   'tareas administrativas ni reservas de Google Calendar. '+
