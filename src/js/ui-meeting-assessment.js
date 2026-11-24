@@ -345,12 +345,13 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    if(!demo){
     if(!bookingEnabled){status.textContent='Evaluación: solicitud preparada. No se agendó porque el piloto de Calendar no está habilitado.';return;}
     if(!Number.isFinite(+startTime)||!Number.isFinite(+endTime)||+endTime<=+startTime||+endTime-+startTime>12*3600000)throw Error('Indica una fecha y duración válida de hasta 12 horas.');
-    const summary=(clientTitle+' · '+String(data.get('subject')).trim()).slice(0,200);
+    const summary=('[ADPHOR QA] '+clientTitle+' · '+String(data.get('subject')).trim()).slice(0,200);
+    const description='[ADPHOR QA] '+String(data.get('notes')||'');
     const formatter=new Intl.DateTimeFormat('es-CO',{timeZone:'America/Bogota',dateStyle:'medium',timeStyle:'short'});
     const detail=summary+'\n'+formatter.formatRange(startTime,endTime)+' · Calendario personal QA. Sin invitados ni invitaciones.';
     if(!window.confirm(detail+'\n\n¿Confirmas que ADPHOR cree esta reunión en tu Google Calendar personal?')){status.textContent='No se creó ninguna reunión.';return;}
     const created=await repo.createGoogleCalendarMeeting(projectId,{
-      idempotencyKey:crypto.randomUUID().toLowerCase(),summary,description:String(data.get('notes')||''),
+      idempotencyKey:crypto.randomUUID().toLowerCase(),summary,description,
       start:startTime.toISOString(),end:endTime.toISOString(),timeZone:'America/Bogota',
     });
     if(!root.isConnected||!isProjectCurrent())return;
