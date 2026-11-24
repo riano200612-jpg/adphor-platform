@@ -19,7 +19,7 @@ test('Calendar OAuth prepares a short-lived, browser-bound PKCE transaction for 
   assert.equal(fields.get('client_id'), input.clientId);
   assert.equal(fields.get('response_type'), 'code');
   assert.equal(fields.get('access_type'), 'offline');
-  assert.equal(fields.get('scope'), 'openid email https://www.googleapis.com/auth/calendar.events.readonly');
+  assert.equal(fields.get('scope'), 'openid email https://www.googleapis.com/auth/calendar.events.owned https://www.googleapis.com/auth/calendar.events.freebusy');
   assert.equal(fields.get('code_challenge_method'), 'S256');
   assert.equal(fields.get('code_challenge'), hash(transaction.verifier));
   assert.equal(fields.get('nonce'), transaction.nonce);

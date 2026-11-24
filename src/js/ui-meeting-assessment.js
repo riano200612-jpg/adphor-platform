@@ -27,6 +27,7 @@ export function meetingGuidance({subject, start, accompaniment, availability, ca
 // until authenticated transactional booking is verified on isolated QA PostgreSQL.
 export function mountMeetingAssessment(root,{repo,projectId,projectName=projectId,role='viewer',members=[],sector='',isProjectCurrent=()=>true}) {
  const demo=repo.mode==='demo-calendar';
+ const bookingEnabled=!demo&&repo.calendarBookingEnabled===true&&typeof repo.createGoogleCalendarMeeting==='function';
  root.innerHTML='<section class="panel"><h2>Reuniones y agenda gerencial</h2><p data-notice></p><form><label>Tipo de reunión<select name="meetingType"><option>Consejo</option><option>Asamblea</option><option>Comité</option><option>Gerencia</option><option>Otra</option></select></label><label>Subtipo<select name="subType"><option value="">Ninguno</option><option>Pre-Asamblea</option><option>Ordinaria</option><option>Extraordinaria</option></select></label><label>Modalidad<select name="modality"><option>Presencial</option><option>Virtual</option><option>Mixta</option></select></label><label>Especificación<input name="specification" maxlength="100"></label><label>Delegado asignado<input name="delegate" maxlength="120"></label><label>Asunto<input name="subject" required minlength="3" maxlength="200"></label><label>Notas<textarea name="notes" maxlength="5000"></textarea></label><label>Inicio<input name="start" type="datetime-local" required></label><label>Fin<input name="end" type="datetime-local"></label><label>Duración sugerida (horas)<input name="duration" type="number" min="0.25" max="12" step="0.25" placeholder="Automática según tipo"></label><label>Prioridad<select name="priority"><option value="bajo">Baja</option><option value="medio" selected>Media</option><option value="alto">Alta</option></select></label><label><input name="management" type="checkbox"> Solicitar asistencia de Gerencia</label><button>Evaluar y agendar</button><button type="button" data-clear>Nuevo horario</button></form><p role="status"></p><h3>Calendario de la copropiedad</h3><div data-list></div></section>';
  const escort=document.createElement('fieldset');escort.className='meeting-escorts';escort.innerHTML='<legend>Acompañamiento</legend><p>Selecciona a un responsable de tu copropiedad o indica que no se requiere acompañamiento.</p><div class="meeting-escort-carousel" role="radiogroup" aria-label="Responsable de acompañamiento"></div>';
  const escortChoices=escort.querySelector('.meeting-escort-carousel');
@@ -59,11 +60,11 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  const agendaHelp=document.createElement('p');
  agendaHelp.textContent=demo
   ? 'Consulta fechas y estados de las reuniones de esta copropiedad. Los cambios de horario y las cancelaciones solo afectan la simulación de este navegador.'
-  : 'Consulta las reuniones verificadas de la copropiedad seleccionada y revisa su fecha, hora y estado. Esta vista de lectura no permite reprogramar ni cancelar eventos corporativos.';
+  : bookingEnabled?'Consulta las reuniones del calendario personal de QA y agenda una reunión piloto. No se agregan invitados ni se envían invitaciones.':'Consulta las reuniones verificadas de la copropiedad seleccionada y revisa su fecha, hora y estado. Esta vista de lectura no permite reprogramar ni cancelar eventos corporativos.';
  agendaGuide.append(agendaHelp);
  list.before(agendaGuide);
- notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':'VISTA DE REVISIÓN: consulta de reuniones verificadas según tu autorización y preparación de solicitudes. La creación de eventos y el envío de invitaciones requieren un backend transaccional autorizado.';
- if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=true;action.textContent='Agendamiento real pendiente de backend QA';action.title='La creación de eventos requiere un servicio transaccional autorizado y certificado.';}}
+ notice.textContent=demo?'SIMULACIÓN LOCAL: citas en este navegador. No se enviarán invitaciones ni se modificará Google Calendar.':bookingEnabled?'PILOTO PERSONAL QA: la reunión se guardará en tu Google Calendar. No se agregarán participantes ni se enviarán invitaciones.':'VISTA DE REVISIÓN: consulta de reuniones verificadas según tu autorización y preparación de solicitudes. La creación de eventos requiere un backend transaccional autorizado.';
+ if(!demo){const action=form.querySelector('button:not([type])');if(action){action.type='submit';action.disabled=!bookingEnabled;action.textContent=bookingEnabled?'Agendar reunión piloto en Google Calendar':'Agendamiento real pendiente de backend QA';action.title=bookingEnabled?'Crea una reunión privada en tu calendario personal, sin invitados.':'La creación de eventos requiere un servicio transaccional autorizado y certificado.';}}
  if(demo){const load=document.createElement('button');load.type='button';load.className='btn secondary';load.textContent='Cargar 3 reuniones de simulación';load.setAttribute('data-demo-scenarios','');notice.after(load);load.onclick=()=>{try{const n=seedDemoMeetingScenarios(projectId);status.textContent=n?n+' reuniones FICTICIAS añadidas únicamente a este navegador.':'Los escenarios de simulación ya estaban cargados.';render();}catch(error){status.textContent=error.message;}};}
  const canCheck=!demo && typeof repo.meetingAvailability === 'function' && ['admin','coordinator'].includes(role) && repo.calendarAvailabilityConfigured !== false;
  if(!demo && ['admin','coordinator'].includes(role) && repo.calendarAvailabilityConfigured === false){
@@ -266,17 +267,24 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  }
  let editing=null, experience;
  let verifiedCloudRows=[];
+ let googleCalendarRows=[];
  function render(){
   experience?.draw();
   list.replaceChildren();
   if(!demo){
-    if(!verifiedCloudRows.length){list.textContent='No hay reuniones verificadas disponibles en la base QA para esta copropiedad. El Excel histórico no se considera una reserva activa.';return;}
-    for(const m of verifiedCloudRows){
+    if(!verifiedCloudRows.length&&!googleCalendarRows.length){list.textContent='No hay reuniones verificadas disponibles para esta copropiedad.';return;}
+    for(const m of [...googleCalendarRows,...verifiedCloudRows]){
       const item=document.createElement('article');item.className='panel';
-      const title=document.createElement('h4');title.textContent=m.title;
+      const title=document.createElement('h4');title.textContent=m.summary||m.title||'Reunión';
       const description=document.createElement('p');
-      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · Confirmación verificada, lectura QA';
-      item.append(title,description);list.append(item);
+      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · '+(m.googleEventId?'Google Calendar verificado':'Registro QA verificado');
+      item.append(title,description);
+      if(m.googleEventId){
+        const eventId=document.createElement('small');eventId.textContent='ID de evento: '+m.googleEventId;item.append(eventId);
+        if(m.meetLink){const link=document.createElement('a');link.href=m.meetLink;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Abrir Google Meet';item.append(link);}
+        else {const pending=document.createElement('p');pending.textContent='Google todavía no confirmó el enlace de Meet.';item.append(pending);}
+      }
+      list.append(item);
     }
     return;
   }
@@ -322,20 +330,42 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  function localInput(value){return bogotaInput(value);}
  form.querySelector('[data-clear]').onclick=()=>{editing=null;form.reset();status.textContent='Nuevo horario.';};
  form.onsubmit=async e=>{
-  e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;status.textContent='Evaluando…';
+  e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;status.textContent=bookingEnabled?'Preparando la reunión…':'Evaluando…';
   try{
    const data=new FormData(form);
-   const assessment=await repo.assessMeeting(projectId,{subject:data.get('subject'),notes:data.get('notes'),management_requested:data.has('management')});
-   if(!root.isConnected)return;
-   if(!demo){status.textContent='Evaluación: '+assessment.priority_level+'. '+assessment.reason+'. No se agendó: backend pendiente.';return;}
+   if(!root.isConnected||!isProjectCurrent())return;
+   const assessment=(demo||!bookingEnabled)
+     ?await repo.assessMeeting(projectId,{subject:data.get('subject'),notes:data.get('notes'),management_requested:data.has('management')})
+     :{requires_management:false};
+   if(!root.isConnected||!isProjectCurrent())return;
    const clientTitle=buildClientMeetingTitle({type:data.get('meetingType'),subType:data.get('subType'),specification:data.get('specification'),property:projectName,modality:data.get('modality')});
    const startTime=bogotaInstant(data.get('start'));
    const duration=meetingDurationHours(data.get('meetingType'),data.get('duration'));
    const endTime=data.get('end')?bogotaInstant(data.get('end')):new Date(startTime.getTime()+duration*3600000);
+   if(!demo){
+    if(!bookingEnabled){status.textContent='Evaluación: solicitud preparada. No se agendó porque el piloto de Calendar no está habilitado.';return;}
+    if(!Number.isFinite(+startTime)||!Number.isFinite(+endTime)||+endTime<=+startTime||+endTime-+startTime>12*3600000)throw Error('Indica una fecha y duración válida de hasta 12 horas.');
+    const summary=('[ADPHOR QA] '+clientTitle+' · '+String(data.get('subject')).trim()).slice(0,200);
+    const description='[ADPHOR QA] '+String(data.get('notes')||'');
+    const formatter=new Intl.DateTimeFormat('es-CO',{timeZone:'America/Bogota',dateStyle:'medium',timeStyle:'short'});
+    const detail=summary+'\n'+formatter.formatRange(startTime,endTime)+' · Calendario personal QA. Sin invitados ni invitaciones.';
+    if(!window.confirm(detail+'\n\n¿Confirmas que ADPHOR cree esta reunión en tu Google Calendar personal?')){status.textContent='No se creó ninguna reunión.';return;}
+    const created=await repo.createGoogleCalendarMeeting(projectId,{
+      summary,description,
+      start:startTime.toISOString(),end:endTime.toISOString(),timeZone:'America/Bogota',
+    });
+    if(!root.isConnected||!isProjectCurrent())return;
+    googleCalendarRows=[created,...googleCalendarRows.filter(row=>row.googleEventId!==created.googleEventId)];
+    status.textContent=created.status==='created'
+      ?'Reunión creada en Google Calendar. ID: '+created.googleEventId+'. El enlace de Google Meet está disponible abajo.'
+      :'Evento creado en Google Calendar; el enlace de Google Meet sigue pendiente de confirmación.';
+    editing=null;form.reset();render();experience.reset();
+    return;
+   }
    const result=scheduleDemoMeeting(projectId,{...Object.fromEntries(data),id:editing,title:clientTitle+' · '+data.get('subject'),start:startTime.toISOString(),end:endTime.toISOString(),priority:data.get('priority'),management:data.has('management')||assessment.requires_management});
    status.textContent=result.status==='pending_management'?'Solicitud registrada localmente, PENDIENTE DE APROBACIÓN GERENCIAL por ventana menor a 24 h. No constituye una reserva real.':'Reunión agendada en el calendario local de prueba. Sin invitaciones externas.';
    editing=null;form.reset();render();experience.reset();
-  }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+  }catch(error){status.textContent=error.message==='CAL_PILOT_DISABLED'?'El piloto de Google Calendar no está habilitado para esta cuenta y copropiedad.':'No se pudo completar la operación de reunión. No se confirmó ningún resultado.';}finally{button.disabled=false;}
  };
  experience=enhanceMeetings(root,{form,list,projectName,demo,role,isProjectCurrent,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
  if(!demo){
@@ -345,6 +375,15 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   mountQaCalendarProbe(diagnostics,{repo,projectId,role,isProjectCurrent});
  }
  render();
+ if(bookingEnabled && typeof repo.listGoogleCalendarMeetings==='function'){
+   repo.listGoogleCalendarMeetings(projectId).then(rows=>{
+     if(!root.isConnected||!isProjectCurrent())return;
+     googleCalendarRows=Array.isArray(rows)?rows:[];
+     render();
+   }).catch(()=>{
+     if(root.isConnected&&isProjectCurrent())status.textContent='No se pudo recuperar la agenda personal de QA. No se muestran reuniones no verificadas.';
+   });
+ }
  if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
    loadVerifiedAgenda(repo,projectId).then(rows=>{
      if(!root.isConnected)return;

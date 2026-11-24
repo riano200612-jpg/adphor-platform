@@ -4,9 +4,12 @@ import {callbackPath} from './authorization.mjs';
 const signing = {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256'};
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', {fatal: true});
-const calendarScope = 'https://www.googleapis.com/auth/calendar.events.readonly';
+const calendarScopes = new Set([
+  'https://www.googleapis.com/auth/calendar.events.owned',
+  'https://www.googleapis.com/auth/calendar.events.freebusy',
+]);
 const supportedScopes = new Set([
-  calendarScope, 'openid', 'email', 'https://www.googleapis.com/auth/userinfo.email',
+  ...calendarScopes, 'openid', 'email', 'https://www.googleapis.com/auth/userinfo.email',
 ]);
 
 function bytes(segment) {
@@ -43,7 +46,7 @@ export function createGoogleCalendarAuthorization({
       }),
     });
     const scopes = typeof grant?.scope === 'string' ? grant.scope.split(/\s+/) : [];
-    if (!scopes.includes(calendarScope) || scopes.some(scope => !supportedScopes.has(scope)) ||
+    if (![...calendarScopes].every(scope => scopes.includes(scope)) || scopes.some(scope => !supportedScopes.has(scope)) ||
         typeof grant?.refresh_token !== 'string' || !grant.refresh_token || grant.refresh_token.length > 4096 ||
         typeof grant?.id_token !== 'string' || grant.id_token.length > 8192) {
       throw new Error('Google did not issue the required authorization.');

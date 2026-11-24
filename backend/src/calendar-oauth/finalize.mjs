@@ -12,7 +12,7 @@ function result(status) {
   }});
 }
 
-export function createCalendarOAuthFinalize({verifyAccess, verifySession, lookupRole, pending, completeAuthorization}) {
+export function createCalendarOAuthFinalize({verifyAccess, verifySession, lookupRole, pending, completeAuthorization, pilotProjectId}) {
   return async function finalize(request) {
     const url = new URL(request.url);
     if (url.origin !== QA_URL || url.pathname !== finalizePath) return result(404);
@@ -22,6 +22,7 @@ export function createCalendarOAuthFinalize({verifyAccess, verifySession, lookup
     if (projects.length !== 1 || [...url.searchParams].length !== 1 ||
         !/^[a-z0-9][a-z0-9-]{0,99}$/.test(projects[0]) || request.body !== null) return result(400);
     const [projectId] = projects;
+    if (pilotProjectId && projectId !== pilotProjectId) return result(403);
     const bearer = /^Bearer ([A-Za-z0-9._-]{1,8192})$/.exec(request.headers.get('Authorization') ?? '')?.[1];
     if (!bearer) return result(401);
     const prefix = pendingCookie + '=';

@@ -1,7 +1,7 @@
 import { QA_URL } from '../../../qa/security/private-worker-bootstrap-core.mjs';
 
 export const callbackPath = '/api/integrations/google-calendar/oauth/callback';
-const pilotScopes = ['openid', 'email', 'https://www.googleapis.com/auth/calendar.events.readonly'];
+const pilotScopes = ['openid', 'email', 'https://www.googleapis.com/auth/calendar.events.owned', 'https://www.googleapis.com/auth/calendar.events.freebusy'];
 const lifetimeMs = 5 * 60 * 1000;
 
 function base64url(bytes) {

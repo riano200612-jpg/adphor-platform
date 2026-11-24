@@ -101,6 +101,22 @@ export function createCloudRepository(url, key) {
     }
     return response;
   }
+  async function calendarMeetingRequest(operation,projectId,{method='GET',body}={}) {
+    const pilotProject=import.meta.env.VITE_QA_CALENDAR_PILOT_PROJECT_ID;
+    if(!authPolicy.isolatedQa||import.meta.env.VITE_QA_CALENDAR_BOOKING_ENABLED!=='true'||
+      typeof pilotProject!=='string'||projectId!==pilotProject) throw Error('CAL_PILOT_DISABLED');
+    const {session}=check(await client.auth.getSession());
+    if(!session?.access_token)throw Error('CAL_SESSION');
+    const query=new URLSearchParams({project:projectId});
+    const headers={Authorization:`Bearer ${session.access_token}`};
+    if(body!==undefined)headers['Content-Type']='application/json';
+    const response=await fetch('/api/integrations/google-calendar/meetings/'+operation+'?'+query,{
+      method,headers,body:body===undefined?undefined:JSON.stringify(body),
+      credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000),
+    });
+    if(!response.ok)throw Error('CAL_MEETING_HTTP_'+response.status);
+    return response;
+  }
   return {
     porto,
     visits,
@@ -190,6 +206,28 @@ export function createCloudRepository(url, key) {
       async finalizeCalendarOAuthPilot(projectId) {
         await calendarPilotRequest('finalize',projectId,204);
       },
+      async createGoogleCalendarMeeting(projectId,meeting) {
+        const response=await calendarMeetingRequest('create',projectId,{
+          method:'POST',body:{...meeting,confirmed:true},
+        });
+        const data=await response.json();
+        let meet=null;
+        if(typeof data?.meetLink==='string')meet=new URL(data.meetLink);
+        if(data?.projectId!==projectId||!['created','meet_pending'].includes(data?.status)||
+          typeof data?.googleEventId!=='string'||
+          (data.status==='created'&&!meet)||
+          (data.meetLink!==null&&typeof data.meetLink!=='string')||
+          (meet&&!(meet.protocol==='https:'&&meet.hostname==='meet.google.com'))) {
+          throw Error('CAL_MEETING_RESPONSE_INVALID');
+        }
+        return data;
+      },
+      async listGoogleCalendarMeetings(projectId) {
+        const response=await calendarMeetingRequest('list',projectId,{method:'POST'});
+        const data=await response.json();
+        if(data?.projectId!==projectId||!Array.isArray(data.meetings))throw Error('CAL_MEETING_LIST_INVALID');
+        return data.meetings;
+      },
     }),
     async meetingAvailability(projectId, start, end) {
       if (allowSessionResume) throw Error('La disponibilidad de Calendar queda pendiente de la conexión OAuth privada.');
@@ -267,6 +305,7 @@ export function createCloudRepository(url, key) {
       return check(await client.rpc(finalize ? 'finalize_monthly_report' : 'monthly_report', { project, report_month: `${month}-01` }));
     },
     mode: 'cloud',
+    calendarBookingEnabled: authPolicy.isolatedQa && import.meta.env.VITE_QA_CALENDAR_BOOKING_ENABLED==='true' && typeof import.meta.env.VITE_QA_CALENDAR_PILOT_PROJECT_ID==='string',
     async restoreSession() {
       user=null;
       const restored=await authentication.restoreSession();
