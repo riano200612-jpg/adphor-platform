@@ -276,6 +276,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   }
   return [...unique.values()].map(row=>({...row,title:row.summary||row.title||'Reunión'}));
  }
+ function calendarGridRows(){return calendarRows().filter(row=>!['reconciling','failed'].includes(row.status));}
  function render(){
   experience?.draw();
   list.replaceChildren();
@@ -288,25 +289,31 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
       const description=document.createElement('p');
       description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · '+(m.googleEventId?'Google Calendar verificado':'Registro QA verificado');
       item.append(title,description);
-      if(m.googleEventId){
+      if(m.status==='failed'){const failed=document.createElement('p');failed.textContent='Google rechazó la solicitud. No se creó una reunión. Corrige los datos antes de intentar otra vez.';item.append(failed);}else if(m.status==='reconciling'){
+        const pending=document.createElement('p');
+        pending.textContent='RESULTADO PENDIENTE · Google aún no confirma si recibió esta solicitud. No la envíes de nuevo.';
+        item.append(pending);
+      }else if(m.googleEventId){
         const eventId=document.createElement('small');eventId.textContent='ID de evento: '+m.googleEventId;item.append(eventId);
         if(m.meetLink){const link=document.createElement('a');link.href=m.meetLink;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Abrir Google Meet';item.append(link);}
-        else {
-          const pending=document.createElement('p');pending.textContent='MEET_PENDING · Google todavía no confirmó el enlace de Meet.';item.append(pending);
-          if(bookingEnabled&&m.status==='meet_pending'&&m.idempotencyKey&&typeof repo.refreshGoogleCalendarMeeting==='function'){
-            const refresh=document.createElement('button');refresh.type='button';refresh.textContent='Comprobar enlace de Meet';
-            refresh.onclick=async()=>{
-              refresh.disabled=true;
-              try{
-                const checked=await repo.refreshGoogleCalendarMeeting(projectId,m.idempotencyKey);
-                googleCalendarRows=[checked,...googleCalendarRows.filter(row=>row.idempotencyKey!==checked.idempotencyKey)];
-                status.textContent=checked.status==='created'?'Google confirmó el enlace de Meet.':'MEET_PENDING · Google aún no confirma el enlace. Comprueba de nuevo más tarde.';
-                render();
-              }catch{status.textContent='No se pudo comprobar el enlace de Meet. La reunión se conserva y no se creará otra.';refresh.disabled=false;}
-            };
-            item.append(refresh);
-          }
-        }
+        else {const pending=document.createElement('p');pending.textContent=m.recoveryExhausted?'MEET_PENDING · Se agotó la ventana automática de comprobación; el estado queda para revisión.':'MEET_PENDING · Google todavía no confirmó el enlace de Meet.';item.append(pending);}
+      }
+      if(bookingEnabled&&!m.recoveryExhausted&&['reconciling','meet_pending'].includes(m.status)&&m.idempotencyKey&&
+        typeof repo.refreshGoogleCalendarMeeting==='function'){
+        const refresh=document.createElement('button');refresh.type='button';
+        refresh.textContent=m.status==='reconciling'?'Comprobar estado en Google Calendar':'Comprobar enlace de Meet';
+        refresh.onclick=async()=>{
+          refresh.disabled=true;
+          try{
+            const checked=await repo.refreshGoogleCalendarMeeting(projectId,m.idempotencyKey);
+            googleCalendarRows=[checked,...googleCalendarRows.filter(row=>row.idempotencyKey!==checked.idempotencyKey)];
+            status.textContent=checked.recoveryExhausted?'Se agotó la ventana de comprobación automática. El estado se conserva para revisión; no se creará otro evento.':checked.status==='created'?'Google confirmó el enlace de Meet.':
+              checked.status==='reconciling'?'RESULTADO PENDIENTE · Google aún no confirma la reunión. No la envíes de nuevo.':
+              'MEET_PENDING · Google aún no confirma el enlace. Comprueba de nuevo más tarde.';
+            render();
+          }catch{status.textContent='No se pudo comprobar el resultado en Google. La solicitud se conserva y no se creará otra.';refresh.disabled=false;}
+        };
+        item.append(refresh);
       }
       list.append(item);
     }
@@ -382,7 +389,9 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
     googleCalendarRows=[created,...googleCalendarRows.filter(row=>row.googleEventId!==created.googleEventId&&row.idempotencyKey!==created.idempotencyKey)];
     status.textContent=created.status==='created'
       ?'Reunión creada en Google Calendar. ID: '+created.googleEventId+'. El enlace de Google Meet está disponible abajo.'
-      :'Evento creado en Google Calendar; el enlace de Google Meet sigue pendiente de confirmación.';
+      :created.status==='reconciling'
+        ?'RESULTADO PENDIENTE · Google aún no confirma si recibió la solicitud. No vuelvas a enviarla; ADPHOR conservará y comprobará el mismo ID.'
+        :'Evento creado en Google Calendar; el enlace de Google Meet sigue pendiente de confirmación.';
     editing=null;form.reset();render();experience.reset();
     return;
    }
@@ -391,7 +400,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    editing=null;form.reset();render();experience.reset();
   }catch(error){status.textContent=error.message==='CAL_PILOT_DISABLED'?'El piloto de Google Calendar no está habilitado para esta cuenta y copropiedad.':'No se pudo completar la operación de reunión. No se confirmó ningún resultado.';}finally{button.disabled=false;}
  };
- experience=enhanceMeetings(root,{form,list,projectName,demo,role,isProjectCurrent,getRows:()=>demo?listDemoMeetings(projectId):calendarRows()});
+ experience=enhanceMeetings(root,{form,list,projectName,demo,role,isProjectCurrent,getRows:()=>demo?listDemoMeetings(projectId):calendarGridRows()});
  if(!demo){
   const diagnostics=document.createElement('div');
   diagnostics.dataset.qaCalendarDiagnostics='';

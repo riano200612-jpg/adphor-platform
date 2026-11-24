@@ -48,7 +48,7 @@ export function createCalendarMeetingRefresh({verifyAccess,verifySession,lookupR
       const role=await lookupRole({bearer,userId:session.userId,projectId:pilotProjectId});
       if(role!=='admin'&&role!=='coordinator')return deny(403);
       const event=await refreshMeeting({actor:{userId:session.userId,projectId:pilotProjectId},idempotencyKey:payload.idempotencyKey});
-      if(!event||!['created','meet_pending'].includes(event.status)||!event.googleEventId)return deny(503);
+      if(!event||!['created','meet_pending','reconciling'].includes(event.status)||!event.googleEventId)return deny(503);
       return Response.json(event,{status:event.status==='created'?200:202,headers:{
         'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
       }});

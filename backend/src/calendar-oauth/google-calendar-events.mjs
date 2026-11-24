@@ -52,7 +52,7 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
   if(![clientId,clientSecret].every(value=>typeof value==='string'&&value.length>0)||
      typeof getConnection!=='function'||typeof eventStore?.claim!=='function'||
      typeof eventStore?.markAttempted!=='function'||typeof eventStore?.complete!=='function'||
-     typeof eventStore?.fail!=='function'||typeof eventStore?.claimMeetRefresh!=='function')
+     typeof eventStore?.fail!=='function'||typeof eventStore?.failDefinitively!=='function'||typeof eventStore?.claimMeetRefresh!=='function')
     throw new Error('Google Calendar event service is not configured.');
   async function request(url,options) {
     const response=await transport(url,{...options,redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(8000)});
@@ -90,6 +90,7 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
     const idempotencyKey=await stableIdempotencyKey(actor,meeting);
     const claim=await eventStore.claim({actor,idempotencyKey});
     if(claim?.status==='complete')return claim.event;
+    if(claim?.status==='rejected')return {...claim.event,googleEventId:null,meetLink:null,status:'failed'};
     if(claim?.status!=='claimed')throw new Error('Google Calendar request is already in progress.');
     const previousAttempt=typeof claim.googleEventId==='string'&&claim.googleEventId.length>0;
     let intentDurable=false,eventId=claim.googleEventId;
@@ -116,6 +117,11 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
           remote=await request(GOOGLE_EVENTS_URL+'?conferenceDataVersion=1&sendUpdates=none',{
             method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
         }catch(error){
+          if([400,401,403,404,410,422].includes(error?.status)){
+            try{await eventStore.failDefinitively({actor,idempotencyKey,googleEventId:eventId});
+              return {...reconciliationEvent(actor,idempotencyKey,meeting,eventId),googleEventId:null,status:'failed'};
+            }catch{return reconciliationEvent(actor,idempotencyKey,meeting,eventId);}
+          }
           if(error?.status!==409)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
           remote=await eventById(token,eventId);
           if(!remote)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
@@ -135,6 +141,7 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
     if(!validActor(actor)||typeof idempotencyKey!=='string'||!/^([a-f0-9]{64})$/.test(idempotencyKey))
       throw new Error('Invalid Google Calendar meeting reference.');
     const claim=await eventStore.claimMeetRefresh({actor,idempotencyKey});
+    if(claim?.status==='expired')return {...claim.event,recoveryExhausted:true};
     if(claim?.status==='complete'||claim?.status==='cooldown')return claim.event;
     if(claim?.status!=='claimed'||!claim.event?.googleEventId)throw new Error('Google Calendar meeting is unavailable.');
     const token=await accessToken(actor);

@@ -71,7 +71,10 @@ export function createCalendarMeetingCreate({verifyAccess,verifySession,lookupRo
           description:payload.description,start:payload.start,end:payload.end,timeZone:payload.timeZone,
         },
       });
-      if(!event || !['created','meet_pending'].includes(event.status))return deny(503);
+      if(event?.status==='failed')return Response.json({code:'CAL_GOOGLE_REJECTED'},{status:422,headers:{
+        'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
+      }});
+      if(!event || !['created','meet_pending','reconciling'].includes(event.status))return deny(503);
       return Response.json(event,{status:event.status==='created'?201:202,headers:{
         'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
       }});

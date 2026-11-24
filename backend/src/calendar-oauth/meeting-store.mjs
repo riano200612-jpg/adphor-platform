@@ -27,14 +27,20 @@ export function createCalendarOAuthMeetingStore({database}) {
                     AND calendar_oauth_private.meetings.google_event_id IS NULL)
                 OR (calendar_oauth_private.meetings.status='creating'
                     AND calendar_oauth_private.meetings.updated_at < CURRENT_TIMESTAMP - interval '2 minutes')
-           RETURNING idempotency_key,google_event_id`,
+           RETURNING idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at`,
           [actor.userId,actor.projectId,idempotencyKey]);
-        if(inserted.rows.length===1)return {status:'claimed',googleEventId:inserted.rows[0].google_event_id??null};
+        if(inserted.rows.length===1){
+          const row=inserted.rows[0];
+          return {status:'claimed',googleEventId:row.google_event_id??null,
+            event:row.google_event_id?{...eventForRow(row,actor),status:'reconciling'}:null};
+        }
         const current=await tx.query(
-          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at
+          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,created_at,updated_at,
+                  (created_at <= CURRENT_TIMESTAMP - interval '30 minutes') AS recovery_expired
              FROM calendar_oauth_private.meetings WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3`,
           [actor.userId,actor.projectId,idempotencyKey]);
         const [row]=current.rows;
+        if(row?.status==='failed'&&row.google_event_id)return {status:'rejected',event:eventForRow(row,actor)};
         if(row&&['created','meet_pending'].includes(row.status))return {status:'complete',event:eventForRow(row,actor)};
         return {status:'in_progress'};
       });
@@ -57,18 +63,23 @@ export function createCalendarOAuthMeetingStore({database}) {
         const claimed=await tx.query(
           `UPDATE calendar_oauth_private.meetings SET updated_at=CURRENT_TIMESTAMP
             WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3
-              AND status='meet_pending' AND google_event_id IS NOT NULL
+              AND status IN ('meet_pending','creating') AND google_event_id IS NOT NULL
               AND updated_at < CURRENT_TIMESTAMP - interval '1 minute'
+              AND created_at > CURRENT_TIMESTAMP - interval '30 minutes'
             RETURNING idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at`,
           [actor.userId,actor.projectId,idempotencyKey]);
         if(claimed.rows.length===1)return {status:'claimed',event:eventForRow(claimed.rows[0],actor)};
         const current=await tx.query(
-          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at
+          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,created_at,updated_at,
+                  (created_at <= CURRENT_TIMESTAMP - interval '30 minutes') AS recovery_expired
              FROM calendar_oauth_private.meetings WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3`,
           [actor.userId,actor.projectId,idempotencyKey]);
         const [row]=current.rows;
         if(row?.status==='created')return {status:'complete',event:eventForRow(row,actor)};
-        if(row?.status==='meet_pending')return {status:'cooldown',event:eventForRow(row,actor)};
+        if(row&&['meet_pending','creating'].includes(row.status)){
+          if(row.recovery_expired)return {status:'expired',event:eventForRow(row,actor)};
+          return {status:'cooldown',event:eventForRow(row,actor)};
+        }
         return {status:'missing'};
       });
     },
@@ -88,6 +99,12 @@ export function createCalendarOAuthMeetingStore({database}) {
         if(rows.length!==1)throw new Error('Calendar meeting persistence failed.');
       });
     },
+    async failDefinitively({actor,idempotencyKey,googleEventId}) {
+      return scoped(database,actor,tx=>tx.query(
+        `UPDATE calendar_oauth_private.meetings SET status='failed',updated_at=CURRENT_TIMESTAMP
+          WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3 AND status='creating' AND google_event_id=$4`,
+        [actor.userId,actor.projectId,idempotencyKey,googleEventId]));
+    },
     async fail({actor,idempotencyKey}) {
       await scoped(database,actor,tx=>tx.query(
         `UPDATE calendar_oauth_private.meetings SET status='failed',updated_at=CURRENT_TIMESTAMP
@@ -101,7 +118,8 @@ export function createCalendarOAuthMeetingStore({database}) {
         const {rows}=await tx.query(
           `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at
              FROM calendar_oauth_private.meetings
-            WHERE user_id=$1 AND project_id=$2 AND status IN ('created','meet_pending')
+            WHERE user_id=$1 AND project_id=$2 AND (status IN ('created','meet_pending','failed') OR
+              (status='creating' AND google_event_id IS NOT NULL))
             ORDER BY start_at DESC LIMIT 100`,
           [actor.userId,actor.projectId],
         );

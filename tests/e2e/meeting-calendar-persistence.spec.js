@@ -36,3 +36,24 @@ test('verified Google meeting appears in history and calendar grid after reload;
  await expect(page.locator('[data-list]')).toContainText(eventId);
  await expect(page.locator('.calendar-grid .calendar-day small').filter({hasText:'[ADPHOR QA] Reunión persistida'})).toHaveCount(1);
 });
+
+test('uncertain remote result stays visible after reload without exposing an unconfirmed Google ID',async({page,baseURL})=>{
+ const eventId='0123456789abcdefghijklmnopqrstuv0123456789abcdefghij';
+ const event={projectId:'source-28',idempotencyKey:'b'.repeat(64),googleEventId:eventId,status:'reconciling',meetLink:null,
+  summary:'[ADPHOR QA] Resultado pendiente',title:'[ADPHOR QA] Resultado pendiente',
+  start:new Date(Date.now()+24*3600000).toISOString(),end:new Date(Date.now()+25*3600000).toISOString()};
+ await page.exposeFunction('readMeetingFixture',async()=>[event]);
+ await page.exposeFunction('refreshMeetingFixture',async()=>event);
+ const fixture=new URL('meeting-calendar-reconciling-fixture',baseURL).href;
+ const moduleUrl=new URL('src/js/ui-meeting-assessment.js',baseURL).href;
+ await page.route('**/meeting-calendar-reconciling-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><main id="meetings"></main>
+ <script type="module">import {mountMeetingAssessment} from '${moduleUrl}';mountMeetingAssessment(document.querySelector('#meetings'),{projectId:'source-28',projectName:'Entrelagos',role:'admin',repo:{mode:'cloud',calendarBookingEnabled:true,
+ createGoogleCalendarMeeting:async()=>{},listGoogleCalendarMeetings:()=>window.readMeetingFixture(),refreshGoogleCalendarMeeting:(project,key)=>window.refreshMeetingFixture(project,key),listVerifiedQaMeetings:async()=>[]}});</script></html>`}));
+ await page.goto(fixture);
+ await expect(page.locator('[data-list]')).toContainText('RESULTADO PENDIENTE');
+ await expect(page.locator('[data-list]')).not.toContainText(eventId);
+ await expect(page.locator('.calendar-grid .calendar-day small').filter({hasText:'[ADPHOR QA] Resultado pendiente'})).toHaveCount(0);
+ await page.reload();
+ await expect(page.locator('[data-list]')).toContainText('RESULTADO PENDIENTE');
+ await expect(page.locator('[data-list]')).not.toContainText(eventId);
+});
