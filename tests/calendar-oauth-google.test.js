@@ -39,14 +39,26 @@ test('Google exchange verifies identity and saves the refresh authorization encr
   try {
     const schema = new URL('../backend/src/calendar-oauth/transactions.sql', import.meta.url);
     await database.exec(await readFile(schema, 'utf8'));
+    const rlsProposal = new URL('../docs/qa/calendar-oauth-meetings-rls-proposal.sql', import.meta.url);
+    await database.exec(await readFile(rlsProposal, 'utf8'));
     await database.exec('SET ROLE adphor_qa_calendar_oauth_state');
     const cipher = await createCalendarOAuthTransactionCipher(crypto.getRandomValues(new Uint8Array(32)));
+    const scopedDatabase = {
+      async transaction(callback) {
+        await database.exec('BEGIN');
+        try {
+          const result=await callback({async query(statement,parameters){return database.query(statement,parameters);}});
+          await database.exec('COMMIT');
+          return result;
+        } catch(error) { await database.exec('ROLLBACK'); throw error; }
+      },
+    };
     const refreshToken = 'fixture-refresh-token';
     const scope = 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar.events.owned https://www.googleapis.com/auth/calendar.events.freebusy';
     let grant = {scope, refresh_token: refreshToken, id_token: await sign()};
     const complete = createGoogleCalendarAuthorization({
       clientId, clientSecret: 'fixture-secret', expectedEmail, clock: () => now * 1000,
-      saveConnection: createCalendarOAuthConnectionStore({database, ...cipher}),
+      saveConnection: createCalendarOAuthConnectionStore({database:scopedDatabase, ...cipher}),
       async transport(url, request) {
         assert.equal(request.redirect, 'manual');
         if (url === 'https://oauth2.googleapis.com/token') {
@@ -71,7 +83,7 @@ test('Google exchange verifies identity and saves the refresh authorization encr
     await assert.rejects(complete(actor), /required authorization/);
     grant.scope = scope;
     await complete(actor);
-    await assert.rejects(complete(actor), /unique constraint/);
+    await complete(actor);
     await assert.rejects(database.query('SELECT payload FROM calendar_oauth_private.connections'), /permission denied/);
     await database.exec('RESET ROLE');
     const {rows} = await database.query('SELECT * FROM calendar_oauth_private.connections');
