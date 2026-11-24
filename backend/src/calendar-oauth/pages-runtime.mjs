@@ -10,6 +10,8 @@ const operations = new Map([
   ['/api/integrations/google-calendar/oauth/start', 'start'],
   [callbackPath, 'callback'],
   [finalizePath, 'finalize'],
+  ['/api/integrations/google-calendar/meetings/create', 'createMeeting'],
+  ['/api/integrations/google-calendar/meetings/list', 'listMeetings'],
 ]);
 
 function response(status) {
@@ -145,7 +147,8 @@ export async function calendarOAuthPages(context, openDatabase) {
   const url = new URL(request.url);
   const operation = operations.get(url.pathname);
   if (url.origin !== QA_URL || !operation || (operation !== 'readiness' && env?.ADPHOR_CALENDAR_OAUTH_ENABLED !== 'true')) return response(404);
-  if (request.method !== (operation === 'callback' ? 'GET' : 'POST')) return response(405);
+  if (['createMeeting','listMeetings'].includes(operation) && env?.ADPHOR_CALENDAR_OAUTH_PILOT_ENABLED !== 'true') return response(404);
+  if (request.method !== (operation === 'callback' || operation === 'listMeetings' ? 'GET' : 'POST')) return response(405);
   if (!request.headers.get('Cf-Access-Jwt-Assertion')) {
     return operation === 'readiness' ? diagnosis(403, 'CAL_ACCESS') : response(403);
   }
@@ -169,13 +172,21 @@ export async function calendarOAuthPages(context, openDatabase) {
     });
     connect();
     const routes = await createCalendarOAuthRuntime({
-      database: {async query(statement, parameters) {return {rows: await sql.unsafe(statement, parameters)};}},
+      database: {
+        async query(statement, parameters) {return {rows: await sql.unsafe(statement, parameters)};},
+        async transaction(callback) {
+          return sql.begin(async transaction=>callback({
+            async query(statement,parameters) {return {rows:await transaction.unsafe(statement,parameters)};},
+          }));
+        },
+      },
       encryptionKey: keyBytes(env.ADPHOR_CALENDAR_OAUTH_ENCRYPTION_KEY),
       access, supabase,
       google: {
         clientId: env.ADPHOR_CALENDAR_OAUTH_GOOGLE_CLIENT_ID,
         clientSecret: env.ADPHOR_CALENDAR_OAUTH_GOOGLE_CLIENT_SECRET,
         expectedEmail: env.ADPHOR_CALENDAR_OAUTH_PILOT_EMAIL,
+        pilotProjectId: env.ADPHOR_CALENDAR_OAUTH_PILOT_PROJECT_ID,
       },
     });
     return await routes[operation](request);
