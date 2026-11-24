@@ -35,8 +35,9 @@ function safeEvent(event) {
   return {googleEventId: id, meetLink, status: meetLink ? 'created' : 'meet_pending'};
 }
 
-async function idForMeetRequest(value) {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
+async function idForMeetRequest(actor,value) {
+  const material=JSON.stringify(['ADPHOR-CALENDAR-QA',actor.userId,actor.projectId,value]);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(material)));
   return [...digest].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
@@ -81,9 +82,9 @@ export function createGoogleCalendarEventService({
     return token.access_token;
   }
 
-  async function findOnGoogle(token, idempotencyKey) {
+  async function findOnGoogle(token, providerRequestId) {
     const url = new URL(GOOGLE_EVENTS_URL);
-    url.searchParams.set('privateExtendedProperty', 'adphorRequestId=' + idempotencyKey);
+    url.searchParams.set('privateExtendedProperty', 'adphorRequestId=' + providerRequestId);
     url.searchParams.set('showDeleted', 'false');
     url.searchParams.set('maxResults', '2');
     const result = await request(url.href, {headers: {Authorization: 'Bearer ' + token}});
@@ -103,7 +104,8 @@ export function createGoogleCalendarEventService({
 
     try {
     const token = await accessToken(actor);
-    const recovered = await findOnGoogle(token, meeting.idempotencyKey);
+    const providerRequestId=await idForMeetRequest(actor,meeting.idempotencyKey);
+    const recovered = await findOnGoogle(token, providerRequestId);
     const event = recovered ?? await request(
       GOOGLE_EVENTS_URL + '?conferenceDataVersion=1&sendUpdates=none',
       {
@@ -115,9 +117,9 @@ export function createGoogleCalendarEventService({
           start: {dateTime: meeting.start, timeZone: meeting.timeZone ?? 'America/Bogota'},
           end: {dateTime: meeting.end, timeZone: meeting.timeZone ?? 'America/Bogota'},
           visibility: 'private',
-          extendedProperties: {private: {adphorRequestId: meeting.idempotencyKey}},
+          extendedProperties: {private: {adphorRequestId: providerRequestId}},
           conferenceData: {createRequest: {
-            requestId: await idForMeetRequest(meeting.idempotencyKey),
+            requestId: providerRequestId,
             conferenceSolutionKey: {type: 'hangoutsMeet'},
           }},
         }),
