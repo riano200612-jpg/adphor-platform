@@ -37,7 +37,7 @@ test('Pages refuses other hosts, disabled rollout and unauthenticated access bef
   assert.equal((await onRequest({request: new Request(QA_URL + callback), env: {}})).status, 404);
 });
 
-test('Pages uses only the QA Hyperdrive binding, failing closed without it or with a malformed binding', async () => {
+test('Pages completes Cloudflare Access verification before opening the QA database handle', async () => {
   const request = new Request(QA_URL + callback, {headers: {'Cf-Access-Jwt-Assertion': 'invalid'}});
   for (const binding of [undefined, {}, {connectionString: ''},
     {connectionString: 'https://not-postgres.example.test'}, {connectionString: 'postgresql://missing-credentials.example.test/postgres'},
@@ -46,7 +46,7 @@ test('Pages uses only the QA Hyperdrive binding, failing closed without it or wi
     const result = await calendarOAuthPages({request, env: {
       ...env, ADPHOR_CALENDAR_QA_HYPERDRIVE: binding,
     }}, () => { opens++; throw Error('must not connect without valid Hyperdrive'); });
-    assert.equal(result.status, 503);
+    assert.equal(result.status, 403);
     assert.equal(opens, 0);
     assert.equal(await result.text(), '');
   }
@@ -66,8 +66,8 @@ test('Pages uses only the QA Hyperdrive binding, failing closed without it or wi
     };
   });
   assert.equal(response.status, 403);
-  assert.equal(opened, 1);
-  assert.equal(closed, 1);
+  assert.equal(opened, 0);
+  assert.equal(closed, 0);
   assert.equal(response.headers.get('set-cookie'), null);
 });
 
@@ -78,7 +78,7 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
     Origin:QA_URL, Authorization:'Bearer fixture',
   }});
   let calls=0;
-  const checks = {dedicated:true,rls:true,can_store:true,cannot_read:true,browser_denied:true};
+  const checks = {dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,cannot_read_payload:true,cannot_read:true,browser_denied:true};
   const dependencies = {
     verifyAccess:async()=>({subject:'access-owner'}),
     verifySession:async()=>({userId:'user',aal:'aal2'}),
@@ -167,7 +167,7 @@ test('readiness accepts an empty body stream and rejects payloads and invalid qu
     lookupRole:async()=> 'admin',
     connect:()=>({unsafe:async()=>{
       calls++;
-      return [{dedicated:true,rls:true,can_store:true,cannot_read:true,browser_denied:true}];
+      return [{dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,cannot_read_payload:true,cannot_read:true,browser_denied:true}];
     }}),
   };
   const emptyStream = new Request(root+'project=source-28',{
@@ -241,4 +241,35 @@ test('transport diagnostics expose only an allowlisted runtime code to the autho
   });
   assert.equal(unrecognized.headers.get('X-ADPHOR-Calendar-Reason'),'OTHER');
   assert.doesNotMatch(JSON.stringify([...unrecognized.headers]),/Bearer|SECRET/);
+});
+
+
+test('invalid Access signature is checked before Pages opens a PostgreSQL handle', async () => {
+  const originalFetch=globalThis.fetch;
+  const signing={name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'};
+  const pair=await crypto.subtle.generateKey({...signing,modulusLength:2048,publicExponent:Uint8Array.of(1,0,1)},true,['sign','verify']);
+  const jwk={...await crypto.subtle.exportKey('jwk',pair.publicKey),kid:'qa-access-key',alg:'RS256',use:'sig'};
+  const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
+  const now=Math.floor(Date.now()/1000);
+  const header=encode({alg:'RS256',kid:jwk.kid});
+  const claims=encode({iss:env.ADPHOR_CALENDAR_OAUTH_ACCESS_ISSUER,aud:[env.ADPHOR_CALENDAR_OAUTH_ACCESS_AUDIENCE],type:'app',exp:now+60,sub:'qa-subject'});
+  const invalidSignature=Buffer.alloc(256,0).toString('base64url');
+  const request=new Request(QA_URL+'/api/integrations/google-calendar/oauth/start?project=source-28',{
+    method:'POST',headers:{
+      Origin:QA_URL,Authorization:'Bearer fixture',
+      'Cf-Access-Jwt-Assertion':header+'.'+claims+'.'+invalidSignature,
+    },
+  });
+  let opens=0;
+  globalThis.fetch=async url=>{
+    assert.equal(url,env.ADPHOR_CALENDAR_OAUTH_ACCESS_ISSUER+'/cdn-cgi/access/certs');
+    return Response.json({keys:[jwk]});
+  };
+  try {
+    const response=await calendarOAuthPages({request,env},()=>{opens++;throw Error('must not open before Access verification');});
+    assert.equal(response.status,403);
+    assert.equal(opens,0);
+  } finally {
+    globalThis.fetch=originalFetch;
+  }
 });
