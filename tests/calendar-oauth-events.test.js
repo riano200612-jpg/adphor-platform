@@ -4,7 +4,7 @@ import {createGoogleCalendarEventService} from '../backend/src/calendar-oauth/go
 const actor={userId:'qa-user',projectId:'source-28'};
 const meeting={summary:'[ADPHOR QA] Reunión piloto ADPHOR',description:'Evento de prueba privado.',
  start:'2026-12-01T10:00:00-05:00',end:'2026-12-01T10:30:00-05:00',timeZone:'America/Bogota'};
-function setup({failInsertResponse=false,failPersistOnce=false,pendingMeet=false,rejectInsertStatus=0,expiredMeet=false}={}){
+function setup({failInsertResponse=false,failPersistOnce=false,pendingMeet=false,rejectInsertStatus=0}={}){
  const remote=new Map(),calls=[],state={locked:false,eventId:null,persisted:null,persistFail:failPersistOnce,failed:false,failedEventId:null};
  const store={
   async claim(){if(state.failed)return {status:'rejected',event:{status:'failed'}};if(state.persisted)return {status:'complete',event:state.persisted};if(state.locked)return {status:'in_progress'};state.locked=true;return {status:'claimed',googleEventId:state.eventId};},
@@ -12,7 +12,7 @@ function setup({failInsertResponse=false,failPersistOnce=false,pendingMeet=false
   async complete({event}){if(state.persistFail){state.persistFail=false;throw Error('synthetic persistence failure');}state.persisted=event;state.locked=false;},
   async fail(){state.locked=false;if(!state.eventId)state.persisted=null;},
   async failDefinitively({googleEventId}){state.failed=true;state.failedEventId=googleEventId;state.locked=false;},
-  async claimMeetRefresh(){return expiredMeet?{status:'expired',event:{projectId:actor.projectId,status:'meet_pending',googleEventId:'0123456789abcdef0123456789abcdef'}}:state.persisted?.status==='created'?{status:'complete',event:state.persisted}:{status:'claimed',event:state.persisted};},
+  async claimMeetRefresh(){return state.persisted?.status==='created'?{status:'complete',event:state.persisted}:{status:'claimed',event:state.persisted};},
  };
  const service=createGoogleCalendarEventService({clientId:'fixture',clientSecret:'fixture',getConnection:async()=>({refreshToken:'refresh'}),eventStore:store,
   async transport(url,options={}){
@@ -83,7 +83,7 @@ test('concurrent confirmations cannot both claim and insert',async()=>{
  const waiting=new Promise(resolve=>release=resolve),started=new Promise(resolve=>notifyPost=resolve);
  const svc=createGoogleCalendarEventService({clientId:'c',clientSecret:'s',getConnection:async()=>({refreshToken:'r'}),
  eventStore:{async claim(){if(state.persisted)return {status:'complete',event:state.persisted};if(state.locked)return {status:'in_progress'};state.locked=true;return {status:'claimed',googleEventId:state.eventId};},
- async markAttempted(v){state.eventId=v.googleEventId;},async complete({event}){state.persisted=event;state.locked=false;},async fail(){state.locked=false;},
+ async markAttempted(v){state.eventId=v.googleEventId;},async complete({event}){state.persisted=event;state.locked=false;},async fail(){state.locked=false;},async failDefinitively(){state.locked=false;},
  async claimMeetRefresh(){return {status:'missing'};}},
  async transport(url,options={}){if(url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'a',token_type:'Bearer'});
  const u=new URL(url),path='/calendar/v3/calendars/primary/events';
@@ -111,10 +111,4 @@ test('definitive Google rejection is distinct from uncertain outcome and cannot 
  assert.ok(state.failedEventId);assert.equal(insertCount(calls),1);
  const retry=await service.createMeeting({actor,meeting});
  assert.equal(retry.status,'failed');assert.equal(insertCount(calls),1);
-});
-
-test('Meet recovery has a hard 30-minute window and expired checks never contact Google',async()=>{
- const {service,calls}=setup({expiredMeet:true});
- const result=await service.refreshMeeting({actor,idempotencyKey:'c'.repeat(64)});
- assert.equal(result.recoveryExhausted,true);assert.equal(result.status,'meet_pending');assert.equal(calls.length,0);
 });

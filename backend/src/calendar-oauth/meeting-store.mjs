@@ -35,8 +35,7 @@ export function createCalendarOAuthMeetingStore({database}) {
             event:row.google_event_id?{...eventForRow(row,actor),status:'reconciling'}:null};
         }
         const current=await tx.query(
-          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,created_at,updated_at,
-                  (created_at <= CURRENT_TIMESTAMP - interval '30 minutes') AS recovery_expired
+          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at
              FROM calendar_oauth_private.meetings WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3`,
           [actor.userId,actor.projectId,idempotencyKey]);
         const [row]=current.rows;
@@ -65,19 +64,16 @@ export function createCalendarOAuthMeetingStore({database}) {
             WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3
               AND status IN ('meet_pending','creating') AND google_event_id IS NOT NULL
               AND updated_at < CURRENT_TIMESTAMP - interval '1 minute'
-              AND created_at > CURRENT_TIMESTAMP - interval '30 minutes'
             RETURNING idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at`,
           [actor.userId,actor.projectId,idempotencyKey]);
         if(claimed.rows.length===1)return {status:'claimed',event:eventForRow(claimed.rows[0],actor)};
         const current=await tx.query(
-          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,created_at,updated_at,
-                  (created_at <= CURRENT_TIMESTAMP - interval '30 minutes') AS recovery_expired
+          `SELECT idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at
              FROM calendar_oauth_private.meetings WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3`,
           [actor.userId,actor.projectId,idempotencyKey]);
         const [row]=current.rows;
         if(row?.status==='created')return {status:'complete',event:eventForRow(row,actor)};
         if(row&&['meet_pending','creating'].includes(row.status)){
-          if(row.recovery_expired)return {status:'expired',event:eventForRow(row,actor)};
           return {status:'cooldown',event:eventForRow(row,actor)};
         }
         return {status:'missing'};

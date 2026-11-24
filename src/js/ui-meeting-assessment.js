@@ -296,9 +296,9 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
       }else if(m.googleEventId){
         const eventId=document.createElement('small');eventId.textContent='ID de evento: '+m.googleEventId;item.append(eventId);
         if(m.meetLink){const link=document.createElement('a');link.href=m.meetLink;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Abrir Google Meet';item.append(link);}
-        else {const pending=document.createElement('p');pending.textContent=m.recoveryExhausted?'MEET_PENDING · Se agotó la ventana automática de comprobación; el estado queda para revisión.':'MEET_PENDING · Google todavía no confirmó el enlace de Meet.';item.append(pending);}
+        else {const pending=document.createElement('p');pending.textContent='MEET_PENDING · Google todavía no confirmó el enlace de Meet. La comprobación se limita para evitar consultas repetidas.';item.append(pending);}
       }
-      if(bookingEnabled&&!m.recoveryExhausted&&['reconciling','meet_pending'].includes(m.status)&&m.idempotencyKey&&
+      if(bookingEnabled&&['reconciling','meet_pending'].includes(m.status)&&m.idempotencyKey&&
         typeof repo.refreshGoogleCalendarMeeting==='function'){
         const refresh=document.createElement('button');refresh.type='button';
         refresh.textContent=m.status==='reconciling'?'Comprobar estado en Google Calendar':'Comprobar enlace de Meet';
@@ -307,7 +307,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
           try{
             const checked=await repo.refreshGoogleCalendarMeeting(projectId,m.idempotencyKey);
             googleCalendarRows=[checked,...googleCalendarRows.filter(row=>row.idempotencyKey!==checked.idempotencyKey)];
-            status.textContent=checked.recoveryExhausted?'Se agotó la ventana de comprobación automática. El estado se conserva para revisión; no se creará otro evento.':checked.status==='created'?'Google confirmó el enlace de Meet.':
+            checked.status==='created'?'Google confirmó el enlace de Meet.':
               checked.status==='reconciling'?'RESULTADO PENDIENTE · Google aún no confirma la reunión. No la envíes de nuevo.':
               'MEET_PENDING · Google aún no confirma el enlace. Comprueba de nuevo más tarde.';
             render();

@@ -141,7 +141,6 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
     if(!validActor(actor)||typeof idempotencyKey!=='string'||!/^([a-f0-9]{64})$/.test(idempotencyKey))
       throw new Error('Invalid Google Calendar meeting reference.');
     const claim=await eventStore.claimMeetRefresh({actor,idempotencyKey});
-    if(claim?.status==='expired')return {...claim.event,recoveryExhausted:true};
     if(claim?.status==='complete'||claim?.status==='cooldown')return claim.event;
     if(claim?.status!=='claimed'||!claim.event?.googleEventId)throw new Error('Google Calendar meeting is unavailable.');
     const token=await accessToken(actor);

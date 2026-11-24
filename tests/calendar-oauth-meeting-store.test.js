@@ -87,17 +87,7 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
     const rejected=rejectedRows.find(row=>row.idempotencyKey===rejectedKey);
     assert.equal(rejected.status,'failed');
     assert.equal(rejected.googleEventId,null);
-    const expiredKey='pilot-store-expired-004';
-    await store.claim({actor,idempotencyKey:expiredKey});
-    const expiredId='3123456789abcdef0123456789abcdef';
-    await store.markAttempted({actor,idempotencyKey:expiredKey,googleEventId:expiredId,summary:'QA Meet vencido',
-      start:'2026-12-04T15:00:00.000Z',end:'2026-12-04T15:30:00.000Z'});
-    await database.transaction(async tx=>{
-      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
-        [actor.userId,actor.projectId]);
-      await tx.query("UPDATE calendar_oauth_private.meetings SET created_at=CURRENT_TIMESTAMP-interval '31 minutes',updated_at=CURRENT_TIMESTAMP-interval '2 minutes' WHERE idempotency_key=$1",[expiredKey]);
-    });
-    assert.equal((await store.claimMeetRefresh({actor,idempotencyKey:expiredKey})).status,'expired');
+
 
     const privileges=await database.query(`SELECT
       pg_has_role(current_user,'adphor_qa_calendar_oauth_state','USAGE') AS inherited,
