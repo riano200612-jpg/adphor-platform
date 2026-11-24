@@ -153,8 +153,11 @@ export async function calendarOAuthPages(context, openDatabase) {
   const {request, env} = context;
   const url = new URL(request.url);
   const operation = operations.get(url.pathname);
-  if (url.origin !== QA_URL || !operation || (operation !== 'readiness' && env?.ADPHOR_CALENDAR_OAUTH_ENABLED !== 'true')) return response(404);
-  if (['createMeeting','listMeetings'].includes(operation) && env?.ADPHOR_CALENDAR_OAUTH_PILOT_ENABLED !== 'true') return response(404);
+  const pilotProjectId=env?.ADPHOR_CALENDAR_OAUTH_PILOT_PROJECT_ID;
+  const pilotConfigured=typeof pilotProjectId==='string'&&/^[a-z0-9][a-z0-9-]{0,99}$/.test(pilotProjectId)&&
+    typeof env?.ADPHOR_CALENDAR_OAUTH_PILOT_EMAIL==='string'&&env.ADPHOR_CALENDAR_OAUTH_PILOT_EMAIL.length>0;
+  if (url.origin !== QA_URL || !operation || (operation !== 'readiness' &&
+      (env?.ADPHOR_CALENDAR_OAUTH_PILOT_ENABLED !== 'true' || !pilotConfigured))) return response(404);
   if (request.method !== (operation === 'callback' || operation === 'listMeetings' ? 'GET' : 'POST')) return response(405);
   if (!request.headers.get('Cf-Access-Jwt-Assertion')) {
     return operation === 'readiness' ? diagnosis(403, 'CAL_ACCESS') : response(403);
