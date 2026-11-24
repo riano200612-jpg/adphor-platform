@@ -21,7 +21,7 @@ test('creates a private event with real Meet response shape, no guests, no updat
       return {refreshToken: 'encrypted-store-decoded-in-service'};
     },
     eventStore: {
-      async claim() { return {status: 'claimed'}; },
+      async claim() { return persisted?.status==='created'?{status:'complete',event:persisted}:{status:'claimed'}; },
       async complete(value) { persisted = value.event; }, async fail() {},
     },
     async transport(url, options) {
@@ -48,7 +48,9 @@ test('creates a private event with real Meet response shape, no guests, no updat
   assert.equal(result.googleEventId, 'event_12345');
   assert.equal(result.meetLink, 'https://meet.google.com/abc-defg-hij');
   assert.deepEqual(persisted, result);
-  assert.equal(calls.length, 3);
+  const retry=await service({actor,meeting});
+  assert.deepEqual(retry,result);
+  assert.equal(calls.length,3);
 });
 
 test('rejects invitations and malformed meeting input before contacting Google', async () => {
