@@ -24,7 +24,7 @@ export function createCalendarOAuthMeetingStore({database}) {
            VALUES ($1,$2,$3,'creating')
            ON CONFLICT (user_id,project_id,idempotency_key) DO UPDATE
              SET status='creating',updated_at=CURRENT_TIMESTAMP
-             WHERE calendar_oauth_private.meetings.status='failed'
+             WHERE calendar_oauth_private.meetings.status IN ('failed','meet_pending')
                 OR (calendar_oauth_private.meetings.status='creating'
                     AND calendar_oauth_private.meetings.updated_at < CURRENT_TIMESTAMP - interval '2 minutes')
            RETURNING idempotency_key`,
