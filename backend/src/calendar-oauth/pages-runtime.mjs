@@ -50,18 +50,21 @@ function databaseFailure(error) {
   return 'CAL_DB_TRANSPORT';
 }
 
-function databaseOptions(connectionString) {
-  const url = new URL(connectionString);
-  if (url.protocol !== 'postgresql:' || !/^aws-[0-9]+-us-east-1\.pooler\.supabase\.com$/.test(url.hostname) ||
-      url.port !== '5432' || url.pathname !== '/postgres' || url.search || url.hash ||
-      url.username !== 'adphor_qa_calendar_oauth_login.qfctnnnnltghepwujpdm' || !url.password) {
-    throw new Error('Invalid QA database configuration.');
+// Cloudflare's QA-only Hyperdrive binding owns the verified TLS connection
+// to the direct Supabase QA PostgreSQL origin. Never pass CA or origin credentials into Workerd.
+function hyperdriveConnectionArgs(binding) {
+  const connectionString = binding?.connectionString;
+  if (typeof connectionString !== 'string') throw new Error('QA Hyperdrive binding unavailable.');
+  let url;
+  try { url = new URL(connectionString); } catch { throw new Error('Invalid QA Hyperdrive binding.'); }
+  if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
+      !url.hostname || !url.username || !url.password || url.hash ||
+      connectionString.length > 8192) {
+    throw new Error('Invalid QA Hyperdrive binding.');
   }
-  return {
-    host: url.hostname, port: 5432, database: 'postgres', username: url.username,
-    password: decodeURIComponent(url.password), ssl: 'verify-full',
-    max: 1, connect_timeout: 5, onnotice: () => {},
-  };
+  return [connectionString, {
+    max: 1, connect_timeout: 5, fetch_types: false, onnotice: () => {},
+  }];
 }
 
 function keyBytes(value) {
@@ -146,7 +149,7 @@ export async function calendarOAuthPages(context, openDatabase) {
   try {
     const access = {issuer: env.ADPHOR_CALENDAR_OAUTH_ACCESS_ISSUER, audience: env.ADPHOR_CALENDAR_OAUTH_ACCESS_AUDIENCE};
     const supabase = {publishableKey: env.VITE_SUPABASE_ANON_KEY};
-    const connect = () => (sql ??= openDatabase(databaseOptions(env.ADPHOR_CALENDAR_OAUTH_DATABASE_URL)));
+    const connect = () => (sql ??= openDatabase(...hyperdriveConnectionArgs(env.ADPHOR_CALENDAR_QA_HYPERDRIVE)));
     if (operation === 'readiness') return await probeCalendarDatabase(request, {
       verifyAccess: createCalendarAccessVerifier(access),
       ...createCalendarSupabaseAuthorization(supabase),
