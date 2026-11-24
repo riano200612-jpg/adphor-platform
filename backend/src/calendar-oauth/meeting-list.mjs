@@ -10,7 +10,8 @@ export function createCalendarMeetingList({verifyAccess,verifySession,lookupRole
   return async function handle(request){
     const url=new URL(request.url);
     if(url.origin!==QA_URL||url.pathname!==listMeetingsPath)return deny(404);
-    if(request.method!=='GET')return deny(405);
+    if(request.method!=='POST')return deny(405);
+    if(request.body!==null)return deny(400);
     if(request.headers.get('Origin')!==QA_URL)return deny(403);
     const projects=url.searchParams.getAll('project');
     if(projects.length!==1||[...url.searchParams].length!==1||projects[0]!==pilotProjectId)return deny(403);
