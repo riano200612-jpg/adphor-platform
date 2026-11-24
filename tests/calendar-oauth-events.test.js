@@ -23,8 +23,7 @@ test('creates a private event with real Meet response shape, no guests, no updat
     },
     eventStore: {
       async claim() { return {status: 'claimed'}; },
-      async find() { return null; },
-      async complete(value) { persisted = value.event; },
+      async complete(value) { persisted = value.event; }, async fail() {},
     },
     async transport(url, options) {
       calls.push({url: String(url), options});
@@ -58,7 +57,7 @@ test('rejects invitations and malformed meeting input before contacting Google',
   const service = createGoogleCalendarEventService({
     clientId: 'qa-client', clientSecret: 'qa-secret',
     getConnection: async () => ({refreshToken: 'x'}),
-    eventStore: {claim: async () => ({status: 'claimed'}), find: async () => null, complete: async () => {}},
+    eventStore: {claim: async () => ({status: 'claimed'}), complete: async () => {}, fail: async () => {}},
     async transport() { calls++; return Response.json({}); },
   });
   await assert.rejects(service({actor, meeting: {...meeting, attendees: [{email: 'external@example.test'}]}}),
@@ -70,7 +69,7 @@ test('fails closed when Google returns no authentic Meet link', async () => {
   const service = createGoogleCalendarEventService({
     clientId: 'qa-client', clientSecret: 'qa-secret',
     getConnection: async () => ({refreshToken: 'x'}),
-    eventStore: {claim: async () => ({status: 'claimed'}), find: async () => null, complete: async () => {}},
+    eventStore: {claim: async () => ({status: 'claimed'}), complete: async () => {}, fail: async () => {}},
     async transport(url) {
       if (url === 'https://oauth2.googleapis.com/token') return Response.json({access_token: 'a', token_type: 'Bearer'});
       if (String(url).includes('privateExtendedProperty=')) return Response.json({items: []});
