@@ -18,9 +18,9 @@ export function createCalendarOAuthRoutes({access, supabase, clientId, store, pe
   const verifyAccess = createCalendarAccessVerifier(access);
   const identity = createCalendarSupabaseAuthorization(supabase);
   const routes = {
-    start: createCalendarOAuthStart({verifyAccess, ...identity, clientId, store}),
+    start: createCalendarOAuthStart({verifyAccess, ...identity, clientId, store, pilotProjectId}),
     callback: createCalendarOAuthCallback({verifyAccess, store, stageAuthorization: pending.stage}),
-    finalize: createCalendarOAuthFinalize({verifyAccess, ...identity, pending, completeAuthorization}),
+    finalize: createCalendarOAuthFinalize({verifyAccess, ...identity, pending, completeAuthorization, pilotProjectId}),
   };
   if (typeof createMeeting === 'function' && typeof pilotProjectId === 'string') {
     routes.createMeeting = createCalendarMeetingCreate({
