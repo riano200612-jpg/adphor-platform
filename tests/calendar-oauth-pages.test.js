@@ -78,7 +78,7 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
     Origin:QA_URL, Authorization:'Bearer fixture',
   }});
   let calls=0;
-  const checks = {dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,cannot_read_payload:true,cannot_read:true,browser_denied:true};
+  const checks = {dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,can_read_encrypted_payload:true,can_scope_user:true,can_scope_project:true,no_extra_column_read:true,no_tablewide_read:true,no_tablewide_update:true,no_tablewide_delete:true,browser_denied:true};
   const dependencies = {
     verifyAccess:async()=>({subject:'access-owner'}),
     verifySession:async()=>({userId:'user',aal:'aal2'}),
@@ -97,7 +97,7 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
   ]) assert.equal((await probeCalendarDatabase(request.clone(), {...dependencies,...overrides})).status,403);
   assert.equal(calls,0);
   assert.equal((await probeCalendarDatabase(request.clone(),dependencies)).status,204);
-  checks.cannot_read=false;
+  checks.no_tablewide_read=false;
   assert.equal((await probeCalendarDatabase(request.clone(),dependencies)).status,503);
   assert.equal(calls,2);
 });
@@ -167,7 +167,7 @@ test('readiness accepts an empty body stream and rejects payloads and invalid qu
     lookupRole:async()=> 'admin',
     connect:()=>({unsafe:async()=>{
       calls++;
-      return [{dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,cannot_read_payload:true,cannot_read:true,browser_denied:true}];
+      return [{dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,can_read_encrypted_payload:true,can_scope_user:true,can_scope_project:true,no_extra_column_read:true,no_tablewide_read:true,no_tablewide_update:true,no_tablewide_delete:true,browser_denied:true}];
     }}),
   };
   const emptyStream = new Request(root+'project=source-28',{
