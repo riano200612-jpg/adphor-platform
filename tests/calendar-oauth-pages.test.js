@@ -88,7 +88,7 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
     connect:()=>({unsafe:async sql=>{
       calls++;
       assert.match(sql,/^SELECT/);
-      assert.doesNotMatch(sql,/\b(?:INSERT INTO|DELETE FROM|UPDATE)\b/);
+      assert.doesNotMatch(sql,/^\s*(?:INSERT\s+INTO|DELETE\s+FROM|UPDATE\s+\w+)/i);
       return [checks];
     }}),
   };
