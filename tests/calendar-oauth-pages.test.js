@@ -80,7 +80,7 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
     Origin:QA_URL, Authorization:'Bearer fixture',
   }});
   let calls=0;
-  const checks = {dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,can_read_encrypted_payload:true,can_scope_user:true,can_scope_project:true,no_extra_column_read:true,no_tablewide_read:true,no_tablewide_update:true,no_tablewide_delete:true,browser_denied:true};
+  const checks = {dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,can_read_encrypted_payload:true,can_scope_user:true,can_scope_project:true,can_update_payload:true,can_update_subject:true,no_extra_column_update:true,no_extra_column_read:true,no_tablewide_read:true,no_tablewide_update:true,no_tablewide_delete:true,browser_denied:true};
   const dependencies = {
     verifyAccess:async()=>({subject:'access-owner'}),
     verifySession:async()=>({userId:'user',aal:'aal2'}),
@@ -171,7 +171,7 @@ test('readiness accepts an empty body stream and rejects payloads and invalid qu
     lookupRole:async()=> 'admin',
     connect:()=>({unsafe:async()=>{
       calls++;
-      return [{dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,can_read_encrypted_payload:true,can_scope_user:true,can_scope_project:true,no_extra_column_read:true,no_tablewide_read:true,no_tablewide_update:true,no_tablewide_delete:true,browser_denied:true}];
+      return [{dedicated:true,constrained_login:true,inherited_state_role:true,rls:true,can_store:true,can_read_encrypted_payload:true,can_scope_user:true,can_scope_project:true,can_update_payload:true,can_update_subject:true,no_extra_column_update:true,no_extra_column_read:true,no_tablewide_read:true,no_tablewide_update:true,no_tablewide_delete:true,browser_denied:true}];
     }}),
   };
   const emptyStream = new Request(root+'project=source-28',{
