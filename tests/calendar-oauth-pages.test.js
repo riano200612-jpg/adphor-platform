@@ -98,7 +98,8 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
     {lookupRole:async()=>null},
   ]) assert.equal((await probeCalendarDatabase(request.clone(), {...dependencies,...overrides})).status,403);
   assert.equal(calls,0);
-  assert.equal((await probeCalendarDatabase(request.clone(),dependencies)).status,204);
+  const permitted=await probeCalendarDatabase(request.clone(),dependencies);
+  assert.equal(permitted.status,204,permitted.headers.get('X-ADPHOR-Calendar-Code')||'no diagnostic');
   checks.no_tablewide_read=false;
   assert.equal((await probeCalendarDatabase(request.clone(),dependencies)).status,503);
   assert.equal(calls,2);
