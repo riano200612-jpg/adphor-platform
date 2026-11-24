@@ -81,21 +81,31 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
     return {...result,userId:actor.userId,projectId:actor.projectId,idempotencyKey,
       summary:meeting.summary.trim(),start:meeting.start,end:meeting.end};
   }
+  function reconciliationEvent(actor,idempotencyKey,meeting,eventId) {
+    return {userId:actor.userId,projectId:actor.projectId,idempotencyKey,googleEventId:eventId,
+      meetLink:null,status:'reconciling',summary:meeting.summary.trim(),start:meeting.start,end:meeting.end};
+  }
   async function createMeeting({actor,meeting}) {
     if(!validActor(actor)||!validRequest(meeting))throw new Error('Invalid Google Calendar meeting request.');
     const idempotencyKey=await stableIdempotencyKey(actor,meeting);
     const claim=await eventStore.claim({actor,idempotencyKey});
     if(claim?.status==='complete')return claim.event;
     if(claim?.status!=='claimed')throw new Error('Google Calendar request is already in progress.');
-    let attemptMayHaveReachedGoogle=false;
+    const previousAttempt=typeof claim.googleEventId==='string'&&claim.googleEventId.length>0;
+    let intentDurable=false,eventId=claim.googleEventId;
     try{
       const token=await accessToken(actor);
-      const eventId=claim.googleEventId||await googleEventIdFor(idempotencyKey);
-      attemptMayHaveReachedGoogle=true;
+      eventId=eventId||await googleEventIdFor(idempotencyKey);
       await eventStore.markAttempted({actor,idempotencyKey,googleEventId:eventId,
         summary:meeting.summary.trim(),start:meeting.start,end:meeting.end});
-      let remote=await eventById(token,eventId);
-      if(!remote){
+      intentDurable=true;
+      let remote;
+      if(previousAttempt){
+        // An earlier insert may have succeeded even if a prior GET is still empty.
+        // Reconcile by the stored ID only; never issue a second POST automatically.
+        remote=await eventById(token,eventId);
+        if(!remote)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
+      }else{
         const providerRequestId=await idForMeetRequest(actor,idempotencyKey);
         const body={id:eventId,summary:meeting.summary.trim(),description:meeting.description,
           start:{dateTime:meeting.start,timeZone:meeting.timeZone??'America/Bogota'},
@@ -106,9 +116,9 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
           remote=await request(GOOGLE_EVENTS_URL+'?conferenceDataVersion=1&sendUpdates=none',{
             method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
         }catch(error){
-          if(error?.status!==409)throw error;
+          if(error?.status!==409)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
           remote=await eventById(token,eventId);
-          if(!remote)throw new Error('Google Calendar event creation is pending reconciliation.');
+          if(!remote)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
         }
       }
       const result=persistedEvent(actor,idempotencyKey,meeting,remote);
@@ -116,7 +126,8 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
       await eventStore.complete({actor,event:result});
       return result;
     }catch(error){
-      if(!attemptMayHaveReachedGoogle){try{await eventStore.fail({actor,idempotencyKey});}catch{}}
+      if(intentDurable)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
+      try{await eventStore.fail({actor,idempotencyKey});}catch{}
       throw error;
     }
   }
@@ -128,7 +139,7 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
     if(claim?.status!=='claimed'||!claim.event?.googleEventId)throw new Error('Google Calendar meeting is unavailable.');
     const token=await accessToken(actor);
     const remote=await eventById(token,claim.event.googleEventId);
-    if(!remote)return claim.event;
+    if(!remote)return {...claim.event,status:'reconciling',meetLink:null};
     const result=safeEvent(remote);
     if(result.googleEventId!==claim.event.googleEventId)throw new Error('Google Calendar event identity did not match the saved meeting.');
     const updated={...claim.event,...result};
