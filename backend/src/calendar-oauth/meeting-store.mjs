@@ -46,7 +46,6 @@ export function createCalendarOAuthMeetingStore({database}) {
           `UPDATE calendar_oauth_private.meetings
               SET google_event_id=$4,summary=$5,start_at=$6::timestamptz,end_at=$7::timestamptz,updated_at=CURRENT_TIMESTAMP
             WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3 AND status='creating'
-            AND google_event_id IS NULL
               AND (google_event_id IS NULL OR google_event_id=$4)
             RETURNING idempotency_key`,
           [actor.userId,actor.projectId,idempotencyKey,googleEventId,summary,start,end]);
@@ -92,7 +91,8 @@ export function createCalendarOAuthMeetingStore({database}) {
     async fail({actor,idempotencyKey}) {
       await scoped(database,actor,tx=>tx.query(
         `UPDATE calendar_oauth_private.meetings SET status='failed',updated_at=CURRENT_TIMESTAMP
-          WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3 AND status='creating'`,
+          WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3
+            AND status='creating' AND google_event_id IS NULL`,
         [actor.userId,actor.projectId,idempotencyKey],
       ));
     },
