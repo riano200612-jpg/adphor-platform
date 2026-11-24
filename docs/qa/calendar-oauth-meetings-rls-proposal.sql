@@ -2,10 +2,18 @@
 -- Extends the existing private OAuth schema for the single pilot. No public/browser grants.
 GRANT SELECT (user_id, project_id, google_subject, payload)
   ON calendar_oauth_private.connections TO adphor_qa_calendar_oauth_state;
+GRANT UPDATE (google_subject,payload)
+  ON calendar_oauth_private.connections TO adphor_qa_calendar_oauth_state;
 CREATE POLICY oauth_connection_scoped_select ON calendar_oauth_private.connections
   FOR SELECT TO adphor_qa_calendar_oauth_state
   USING (user_id = nullif(current_setting('adphor.calendar_user_id', true),'')
      AND project_id = nullif(current_setting('adphor.calendar_project_id', true),''));
+CREATE POLICY oauth_connection_scoped_update ON calendar_oauth_private.connections
+  FOR UPDATE TO adphor_qa_calendar_oauth_state
+  USING (user_id = nullif(current_setting('adphor.calendar_user_id', true),'')
+     AND project_id = nullif(current_setting('adphor.calendar_project_id', true),''))
+  WITH CHECK (user_id = nullif(current_setting('adphor.calendar_user_id', true),'')
+          AND project_id = nullif(current_setting('adphor.calendar_project_id', true),''));
 
 CREATE TABLE calendar_oauth_private.meetings (
   user_id text NOT NULL,
