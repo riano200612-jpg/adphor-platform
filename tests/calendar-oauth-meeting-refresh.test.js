@@ -9,7 +9,7 @@ test('Meet refresh keeps Access, AAL2, membership and pilot scope checks',async(
  let calls=0;const deps={pilotProjectId:'source-28',verifyAccess:async()=>({subject:'access'}),
  verifySession:async()=>({userId:'u1',aal:'aal2'}),lookupRole:async()=> 'admin',
  refreshMeeting:async({actor,idempotencyKey})=>{calls++;assert.deepEqual(actor,{userId:'u1',projectId:'source-28'});assert.equal(idempotencyKey,payload.idempotencyKey);
- return {projectId:'source-28',status:'created',googleEventId:'0123456789abcdefghijklmnopqrstuv0123456789abcdefghij',
+ return {projectId:'source-28',status:'created',googleEventId:'0123456789abcdef0123456789abcdef',
  meetLink:'https://meet.google.com/abc-defg-hij'};}};
  assert.equal((await createCalendarMeetingRefresh({...deps,verifyAccess:async()=>null})(request())).status,403);
  assert.equal((await createCalendarMeetingRefresh({...deps,verifySession:async()=>({userId:'u1',aal:'aal1'})})(request())).status,403);

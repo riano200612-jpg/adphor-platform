@@ -35,11 +35,13 @@ async function stableIdempotencyKey(actor,meeting) {
   return [...digest].map(byte=>byte.toString(16).padStart(2,'0')).join('');
 }
 async function googleEventIdFor(idempotencyKey) {
-  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode('ADPHOR-GOOGLE-EVENT-V1:'+idempotencyKey)));
-  const alphabet='0123456789abcdefghijklmnopqrstuv';let bits=0,value=0,result='';
-  for(const byte of digest){value=(value<<8)|byte;bits+=8;while(bits>=5){bits-=5;result+=alphabet[(value>>>bits)&31];}}
-  if(bits>0)result+=alphabet[(value<<(5-bits))&31];
-  return result;
+  // RFC 4122 name-based UUID v5, encoded as 32 hex characters (valid base32hex).
+  const namespace=Uint8Array.from('6ba7b8109dad11d180b400c04fd430c8'.match(/../g),part=>parseInt(part,16));
+  const name=encoder.encode('ADPHOR-GOOGLE-EVENT-V1:'+idempotencyKey);
+  const input=new Uint8Array(namespace.length+name.length);input.set(namespace);input.set(name,namespace.length);
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-1',input));
+  const uuid=digest.slice(0,16);uuid[6]=(uuid[6]&0x0f)|0x50;uuid[8]=(uuid[8]&0x3f)|0x80;
+  return [...uuid].map(byte=>byte.toString(16).padStart(2,'0')).join('');
 }
 async function idForMeetRequest(actor,value) {
   const material=JSON.stringify(['ADPHOR-CALENDAR-QA',actor.userId,actor.projectId,value]);

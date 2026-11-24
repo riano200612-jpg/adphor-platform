@@ -20,7 +20,7 @@ function setup({failInsertResponse=false,failPersistOnce=false,pendingMeet=false
    const u=new URL(url),path='/calendar/v3/calendars/primary/events';
    if(u.pathname.startsWith(path+'/')){const id=decodeURIComponent(u.pathname.split('/').pop());return remote.has(id)?Response.json(remote.get(id)):Response.json({}, {status:404});}
    if(u.pathname===path&&options.method==='POST'){
-    const body=JSON.parse(options.body);assert.match(body.id,/^[0-9a-v]{52}$/);assert.equal(body.attendees,undefined);
+    const body=JSON.parse(options.body);assert.match(body.id,/^[0-9a-f]{32}$/);assert.equal(body.attendees,undefined);
     assert.equal(body.visibility,'private');assert.equal(u.searchParams.get('conferenceDataVersion'),'1');assert.equal(u.searchParams.get('sendUpdates'),'none');
     if(remote.has(body.id))return Response.json({}, {status:409});
     const event={id:body.id};if(!pendingMeet)event.conferenceData={createRequest:{status:{statusCode:'success'}},entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]};
@@ -34,7 +34,7 @@ const insertCount=calls=>calls.filter(c=>c.options.method==='POST'&&c.url.includ
 
 test('creates one private event using a deterministic Google ID and confirmed Meet',async()=>{
  const {service,calls,state}=setup();const result=await service.createMeeting({actor,meeting});
- assert.equal(result.status,'created');assert.match(result.googleEventId,/^[0-9a-v]{52}$/);
+ assert.equal(result.status,'created');assert.match(result.googleEventId,/^[0-9a-f]{32}$/);
  assert.equal(result.meetLink,'https://meet.google.com/abc-defg-hij');assert.equal(state.persisted.googleEventId,result.googleEventId);
  assert.equal(insertCount(calls),1);assert.deepEqual(await service.createMeeting({actor,meeting}),result);
 });

@@ -41,7 +41,7 @@ export function createCalendarOAuthMeetingStore({database}) {
     },
     async markAttempted({actor,idempotencyKey,googleEventId,summary,start,end}) {
       return scoped(database,actor,async tx=>{
-        if(typeof googleEventId!=='string'||!/^[0-9a-v]{52}$/.test(googleEventId))throw new Error('Invalid Google event identity.');
+        if(typeof googleEventId!=='string'||!/^[0-9a-f]{32}$/.test(googleEventId))throw new Error('Invalid Google event identity.');
         const {rows}=await tx.query(
           `UPDATE calendar_oauth_private.meetings
               SET google_event_id=$4,summary=$5,start_at=$6::timestamptz,end_at=$7::timestamptz,updated_at=CURRENT_TIMESTAMP

@@ -38,7 +38,7 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
     const store=createCalendarOAuthMeetingStore({database});
     const idempotencyKey='pilot-store-test-request-001';
     assert.equal((await store.claim({actor,idempotencyKey})).status,'claimed');
-    const eventId='0123456789abcdefghijklmnopqrstuv0123456789abcdefghij';
+    const eventId='0123456789abcdef0123456789abcdef';
     await store.markAttempted({actor,idempotencyKey,googleEventId:eventId,summary:'QA privada',
       start:'2026-12-01T15:00:00.000Z',end:'2026-12-01T15:30:00.000Z'});
     assert.equal((await store.claim({actor,idempotencyKey})).status,'in_progress');
@@ -63,7 +63,7 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
     assert.deepEqual(await store.list({actor:{userId:'other-user',projectId:'source-28'}}),[]);
     const pendingKey='pilot-store-meet-pending-002';
     await store.claim({actor,idempotencyKey:pendingKey});
-    const pendingId='1123456789abcdefghijklmnopqrstuv0123456789abcdefghij';
+    const pendingId='1123456789abcdef0123456789abcdef';
     await store.markAttempted({actor,idempotencyKey:pendingKey,googleEventId:pendingId,summary:'QA Meet pendiente',
       start:'2026-12-02T15:00:00.000Z',end:'2026-12-02T15:30:00.000Z'});
     await store.complete({actor,event:{userId:actor.userId,projectId:actor.projectId,idempotencyKey:pendingKey,
