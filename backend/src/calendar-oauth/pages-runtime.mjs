@@ -158,7 +158,7 @@ export async function calendarOAuthPages(context, openDatabase) {
     typeof env?.ADPHOR_CALENDAR_OAUTH_PILOT_EMAIL==='string'&&env.ADPHOR_CALENDAR_OAUTH_PILOT_EMAIL.length>0;
   if (url.origin !== QA_URL || !operation || (operation !== 'readiness' &&
       (env?.ADPHOR_CALENDAR_OAUTH_PILOT_ENABLED !== 'true' || !pilotConfigured))) return response(404);
-  if (request.method !== (operation === 'callback' || operation === 'listMeetings' ? 'GET' : 'POST')) return response(405);
+  if (request.method !== (operation === 'callback' ? 'GET' : 'POST')) return response(405);
   if (!request.headers.get('Cf-Access-Jwt-Assertion')) {
     return operation === 'readiness' ? diagnosis(403, 'CAL_ACCESS') : response(403);
   }
