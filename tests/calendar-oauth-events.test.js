@@ -39,34 +39,42 @@ test('creates one private event using a deterministic Google ID and confirmed Me
  assert.equal(insertCount(calls),1);assert.deepEqual(await service.createMeeting({actor,meeting}),result);
 });
 test('recovers accepted event after timeout by exact ID and does not insert again',async()=>{
- const {service,calls,state}=setup({failInsertResponse:true});await assert.rejects(service.createMeeting({actor,meeting}));
+ const {service,calls,state}=setup({failInsertResponse:true});
+ const uncertain=await service.createMeeting({actor,meeting});
+ assert.equal(uncertain.status,'reconciling');assert.ok(uncertain.googleEventId);
  const original=state.eventId;state.locked=false;
  const result=await service.createMeeting({actor,meeting});assert.equal(result.googleEventId,original);assert.equal(result.status,'created');
  assert.equal(insertCount(calls),1);
 });
 test('persistence failure after Google acceptance preserves intent and reconciles without duplicate',async()=>{
- const {service,calls,state}=setup({failPersistOnce:true});await assert.rejects(service.createMeeting({actor,meeting}),/synthetic persistence failure/);
+ const {service,calls,state}=setup({failPersistOnce:true});
+ const uncertain=await service.createMeeting({actor,meeting});assert.equal(uncertain.status,'reconciling');
  assert.ok(state.eventId);state.locked=false;
  const result=await service.createMeeting({actor,meeting});assert.equal(result.googleEventId,state.eventId);
- assert.equal(insertCount(calls),1);
+ assert.equal(result.status,'created');assert.equal(insertCount(calls),1);
 });
-test('temporary exact-ID 404 and a retry reuse the same ID; a duplicate response reconciles by ID',async()=>{
- const remote=new Map(),ids=[],state={eventId:null,locked:false,persisted:null};let posts=0,lookups=0;
+test('temporary exact-ID 404 after an uncertain insert never triggers a second POST',async()=>{
+ const remote=new Map(),state={eventId:null,locked:false,persisted:null};let posts=0,hidden=true;
  const svc=createGoogleCalendarEventService({clientId:'c',clientSecret:'s',getConnection:async()=>({refreshToken:'r'}),
  eventStore:{async claim(){if(state.persisted)return {status:'complete',event:state.persisted};if(state.locked)return {status:'in_progress'};state.locked=true;return {status:'claimed',googleEventId:state.eventId};},
  async markAttempted(v){state.eventId=v.googleEventId;},async complete({event}){state.persisted=event;state.locked=false;},async fail(){state.locked=false;},
  async claimMeetRefresh(){return {status:'missing'};}},
  async transport(url,options={}){if(url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'a',token_type:'Bearer'});
  const u=new URL(url),path='/calendar/v3/calendars/primary/events';
- if(u.pathname.startsWith(path+'/')){lookups++;if(lookups===2)return Response.json({}, {status:404});const id=u.pathname.split('/').pop();return remote.has(id)?Response.json(remote.get(id)):Response.json({}, {status:404});}
- if(u.pathname===path&&options.method==='POST'){posts++;const body=JSON.parse(options.body);ids.push(body.id);
-  if(remote.has(body.id))return Response.json({}, {status:409});
+ if(u.pathname.startsWith(path+'/')){const id=u.pathname.split('/').pop();return !hidden&&remote.has(id)?Response.json(remote.get(id)):Response.json({}, {status:404});}
+ if(u.pathname===path&&options.method==='POST'){posts++;const body=JSON.parse(options.body);
   const event={id:body.id,conferenceData:{createRequest:{status:{statusCode:'success'}},entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}};
-  remote.set(body.id,event);if(posts===1)throw Error('timeout');return Response.json(event);}
+  remote.set(body.id,event);throw Error('synthetic timeout after Google accepted the event');}
  return Response.json({}, {status:500});}});
- await assert.rejects(svc.createMeeting({actor,meeting}));state.locked=false;
- const result=await svc.createMeeting({actor,meeting});assert.equal(result.status,'created');
- assert.equal(posts,2);assert.equal(ids[0],ids[1]);assert.equal(result.googleEventId,ids[0]);
+ const uncertain=await svc.createMeeting({actor,meeting});assert.equal(uncertain.status,'reconciling');
+ const savedId=uncertain.googleEventId;state.locked=false;
+ const stillUncertain=await svc.createMeeting({actor,meeting});
+ assert.equal(stillUncertain.status,'reconciling');assert.equal(stillUncertain.googleEventId,savedId);
+ assert.equal(posts,1);
+ hidden=false;state.locked=false;
+ const recovered=await svc.createMeeting({actor,meeting});
+ assert.equal(recovered.status,'created');assert.equal(recovered.googleEventId,savedId);
+ assert.equal(posts,1);
 });
 test('concurrent confirmations cannot both claim and insert',async()=>{
  const remote=new Map(),state={locked:false,persisted:null,eventId:null};let release,notifyPost,posts=0;
