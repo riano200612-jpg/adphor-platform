@@ -223,7 +223,7 @@ export function createCloudRepository(url, key) {
         return data;
       },
       async listGoogleCalendarMeetings(projectId) {
-        const response=await calendarMeetingRequest('list',projectId);
+        const response=await calendarMeetingRequest('list',projectId,{method:'POST'});
         const data=await response.json();
         if(data?.projectId!==projectId||!Array.isArray(data.meetings))throw Error('CAL_MEETING_LIST_INVALID');
         return data.meetings;
