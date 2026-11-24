@@ -287,7 +287,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
       const item=document.createElement('article');item.className='panel';
       const title=document.createElement('h4');title.textContent=m.summary||m.title||'Reunión';
       const description=document.createElement('p');
-      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · '+(m.googleEventId?'Google Calendar verificado':'Registro QA verificado');
+      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · '+(m.status==='reconciling'?'Resultado pendiente de verificar con Google':m.googleEventId?'Google Calendar verificado':'Registro QA verificado');
       item.append(title,description);
       if(m.status==='failed'){const failed=document.createElement('p');failed.textContent='Google rechazó la solicitud. No se creó una reunión. Corrige los datos antes de intentar otra vez.';item.append(failed);}else if(m.status==='reconciling'){
         const pending=document.createElement('p');
@@ -307,7 +307,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
           try{
             const checked=await repo.refreshGoogleCalendarMeeting(projectId,m.idempotencyKey);
             googleCalendarRows=[checked,...googleCalendarRows.filter(row=>row.idempotencyKey!==checked.idempotencyKey)];
-            checked.status==='created'?'Google confirmó el enlace de Meet.':
+            status.textContent=checked.status==='created'?'Google confirmó el enlace de Meet.':
               checked.status==='reconciling'?'RESULTADO PENDIENTE · Google aún no confirma la reunión. No la envíes de nuevo.':
               'MEET_PENDING · Google aún no confirma el enlace. Comprueba de nuevo más tarde.';
             render();
