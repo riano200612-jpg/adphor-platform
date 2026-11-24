@@ -42,7 +42,11 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
     await store.markAttempted({actor,idempotencyKey,googleEventId:eventId,summary:'QA privada',
       start:'2026-12-01T15:00:00.000Z',end:'2026-12-01T15:30:00.000Z'});
     assert.equal((await store.claim({actor,idempotencyKey})).status,'in_progress');
-    const intent=await database.query('SELECT google_event_id,status FROM calendar_oauth_private.meetings WHERE idempotency_key=$1',[idempotencyKey]);
+    const intent=await database.transaction(async tx=>{
+      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
+        [actor.userId,actor.projectId]);
+      return tx.query('SELECT google_event_id,status FROM calendar_oauth_private.meetings WHERE idempotency_key=$1',[idempotencyKey]);
+    });
     assert.equal(intent.rows[0].google_event_id,eventId);
     assert.equal(intent.rows[0].status,'creating');
     await store.complete({actor,event:{
@@ -57,6 +61,22 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
     assert.equal(rows.length,1);
     assert.equal(rows[0].meetLink,'https://meet.google.com/abc-defg-hij');
     assert.deepEqual(await store.list({actor:{userId:'other-user',projectId:'source-28'}}),[]);
+    const pendingKey='pilot-store-meet-pending-002';
+    await store.claim({actor,idempotencyKey:pendingKey});
+    const pendingId='1123456789abcdefghijklmnopqrstuv0123456789abcdefghij';
+    await store.markAttempted({actor,idempotencyKey:pendingKey,googleEventId:pendingId,summary:'QA Meet pendiente',
+      start:'2026-12-02T15:00:00.000Z',end:'2026-12-02T15:30:00.000Z'});
+    await store.complete({actor,event:{userId:actor.userId,projectId:actor.projectId,idempotencyKey:pendingKey,
+      googleEventId:pendingId,meetLink:null,status:'meet_pending',summary:'QA Meet pendiente',
+      start:'2026-12-02T15:00:00.000Z',end:'2026-12-02T15:30:00.000Z'}});
+    await database.transaction(async tx=>{
+      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
+        [actor.userId,actor.projectId]);
+      await tx.query("UPDATE calendar_oauth_private.meetings SET updated_at=CURRENT_TIMESTAMP-interval '2 minutes' WHERE idempotency_key=$1",[pendingKey]);
+    });
+    assert.equal((await store.claimMeetRefresh({actor,idempotencyKey:pendingKey})).status,'claimed');
+    assert.equal((await store.claimMeetRefresh({actor,idempotencyKey:pendingKey})).status,'cooldown');
+
     const privileges=await database.query(`SELECT
       pg_has_role(current_user,'adphor_qa_calendar_oauth_state','USAGE') AS inherited,
       NOT has_table_privilege(current_user,'calendar_oauth_private.connections','SELECT') AS no_tablewide_select,
