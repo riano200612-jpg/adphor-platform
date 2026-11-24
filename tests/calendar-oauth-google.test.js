@@ -42,7 +42,7 @@ test('Google exchange verifies identity and saves the refresh authorization encr
     await database.exec('SET ROLE adphor_qa_calendar_oauth_state');
     const cipher = await createCalendarOAuthTransactionCipher(crypto.getRandomValues(new Uint8Array(32)));
     const refreshToken = 'fixture-refresh-token';
-    const scope = 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar.events.readonly';
+    const scope = 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar.events.owned https://www.googleapis.com/auth/calendar.events.freebusy';
     let grant = {scope, refresh_token: refreshToken, id_token: await sign()};
     const complete = createGoogleCalendarAuthorization({
       clientId, clientSecret: 'fixture-secret', expectedEmail, clock: () => now * 1000,
