@@ -4,7 +4,6 @@ import {createGoogleCalendarEventService} from '../backend/src/calendar-oauth/go
 
 const actor = {userId: 'qa-user', projectId: 'source-28'};
 const meeting = {
-  idempotencyKey: 'qa-meeting-request-0001',
   summary: '[ADPHOR QA] Reunión piloto ADPHOR',
   description: 'Evento de prueba privado.',
   start: '2026-12-01T10:00:00-05:00',
