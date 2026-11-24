@@ -13,7 +13,7 @@ function validRequest(input) {
     Number.isFinite(Date.parse(value));
   return typeof input?.idempotencyKey === 'string' &&
     /^[a-z0-9_-]{20,128}$/.test(input.idempotencyKey) &&
-    typeof input?.summary === 'string' && input.summary.trim().length >= 3 &&
+    typeof input?.summary === 'string' && input.summary.startsWith('[ADPHOR QA] ') && input.summary.trim().length >= 15 &&
     input.summary.trim().length <= 200 &&
     typeof input?.description === 'string' && input.description.length <= 5000 &&
     dateTime(input?.start) && dateTime(input?.end) &&
