@@ -9,7 +9,7 @@ function request(payload,options={}) {
     body:payload===null?null:JSON.stringify(payload),
   });
 }
-const payload={confirmed:true,idempotencyKey:'pilot-meeting-request-001',summary:'Reunión QA',description:'Prueba',start:'2026-12-01T10:00:00-05:00',end:'2026-12-01T10:30:00-05:00'};
+const payload={confirmed:true,idempotencyKey:'pilot-meeting-request-001',summary:'[ADPHOR QA] Reunión QA',description:'Prueba',start:'2026-12-01T10:00:00-05:00',end:'2026-12-01T10:30:00-05:00'};
 
 test('requires Access, Supabase AAL2, allowed membership, explicit confirmation and exact pilot scope',async()=>{
   let created=0;
