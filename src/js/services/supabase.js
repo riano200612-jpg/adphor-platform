@@ -211,9 +211,12 @@ export function createCloudRepository(url, key) {
           method:'POST',body:{...meeting,confirmed:true},
         });
         const data=await response.json();
-        const meet=data?.meetLink===null?null:new URL(data?.meetLink);
+        let meet=null;
+        if(typeof data?.meetLink==='string')meet=new URL(data.meetLink);
         if(data?.projectId!==projectId||!['created','meet_pending'].includes(data?.status)||
           typeof data?.googleEventId!=='string'||
+          (data.status==='created'&&!meet)||
+          (data.meetLink!==null&&typeof data.meetLink!=='string')||
           (meet&&!(meet.protocol==='https:'&&meet.hostname==='meet.google.com'))) {
           throw Error('CAL_MEETING_RESPONSE_INVALID');
         }
@@ -302,6 +305,7 @@ export function createCloudRepository(url, key) {
       return check(await client.rpc(finalize ? 'finalize_monthly_report' : 'monthly_report', { project, report_month: `${month}-01` }));
     },
     mode: 'cloud',
+    calendarBookingEnabled: authPolicy.isolatedQa && import.meta.env.VITE_QA_CALENDAR_BOOKING_ENABLED==='true' && typeof import.meta.env.VITE_QA_CALENDAR_PILOT_PROJECT_ID==='string',
     async restoreSession() {
       user=null;
       const restored=await authentication.restoreSession();
