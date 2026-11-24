@@ -26,7 +26,12 @@ CREATE TABLE calendar_oauth_private.meetings (
 );
 ALTER TABLE calendar_oauth_private.meetings ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON calendar_oauth_private.meetings FROM PUBLIC;
-GRANT SELECT, INSERT, UPDATE ON calendar_oauth_private.meetings TO adphor_qa_calendar_oauth_state;
+GRANT SELECT (user_id,project_id,idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at)
+  ON calendar_oauth_private.meetings TO adphor_qa_calendar_oauth_state;
+GRANT INSERT (user_id,project_id,idempotency_key,status)
+  ON calendar_oauth_private.meetings TO adphor_qa_calendar_oauth_state;
+GRANT UPDATE (status,updated_at,google_event_id,meet_url,summary,start_at,end_at)
+  ON calendar_oauth_private.meetings TO adphor_qa_calendar_oauth_state;
 CREATE POLICY oauth_meetings_select ON calendar_oauth_private.meetings
   FOR SELECT TO adphor_qa_calendar_oauth_state
   USING (user_id = nullif(current_setting('adphor.calendar_user_id', true),'')
