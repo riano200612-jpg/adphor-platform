@@ -16,5 +16,6 @@ test('Meet refresh keeps Access, AAL2, membership and pilot scope checks',async(
  assert.equal((await createCalendarMeetingRefresh({...deps,lookupRole:async()=>null})(request())).status,403);
  assert.equal((await createCalendarMeetingRefresh(deps)(request(payload,'source-29'))).status,403);
  assert.equal((await createCalendarMeetingRefresh(deps)(request({idempotencyKey:'bad'}))).status,400);
+ assert.equal((await createCalendarMeetingRefresh(deps)(request({idempotencyKey:payload.idempotencyKey,padding:'x'.repeat(3000)}))).status,400);
  assert.equal((await createCalendarMeetingRefresh(deps)(request())).status,200);assert.equal(calls,1);
 });

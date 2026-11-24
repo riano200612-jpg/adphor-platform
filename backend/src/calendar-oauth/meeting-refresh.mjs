@@ -3,6 +3,27 @@ export const refreshMeetingPath='/api/integrations/google-calendar/meetings/refr
 function deny(status){return new Response(null,{status,headers:{
   'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
 }});}
+async function readPayload(request){
+  const length=Number(request.headers.get('Content-Length')||0);
+  if(length>2048||request.body===null)return null;
+  const reader=request.body.getReader(),chunks=[];
+  let size=0;
+  try{
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done)break;
+      size+=value.byteLength;
+      if(size>2048){await reader.cancel();return null;}
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(size);let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+    return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+  }catch{
+    try{await reader.cancel();}catch{}
+    return null;
+  }
+}
 export function createCalendarMeetingRefresh({verifyAccess,verifySession,lookupRole,refreshMeeting,pilotProjectId}){
   if(typeof verifyAccess!=='function'||typeof verifySession!=='function'||typeof lookupRole!=='function'||
     typeof refreshMeeting!=='function'||typeof pilotProjectId!=='string'||
@@ -16,12 +37,7 @@ export function createCalendarMeetingRefresh({verifyAccess,verifySession,lookupR
     if(projects.length!==1||[...url.searchParams].length!==1||projects[0]!==pilotProjectId)return deny(403);
     const bearer=/^Bearer ([A-Za-z0-9._-]{1,8192})$/.exec(request.headers.get('Authorization')||'')?.[1];
     if(!bearer)return deny(401);
-    let payload;
-    try{
-      const length=Number(request.headers.get('Content-Length')||0);if(length>2048)return deny(400);
-      const text=await request.text();if(new TextEncoder().encode(text).byteLength>2048)return deny(400);
-      payload=JSON.parse(text);
-    }catch{return deny(400);}
+    const payload=await readPayload(request);
     if(!payload||typeof payload!=='object'||Array.isArray(payload)||
       Object.keys(payload).some(key=>key!=='idempotencyKey')||
       typeof payload.idempotencyKey!=='string'||! /^[a-f0-9]{64}$/.test(payload.idempotencyKey))return deny(400);
