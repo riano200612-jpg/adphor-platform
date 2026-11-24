@@ -117,10 +117,14 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
   try {
     rows = await sql.unsafe(`SELECT
     current_user = 'adphor_qa_calendar_oauth_login' AS dedicated,
+    (SELECT rolinherit AND NOT rolsuper AND NOT rolbypassrls
+       FROM pg_catalog.pg_roles WHERE rolname = current_user) AS constrained_login,
+    pg_has_role(current_user, 'adphor_qa_calendar_oauth_state', 'USAGE') AS inherited_state_role,
     (SELECT count(*) = 3 FROM pg_catalog.pg_tables
       WHERE schemaname = 'calendar_oauth_private' AND rowsecurity
         AND tablename IN ('transactions', 'pending', 'connections')) AS rls,
     has_column_privilege(current_user, 'calendar_oauth_private.connections', 'payload', 'INSERT') AS can_store,
+    NOT has_column_privilege(current_user, 'calendar_oauth_private.connections', 'payload', 'SELECT') AS cannot_read_payload,
     NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'SELECT') AS cannot_read,
     NOT has_schema_privilege('authenticated', 'calendar_oauth_private', 'USAGE') AS browser_denied`);
   } catch (error) {
@@ -128,8 +132,9 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
     return diagnosis(503, code, code === 'CAL_DB_TRANSPORT' ? databaseTransportReason(error) : undefined);
   }
   const [row] = rows;
-  if (rows.length !== 1 || row?.dedicated !== true || row.rls !== true ||
-      row.can_store !== true || row.cannot_read !== true || row.browser_denied !== true) {
+  if (rows.length !== 1 || row?.dedicated !== true || row.constrained_login !== true ||
+      row.inherited_state_role !== true || row.rls !== true || row.can_store !== true ||
+      row.cannot_read_payload !== true || row.cannot_read !== true || row.browser_denied !== true) {
     return diagnosis(503, 'CAL_DB_PERMISSIONS');
   }
   return response(204);
@@ -145,9 +150,16 @@ export async function calendarOAuthPages(context, openDatabase) {
     return operation === 'readiness' ? diagnosis(403, 'CAL_ACCESS') : response(403);
   }
 
+  const access = {issuer: env.ADPHOR_CALENDAR_OAUTH_ACCESS_ISSUER, audience: env.ADPHOR_CALENDAR_OAUTH_ACCESS_AUDIENCE};
+  if (operation !== 'readiness') {
+    let verified;
+    try { verified = await createCalendarAccessVerifier(access)(request); }
+    catch { return response(503); }
+    if (!verified?.subject) return response(403);
+  }
+
   let sql;
   try {
-    const access = {issuer: env.ADPHOR_CALENDAR_OAUTH_ACCESS_ISSUER, audience: env.ADPHOR_CALENDAR_OAUTH_ACCESS_AUDIENCE};
     const supabase = {publishableKey: env.VITE_SUPABASE_ANON_KEY};
     const connect = () => (sql ??= openDatabase(...hyperdriveConnectionArgs(env.ADPHOR_CALENDAR_QA_HYPERDRIVE)));
     if (operation === 'readiness') return await probeCalendarDatabase(request, {
