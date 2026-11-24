@@ -11,13 +11,28 @@ function deny(status) {
 
 async function readRequest(request) {
   const length=Number(request.headers.get('Content-Length') || 0);
-  if (length > 16000) return null;
-  const text=await request.text();
-  if (text.length > 16000) return null;
+  if (length > 16000 || request.body===null) return null;
+  const reader=request.body.getReader();
+  const chunks=[];
+  let size=0;
   try {
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done)break;
+      size+=value.byteLength;
+      if(size>16000){await reader.cancel();return null;}
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(size);
+    let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+    const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
     const value=JSON.parse(text);
-    return value && typeof value==='object' && !Array.isArray(value) ? value : null;
-  } catch { return null; }
+    return value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+  }catch{
+    try{await reader.cancel();}catch{}
+    return null;
+  }
 }
 
 // The route checks every identity boundary before calling Google. A client
