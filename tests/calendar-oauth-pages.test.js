@@ -6,7 +6,9 @@ import {onRequest} from '../functions/api/integrations/google-calendar/oauth/[op
 
 const callback = '/api/integrations/google-calendar/oauth/callback';
 const env = {
-  ADPHOR_CALENDAR_OAUTH_ENABLED: 'true',
+  ADPHOR_CALENDAR_OAUTH_ENABLED: 'false',
+  ADPHOR_CALENDAR_OAUTH_PILOT_ENABLED: 'true',
+  ADPHOR_CALENDAR_OAUTH_PILOT_PROJECT_ID: 'pilot',
   ADPHOR_CALENDAR_QA_HYPERDRIVE: {
     connectionString: 'postgresql://synthetic_user:synthetic_password@hyperdrive.example.test:5432/postgres',
   },
@@ -105,7 +107,7 @@ test('the OAuth pooler probe requires Access, AAL2 and current scope before a me
 test('readiness remains reachable for protected diagnostics while the OAuth feature is off', async () => {
   const request=new Request(QA_URL+'/api/integrations/google-calendar/oauth/readiness?project=pilot',
     {method:'POST',headers:{Origin:QA_URL}});
-  const response=await calendarOAuthPages({request,env:{ADPHOR_CALENDAR_OAUTH_ENABLED:'false'}},
+  const response=await calendarOAuthPages({request,env:{ADPHOR_CALENDAR_OAUTH_ENABLED:'false',ADPHOR_CALENDAR_OAUTH_PILOT_ENABLED:'false'}},
     ()=>assert.fail('No Access assertion means no database handle.'));
   assert.equal(response.status,403);
 });
