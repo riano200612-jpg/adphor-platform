@@ -20,3 +20,16 @@ test('lists only meetings in the authenticated pilot project after Access/AAL2/m
   })(new Request(QA_URL+listMeetingsPath+'?project=source-29',{method:'POST',headers:{Origin:QA_URL,Authorization:'Bearer session'}}));
   assert.equal(denied.status,403);
 });
+
+test('accepts null and zero-byte request bodies, but rejects a payload byte',async()=>{
+ let listed=0;const handler=createCalendarMeetingList({pilotProjectId:'source-28',verifyAccess:async()=>({subject:'access'}),
+  verifySession:async()=>({userId:'u1',aal:'aal2'}),lookupRole:async()=> 'admin',meetingStore:{list:async()=>{listed++;return [];}}});
+ const headers={Origin:QA_URL,Authorization:'Bearer session'};
+ for(const body of [null,new ReadableStream({start(controller){controller.close();}})]){
+  const result=await handler(new Request(QA_URL+listMeetingsPath+'?project=source-28',{method:'POST',headers,body}));
+  assert.equal(result.status,200);
+ }
+ const payload=await handler(new Request(QA_URL+listMeetingsPath+'?project=source-28',{method:'POST',headers,
+  body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('x'));controller.close();}})}));
+ assert.equal(payload.status,400);assert.equal(listed,2);
+});

@@ -16,7 +16,7 @@ export async function createCalendarOAuthRuntime({database, encryptionKey, acces
   const storage = {database, ...cipher};
   const connectionReader=createCalendarOAuthConnectionReader({database,open:cipher.open});
   const meetingStore=createCalendarOAuthMeetingStore({database});
-  const createMeeting=createGoogleCalendarEventService({
+  const calendarEvents=createGoogleCalendarEventService({
     clientId:google.clientId,clientSecret:google.clientSecret,
     getConnection:actor=>connectionReader(actor,async connection=>connection),eventStore:meetingStore,
   });
@@ -24,7 +24,8 @@ export async function createCalendarOAuthRuntime({database, encryptionKey, acces
     access, supabase: {...supabase, pilotEmail: google.expectedEmail}, clientId: google.clientId,
     store: createCalendarOAuthTransactionStore(storage),
     pending: createCalendarOAuthPendingStore(storage),
-    createMeeting,meetingStore,pilotProjectId:google.pilotProjectId,
+    createMeeting:calendarEvents.createMeeting,refreshMeeting:calendarEvents.refreshMeeting,
+    meetingStore,pilotProjectId:google.pilotProjectId,
     completeAuthorization: createGoogleCalendarAuthorization({
       ...google, saveConnection: createCalendarOAuthConnectionStore(storage),
     }),

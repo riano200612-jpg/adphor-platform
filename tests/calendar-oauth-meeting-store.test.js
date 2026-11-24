@@ -37,7 +37,14 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
 
     const store=createCalendarOAuthMeetingStore({database});
     const idempotencyKey='pilot-store-test-request-001';
-    assert.deepEqual(await store.claim({actor,idempotencyKey}),{status:'claimed'});
+    assert.equal((await store.claim({actor,idempotencyKey})).status,'claimed');
+    const eventId='0123456789abcdefghijklmnopqrstuv0123456789abcdefghij';
+    await store.markAttempted({actor,idempotencyKey,googleEventId:eventId,summary:'QA privada',
+      start:'2026-12-01T15:00:00.000Z',end:'2026-12-01T15:30:00.000Z'});
+    assert.equal((await store.claim({actor,idempotencyKey})).status,'in_progress');
+    const intent=await database.query('SELECT google_event_id,status FROM calendar_oauth_private.meetings WHERE idempotency_key=$1',[idempotencyKey]);
+    assert.equal(intent.rows[0].google_event_id,eventId);
+    assert.equal(intent.rows[0].status,'creating');
     await store.complete({actor,event:{
       userId:actor.userId,projectId:actor.projectId,idempotencyKey,googleEventId:'event_12345',
       meetLink:'https://meet.google.com/abc-defg-hij',status:'created',

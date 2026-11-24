@@ -3,6 +3,12 @@ import {QA_URL} from '../../../qa/security/private-worker-bootstrap-core.mjs';
 export const listMeetingsPath='/api/integrations/google-calendar/meetings/list';
 
 function deny(status){return new Response(null,{status,headers:{'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff'}});}
+async function hasEmptyBody(request){
+  if(request.body===null)return true;
+  const reader=request.body.getReader();
+  try{for(;;){const {done,value}=await reader.read();if(done)return true;if(value?.byteLength){await reader.cancel();return false;}}
+  }catch{return false;}
+}
 
 export function createCalendarMeetingList({verifyAccess,verifySession,lookupRole,meetingStore,pilotProjectId}){
   if(typeof verifyAccess!=='function'||typeof verifySession!=='function'||typeof lookupRole!=='function'||
@@ -11,7 +17,7 @@ export function createCalendarMeetingList({verifyAccess,verifySession,lookupRole
     const url=new URL(request.url);
     if(url.origin!==QA_URL||url.pathname!==listMeetingsPath)return deny(404);
     if(request.method!=='POST')return deny(405);
-    if(request.body!==null)return deny(400);
+    if(!(await hasEmptyBody(request)))return deny(400);
     if(request.headers.get('Origin')!==QA_URL)return deny(403);
     const projects=url.searchParams.getAll('project');
     if(projects.length!==1||[...url.searchParams].length!==1||projects[0]!==pilotProjectId)return deny(403);

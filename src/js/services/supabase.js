@@ -228,6 +228,16 @@ export function createCloudRepository(url, key) {
         if(data?.projectId!==projectId||!Array.isArray(data.meetings))throw Error('CAL_MEETING_LIST_INVALID');
         return data.meetings;
       },
+      async refreshGoogleCalendarMeeting(projectId,idempotencyKey) {
+        const response=await calendarMeetingRequest('refresh',projectId,{method:'POST',body:{idempotencyKey}});
+        const data=await response.json();let meet=null;
+        if(typeof data?.meetLink==='string')meet=new URL(data.meetLink);
+        if(data?.projectId!==projectId||!['created','meet_pending'].includes(data?.status)||
+          typeof data?.googleEventId!=='string'||(data.status==='created'&&!meet)||
+          (data.meetLink!==null&&typeof data.meetLink!=='string')||
+          (meet&&!(meet.protocol==='https:'&&meet.hostname==='meet.google.com')))throw Error('CAL_MEETING_RESPONSE_INVALID');
+        return data;
+      },
     }),
     async meetingAvailability(projectId, start, end) {
       if (allowSessionResume) throw Error('La disponibilidad de Calendar queda pendiente de la conexión OAuth privada.');

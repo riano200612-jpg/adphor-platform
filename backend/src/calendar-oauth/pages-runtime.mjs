@@ -12,6 +12,7 @@ const operations = new Map([
   [finalizePath, 'finalize'],
   ['/api/integrations/google-calendar/meetings/create', 'createMeeting'],
   ['/api/integrations/google-calendar/meetings/list', 'listMeetings'],
+  ['/api/integrations/google-calendar/meetings/refresh', 'refreshMeeting'],
 ]);
 
 function response(status) {

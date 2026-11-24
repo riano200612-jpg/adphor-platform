@@ -3,5 +3,6 @@ export function eventForRow(row,actor) {
     userId:actor.userId,projectId:actor.projectId,idempotencyKey:row.idempotency_key,
     googleEventId:row.google_event_id,meetLink:row.meet_url,status:row.status,
     summary:row.summary,start:new Date(row.start_at).toISOString(),end:new Date(row.end_at).toISOString(),
+    updatedAt:row.updated_at?new Date(row.updated_at).toISOString():null,
   };
 }
