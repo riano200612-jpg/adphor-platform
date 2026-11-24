@@ -48,8 +48,8 @@ export function createGoogleCalendarEventService({
 }) {
   if (![clientId, clientSecret].every(value => typeof value === 'string' && value.length > 0) ||
       typeof getConnection !== 'function' ||
-      typeof eventStore?.claim !== 'function' || typeof eventStore?.find !== 'function' ||
-      typeof eventStore?.complete !== 'function') {
+      typeof eventStore?.claim !== 'function' || typeof eventStore?.complete !== 'function' ||
+      typeof eventStore?.fail !== 'function') {
     throw new Error('Google Calendar event service is not configured.');
   }
 
@@ -101,6 +101,7 @@ export function createGoogleCalendarEventService({
     if (claim?.status === 'complete' && claim.event) return claim.event;
     if (claim?.status !== 'claimed') throw new Error('Google Calendar request is already in progress.');
 
+    try {
     const token = await accessToken(actor);
     const recovered = await findOnGoogle(token, meeting.idempotencyKey);
     const event = recovered ?? await request(
@@ -130,5 +131,9 @@ export function createGoogleCalendarEventService({
     };
     await eventStore.complete({actor, event: persisted});
     return persisted;
+    } catch (error) {
+      try { await eventStore.fail({actor,idempotencyKey:meeting.idempotencyKey}); } catch {}
+      throw error;
+    }
   };
 }
