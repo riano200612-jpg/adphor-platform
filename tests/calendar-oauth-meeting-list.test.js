@@ -10,13 +10,13 @@ test('lists only meetings in the authenticated pilot project after Access/AAL2/m
     verifySession:async()=>({userId:'u1',aal:'aal2'}),lookupRole:async()=> 'admin',
     meetingStore:{list:async({actor})=>{listed++;assert.deepEqual(actor,{userId:'u1',projectId:'source-28'});return [{googleEventId:'event_12345',meetLink:'https://meet.google.com/abc-defg-hij'}];}},
   });
-  const response=await handler(new Request(QA_URL+listMeetingsPath+'?project=source-28',{headers:{Origin:QA_URL,Authorization:'Bearer session'}}));
+  const response=await handler(new Request(QA_URL+listMeetingsPath+'?project=source-28',{method:'POST',headers:{Origin:QA_URL,Authorization:'Bearer session'}}));
   assert.equal(response.status,200);
   assert.equal((await response.json()).meetings[0].googleEventId,'event_12345');
   assert.equal(listed,1);
   const denied=await createCalendarMeetingList({
     pilotProjectId:'source-28',verifyAccess:async()=>({subject:'access'}),
     verifySession:async()=>({userId:'u1',aal:'aal2'}),lookupRole:async()=> null,meetingStore:{list:async()=>[]},
-  })(new Request(QA_URL+listMeetingsPath+'?project=source-29',{headers:{Origin:QA_URL,Authorization:'Bearer session'}}));
+  })(new Request(QA_URL+listMeetingsPath+'?project=source-29',{method:'POST',headers:{Origin:QA_URL,Authorization:'Bearer session'}}));
   assert.equal(denied.status,403);
 });
