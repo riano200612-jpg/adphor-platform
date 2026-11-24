@@ -50,13 +50,13 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
     assert.equal(intent.rows[0].google_event_id,eventId);
     assert.equal(intent.rows[0].status,'creating');
     await store.complete({actor,event:{
-      userId:actor.userId,projectId:actor.projectId,idempotencyKey,googleEventId:'event_12345',
+      userId:actor.userId,projectId:actor.projectId,idempotencyKey,googleEventId:eventId,
       meetLink:'https://meet.google.com/abc-defg-hij',status:'created',
       summary:'QA privada',start:'2026-12-01T15:00:00.000Z',end:'2026-12-01T15:30:00.000Z',
     }});
     const duplicate=await store.claim({actor,idempotencyKey});
     assert.equal(duplicate.status,'complete');
-    assert.equal(duplicate.event.googleEventId,'event_12345');
+    assert.equal(duplicate.event.googleEventId,eventId);
     const rows=await store.list({actor});
     assert.equal(rows.length,1);
     assert.equal(rows[0].meetLink,'https://meet.google.com/abc-defg-hij');
