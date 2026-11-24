@@ -15,7 +15,7 @@ function deny(status) {
 
 // The verifiers are trusted server adapters. verifyAccess and verifySession
 // validate provider tokens, and lookupRole uses the end-user session and RLS.
-export function createCalendarOAuthStart({verifyAccess, verifySession, lookupRole, store, clientId}) {
+export function createCalendarOAuthStart({verifyAccess, verifySession, lookupRole, store, clientId, pilotProjectId}) {
   return async function start(request) {
     const url = new URL(request.url);
     if (url.origin !== QA_URL || url.pathname !== startPath) return deny(404);
@@ -25,6 +25,7 @@ export function createCalendarOAuthStart({verifyAccess, verifySession, lookupRol
     if (projects.length !== 1 || [...url.searchParams].length !== 1 ||
         !/^[a-z0-9][a-z0-9-]{0,99}$/.test(projects[0]) || request.body !== null) return deny(400);
     const [projectId] = projects;
+    if (pilotProjectId && projectId !== pilotProjectId) return deny(403);
     const authorization = request.headers.get('Authorization') ?? '';
     const bearer = /^Bearer ([A-Za-z0-9._-]{1,8192})$/.exec(authorization)?.[1];
     if (!bearer) return deny(401);
