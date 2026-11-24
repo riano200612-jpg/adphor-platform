@@ -327,3 +327,20 @@
     padding:4px 2px 0;margin-bottom:9px;
   }
 }
+
+/* ADPHOR ONE: use available desktop width; preserve existing mobile layout. */
+@media (min-width: 1131px) {
+  .adphor-one-shell .workspace main {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+  .adphor-one-shell .adphor-one-home .adphor-one-hero,
+  .adphor-one-shell .adphor-one-home .adphor-one-grid,
+  .adphor-one-shell .adphor-one-home .adphor-one-group-grid {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+}
