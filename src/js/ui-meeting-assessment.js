@@ -351,7 +351,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
     const detail=summary+'\n'+formatter.formatRange(startTime,endTime)+' · Calendario personal QA. Sin invitados ni invitaciones.';
     if(!window.confirm(detail+'\n\n¿Confirmas que ADPHOR cree esta reunión en tu Google Calendar personal?')){status.textContent='No se creó ninguna reunión.';return;}
     const created=await repo.createGoogleCalendarMeeting(projectId,{
-      idempotencyKey:crypto.randomUUID().toLowerCase(),summary,description,
+      summary,description,
       start:startTime.toISOString(),end:endTime.toISOString(),timeZone:'America/Bogota',
     });
     if(!root.isConnected||!isProjectCurrent())return;
