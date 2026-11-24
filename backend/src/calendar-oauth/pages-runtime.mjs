@@ -51,7 +51,7 @@ function databaseFailure(error) {
 }
 
 // Cloudflare's QA-only Hyperdrive binding owns the verified TLS connection
-// to Supavisor. Do not pass a direct pooler URL, CA or credentials into Workerd.
+// to the direct Supabase QA PostgreSQL origin. Never pass CA or origin credentials into Workerd.
 function hyperdriveConnectionArgs(binding) {
   const connectionString = binding?.connectionString;
   if (typeof connectionString !== 'string') throw new Error('QA Hyperdrive binding unavailable.');
