@@ -126,8 +126,13 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
       WHERE schemaname = 'calendar_oauth_private' AND rowsecurity
         AND tablename IN ('transactions', 'pending', 'connections')) AS rls,
     has_column_privilege(current_user, 'calendar_oauth_private.connections', 'payload', 'INSERT') AS can_store,
-    NOT has_column_privilege(current_user, 'calendar_oauth_private.connections', 'payload', 'SELECT') AS cannot_read_payload,
-    NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'SELECT') AS cannot_read,
+    has_column_privilege(current_user, 'calendar_oauth_private.connections', 'payload', 'SELECT') AS can_read_encrypted_payload,
+    has_column_privilege(current_user, 'calendar_oauth_private.connections', 'user_id', 'SELECT') AS can_scope_user,
+    has_column_privilege(current_user, 'calendar_oauth_private.connections', 'project_id', 'SELECT') AS can_scope_project,
+    NOT has_column_privilege(current_user, 'calendar_oauth_private.connections', 'created_at', 'SELECT') AS no_extra_column_read,
+    NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'SELECT') AS no_tablewide_read,
+    NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'UPDATE') AS no_tablewide_update,
+    NOT has_table_privilege(current_user, 'calendar_oauth_private.connections', 'DELETE') AS no_tablewide_delete,
     NOT has_schema_privilege('authenticated', 'calendar_oauth_private', 'USAGE') AS browser_denied`);
   } catch (error) {
     const code = databaseFailure(error);
@@ -136,7 +141,9 @@ export async function probeCalendarDatabase(request, {verifyAccess, verifySessio
   const [row] = rows;
   if (rows.length !== 1 || row?.dedicated !== true || row.constrained_login !== true ||
       row.inherited_state_role !== true || row.rls !== true || row.can_store !== true ||
-      row.cannot_read_payload !== true || row.cannot_read !== true || row.browser_denied !== true) {
+      row.can_read_encrypted_payload !== true || row.can_scope_user !== true || row.can_scope_project !== true ||
+      row.no_extra_column_read !== true || row.no_tablewide_read !== true ||
+      row.no_tablewide_update !== true || row.no_tablewide_delete !== true || row.browser_denied !== true) {
     return diagnosis(503, 'CAL_DB_PERMISSIONS');
   }
   return response(204);
