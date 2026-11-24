@@ -374,6 +374,15 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
   mountQaCalendarProbe(diagnostics,{repo,projectId,role,isProjectCurrent});
  }
  render();
+ if(bookingEnabled && typeof repo.listGoogleCalendarMeetings==='function'){
+   repo.listGoogleCalendarMeetings(projectId).then(rows=>{
+     if(!root.isConnected||!isProjectCurrent())return;
+     googleCalendarRows=Array.isArray(rows)?rows:[];
+     render();
+   }).catch(()=>{
+     if(root.isConnected&&isProjectCurrent())status.textContent='No se pudo recuperar la agenda personal de QA. No se muestran reuniones no verificadas.';
+   });
+ }
  if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
    loadVerifiedAgenda(repo,projectId).then(rows=>{
      if(!root.isConnected)return;
