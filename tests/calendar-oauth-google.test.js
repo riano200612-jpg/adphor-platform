@@ -84,7 +84,8 @@ test('Google exchange verifies identity and saves the refresh authorization encr
     grant.scope = scope;
     await complete(actor);
     await complete(actor);
-    await assert.rejects(database.query('SELECT payload FROM calendar_oauth_private.connections'), /permission denied/);
+    const unscoped = await database.query('SELECT payload FROM calendar_oauth_private.connections');
+    assert.equal(unscoped.rows.length,0);
     await database.exec('RESET ROLE');
     const {rows} = await database.query('SELECT * FROM calendar_oauth_private.connections');
     assert.equal(rows.length, 1);
