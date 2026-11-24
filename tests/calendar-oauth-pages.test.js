@@ -149,6 +149,7 @@ test('the OAuth Pages entrypoint dispatches all operations and denies an anonymo
     ['start?project=source-28', 'POST', 404],
     ['callback', 'GET', 404],
     ['finalize?project=source-28', 'POST', 404],
+    ['../meetings/list?project=source-28', 'POST', 404],
   ]) {
     const result = await onRequest({
       request: new Request(root + operation, {method, headers: {Origin: QA_URL}}),
