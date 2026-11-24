@@ -55,7 +55,7 @@ export function createCalendarMeetingCreate({verifyAccess,verifySession,lookupRo
     if(!bearer)return deny(401);
     const payload=await readRequest(request);
     if(!payload || payload.confirmed!==true || payload.attendees!==undefined ||
-      Object.keys(payload).some(key=>!['confirmed','idempotencyKey','summary','description','start','end','timeZone'].includes(key)))return deny(400);
+      Object.keys(payload).some(key=>!['confirmed','summary','description','start','end','timeZone'].includes(key)))return deny(400);
     try{
       const access=await verifyAccess(request);
       if(!access?.subject)return deny(403);
@@ -67,7 +67,7 @@ export function createCalendarMeetingCreate({verifyAccess,verifySession,lookupRo
       const event=await createMeeting({
         actor:{userId:session.userId,projectId:pilotProjectId},
         meeting:{
-          idempotencyKey:payload.idempotencyKey,summary:payload.summary,
+          summary:payload.summary,
           description:payload.description,start:payload.start,end:payload.end,timeZone:payload.timeZone,
         },
       });
