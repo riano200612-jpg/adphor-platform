@@ -11,9 +11,7 @@ function validRequest(input) {
   const dateTime = value => typeof value === 'string' &&
     /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(value) &&
     Number.isFinite(Date.parse(value));
-  return typeof input?.idempotencyKey === 'string' &&
-    /^[a-z0-9_-]{20,128}$/.test(input.idempotencyKey) &&
-    typeof input?.summary === 'string' && input.summary.startsWith('[ADPHOR QA] ') && input.summary.trim().length >= 15 &&
+  return typeof input?.summary === 'string' && input.summary.startsWith('[ADPHOR QA] ') && input.summary.trim().length >= 15 &&
     input.summary.trim().length <= 200 &&
     typeof input?.description === 'string' && input.description.length <= 5000 &&
     dateTime(input?.start) && dateTime(input?.end) &&
@@ -33,6 +31,15 @@ function safeEvent(event) {
   const meetUrl = typeof meet === 'string' ? new URL(meet) : null;
   const meetLink = meetUrl?.protocol === 'https:' && meetUrl.hostname === 'meet.google.com' ? meetUrl.href : null;
   return {googleEventId: id, meetLink, status: meetLink ? 'created' : 'meet_pending'};
+}
+
+async function stableIdempotencyKey(actor,meeting) {
+  const material=JSON.stringify([
+    'ADPHOR-CALENDAR-BOOKING-V1',actor.userId,actor.projectId,
+    meeting.summary.trim(),meeting.description,meeting.start,meeting.end,meeting.timeZone??'America/Bogota',
+  ]);
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(material)));
+  return [...digest].map(byte=>byte.toString(16).padStart(2,'0')).join('');
 }
 
 async function idForMeetRequest(actor,value) {
@@ -98,13 +105,18 @@ export function createGoogleCalendarEventService({
     if (!validActor(actor) || !validRequest(meeting)) {
       throw new Error('Invalid Google Calendar meeting request.');
     }
-    const claim = await eventStore.claim({actor, idempotencyKey: meeting.idempotencyKey});
-    if (claim?.status === 'complete' && claim.event) return claim.event;
-    if (claim?.status !== 'claimed') throw new Error('Google Calendar request is already in progress.');
+    const idempotencyKey=await stableIdempotencyKey(actor,meeting);
+    const claim = await eventStore.claim({actor,idempotencyKey});
+    if (claim?.status === 'complete' && claim.event?.status==='created') return claim.event;
+    if (claim?.status === 'complete' && claim.event?.status==='meet_pending') {
+      const retryClaim=await eventStore.claim({actor,idempotencyKey,retryPending:true});
+      if(retryClaim?.status==='complete'&&retryClaim.event?.status==='created')return retryClaim.event;
+      if(retryClaim?.status!=='claimed')throw new Error('Google Calendar request is already in progress.');
+    } else if (claim?.status !== 'claimed') throw new Error('Google Calendar request is already in progress.');
 
     try {
     const token = await accessToken(actor);
-    const providerRequestId=await idForMeetRequest(actor,meeting.idempotencyKey);
+    const providerRequestId=await idForMeetRequest(actor,idempotencyKey);
     const recovered = await findOnGoogle(token, providerRequestId);
     const event = recovered ?? await request(
       GOOGLE_EVENTS_URL + '?conferenceDataVersion=1&sendUpdates=none',
@@ -128,13 +140,13 @@ export function createGoogleCalendarEventService({
     const result = safeEvent(event);
     const persisted = {
       ...result, userId: actor.userId, projectId: actor.projectId,
-      idempotencyKey: meeting.idempotencyKey, summary: meeting.summary.trim(),
+      idempotencyKey, summary: meeting.summary.trim(),
       start: meeting.start, end: meeting.end,
     };
     await eventStore.complete({actor, event: persisted});
     return persisted;
     } catch (error) {
-      try { await eventStore.fail({actor,idempotencyKey:meeting.idempotencyKey}); } catch {}
+      try { await eventStore.fail({actor,idempotencyKey}); } catch {}
       throw error;
     }
   };
