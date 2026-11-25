@@ -55,7 +55,11 @@ export function mountMissAdphorWelcome(root, options={}) {
   corporateLogo.src='/assets/branding/adphor-logo-oficial-v3.png';
   corporateLogo.alt='ADPHOR. Administradores Profesionales en Propiedad Horizontal';
   corporateLogo.loading='eager';corporateLogo.decoding='async';
-  const motto=document.createElement('p');motto.textContent='Administramos sueños';
+  const motto=document.createElement('img');
+  motto.className='miss-qa-corporate-slogan';
+  motto.src='/assets/branding/adphor-eslogan-original.png';
+  motto.alt='Administramos sueños';
+  motto.loading='eager';motto.decoding='async';
   identity.append(corporateLogo,motto);
   const eyebrow=root.querySelector?.('.login-form-wrap .eyebrow');
   const loginForm=root.querySelector?.('#login-form');
