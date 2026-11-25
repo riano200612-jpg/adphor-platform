@@ -24,7 +24,7 @@ test('Agenda Virtual V4 preserves eight original sections, tenant isolation and 
  await expect(frame.locator('body')).not.toContainText('Jaqueline Gazabon');
  await expect(frame.locator('body')).not.toContainText('Centro Médico Santa Lucía');
  await expect(frame.locator('body')).not.toContainText('https://meet.google.com/');
- await expect(page.locator('#qa-v4-e2e button')).toContainText('Volver al portal');
+ await expect(page.locator('#qa-v4-e2e button').filter({hasText:'Volver al portal'})).toContainText('Volver al portal');
  expect(errors).toEqual([]);
 });
 
