@@ -484,8 +484,20 @@ body:has(.miss-welcome-cover){background:#0c2743}
 .miss-welcome-cover.miss-entry-is-cover .login-story{margin-block:auto}
 @media(min-width:840px){
   .miss-welcome-cover.miss-entry-is-login.login-shell{
-    grid-template-columns:minmax(0,.38fr) minmax(0,.62fr);
-    grid-template-rows:auto 1fr;align-content:stretch;
+    grid-template-columns:minmax(0, min(38%, 420px)) minmax(0, min(62%, 680px));
+    grid-template-rows:auto minmax(0,auto);align-content:start;
+    justify-content:center;
+  }
+  .miss-welcome-cover.login-shell>.miss-qa-corporate-identity{
+    width:100%;position:relative;
+  }
+  .miss-welcome-cover.miss-entry-is-login.login-shell>.miss-qa-corporate-identity{
+    width:calc(100vw - 2 * clamp(12px,2vw,32px));
+    justify-self:center;
+  }
+  .miss-welcome-cover.miss-entry-is-login .login-story,
+  .miss-welcome-cover.miss-entry-is-login .login-form-wrap{
+    min-height:0;
   }
   .miss-welcome-cover.miss-entry-is-login .login-form-wrap form{
     max-width:660px;margin-inline:auto;
