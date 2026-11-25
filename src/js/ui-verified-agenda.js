@@ -1,9 +1,10 @@
-import {loadVerifiedAgenda,filterVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
+import {bogotaAgendaDate,loadVerifiedAgenda,filterVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
 export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
  root.innerHTML=`<section class="visit-workspace" aria-label="Agenda de reuniones verificadas">
  <header class="page-heading"><div><p class="eyebrow">OPERACIONES · CALENDARIO CORPORATIVO</p><h1>Agenda</h1><p data-agenda-property></p></div></header>
  <p class="notice">Consulta de reuniones verificadas · America/Bogota. La carga actual es puntual; no acredita sincronización periódica con Google Calendar.</p>
  <section class="panel"><h2>Centro de Inteligencia Directiva</h2>
+ <p data-directive-brief aria-live="polite"></p>
  <details><summary>Consultar acompañamientos por tipo de reunión</summary><ul><li><strong>Consejo · Ordinario</strong> — Gerencia General, Gerencia Financiera</li>
 <li><strong>Consejo · Extraordinario</strong> — Coordinación de Zona</li>
 <li><strong>Consejo · Pre-Asamblea</strong> — Gerencia General, Gerencia Financiera, Coordinación General, Coordinación Operativa</li>
@@ -72,7 +73,9 @@ export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
   }
   message.textContent=visible.length?`${visible.length} reuniones verificadas para esta copropiedad.`:rows.length?'No hay reuniones que coincidan con los filtros.':'No hay reuniones verificadas para esta copropiedad.';
  };
+ const brief=root.querySelector('[data-directive-brief]');
  const load=async()=>{
+  brief.textContent='';
   const id=++request;rows=[];loaded=false;list.replaceChildren();refresh.disabled=true;
   message.textContent='Consultando agenda autorizada…';
   try{
@@ -80,6 +83,12 @@ export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
    if(id!==request||!active())return;
    rows=result;loaded=true;state.replaceChildren(new Option('Todos',''));
    for(const value of new Set(rows.map(row=>row.source_status).filter(Boolean)))state.add(new Option(value,value));
+   const now=new Date();
+   const today=bogotaAgendaDate(now);
+   const todayCount=rows.filter(row=>bogotaAgendaDate(row.start_at)===today).length;
+   const next=rows.find(row=>new Date(row.start_at)>=now);
+   brief.textContent='Reuniones verificadas que comienzan hoy: '+todayCount+'. '+
+    (next?'Próxima reunión: '+next.title+' · '+formatter.format(new Date(next.start_at))+'.':'Sin próximas reuniones en la carga consultada.');
    render();
   }catch(error){
    if(id===request&&active())message.textContent=verifiedAgendaUiError(error);
