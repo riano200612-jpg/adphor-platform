@@ -63,7 +63,8 @@ test('shared scheduled-visit contract: review, confirmation and SQL lookup after
   const review=page.getByRole('button',{name:'Revisar visita'});
   await expect(review).toBeDisabled();
   await page.getByText('Miss ADPHOR · Guía de Visitas').click();
-  await expect(page.getByText('Indica el tipo o motivo de la visita.')).toBeVisible();
+  await expect(page.locator('[data-visit-guide] p')).toBeVisible();
+  await expect(page.locator('[data-visit-guide] p')).toHaveText('Indica el tipo o motivo de la visita.');
   await page.getByLabel('Tipo o motivo').fill('Inspección de prueba');
   await page.getByLabel('Fecha y hora (Colombia)').fill('2026-11-14T10:00');
   const responsible=page.locator('#visit select[name="responsible"]');

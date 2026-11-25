@@ -1,4 +1,5 @@
 import {createMeetingRequestGate} from './services/meeting-request-gate.js';
+import {dedupeCalendarMeetingRows} from './services/meeting-calendar-identity.js';
 import {calendarHasConflict} from './services/calendar-availability.js';
 import {loadVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
 import {mountQaCalendarProbe} from './ui-qa-calendar-probe.js';
@@ -37,15 +38,15 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  if(!demo&&repo.staffDirectoryEnabled){
   escortChoices.replaceChildren();
   repo.staffDirectory(projectId).then(people=>{
-   if(!escortChoices.isConnected)return;
+   if(!escortChoices.isConnected||!isProjectCurrent())return;
    const eligible=people.filter(p=>p.relationship==='coordinator'||['GG','GF','GT','CG','CO','A'].includes(p.role_code));
    drawCompanionOptions(escortChoices,eligible.map(p=>({id:p.id,nombre:p.name,leyendaRol:p.role_label,photoStoragePath:p.photo_path})),{photoUrl:id=>repo.staffPhotoUrl(projectId,id)});
-  }).catch(()=>{if(escortChoices.isConnected){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
+  }).catch(()=>{if(escortChoices.isConnected&&isProjectCurrent()){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
  }else if(!demo&&repo.privateMediaEnabled){
   escortChoices.replaceChildren();
   repo.authorizedCompanions(projectId,sector).then(people=>{
-    if(escortChoices.isConnected)drawCompanionOptions(escortChoices,people,{photoUrl:id=>repo.companionPhotoUrl(projectId,id)});
-  }).catch(()=>{if(escortChoices.isConnected){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
+    if(escortChoices.isConnected&&isProjectCurrent())drawCompanionOptions(escortChoices,people,{photoUrl:id=>repo.companionPhotoUrl(projectId,id)});
+  }).catch(()=>{if(escortChoices.isConnected&&isProjectCurrent()){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
  }
  if(role==='admin' && !demo){
    const help=document.createElement('div');help.className='panel';
@@ -268,21 +269,45 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  let editing=null, experience;
  let verifiedCloudRows=[];
  let googleCalendarRows=[];
+ function calendarRows(){return dedupeCalendarMeetingRows([...googleCalendarRows,...verifiedCloudRows],projectId);}
+ function calendarGridRows(){return calendarRows().filter(row=>!['reconciling','failed'].includes(row.status));}
  function render(){
   experience?.draw();
   list.replaceChildren();
   if(!demo){
-    if(!verifiedCloudRows.length&&!googleCalendarRows.length){list.textContent='No hay reuniones verificadas disponibles para esta copropiedad.';return;}
-    for(const m of [...googleCalendarRows,...verifiedCloudRows]){
+    const rows=calendarRows();
+    if(!rows.length){list.textContent='No hay reuniones verificadas disponibles para esta copropiedad.';return;}
+    for(const m of rows){
       const item=document.createElement('article');item.className='panel';
       const title=document.createElement('h4');title.textContent=m.summary||m.title||'Reunión';
       const description=document.createElement('p');
-      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · '+(m.googleEventId?'Google Calendar verificado':'Registro QA verificado');
+      description.textContent=new Date(m.start).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' → '+new Date(m.end).toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · '+(m.status==='reconciling'?'Resultado pendiente de verificar con Google':m.googleEventId?'Google Calendar verificado':'Registro QA verificado');
       item.append(title,description);
-      if(m.googleEventId){
+      if(m.status==='failed'){const failed=document.createElement('p');failed.textContent='Google rechazó la solicitud. No se creó una reunión. Corrige los datos antes de intentar otra vez.';item.append(failed);}else if(m.status==='reconciling'){
+        const pending=document.createElement('p');
+        pending.textContent='RESULTADO PENDIENTE · Google aún no confirma si recibió esta solicitud. No la envíes de nuevo.';
+        item.append(pending);
+      }else if(m.googleEventId){
         const eventId=document.createElement('small');eventId.textContent='ID de evento: '+m.googleEventId;item.append(eventId);
         if(m.meetLink){const link=document.createElement('a');link.href=m.meetLink;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Abrir Google Meet';item.append(link);}
-        else {const pending=document.createElement('p');pending.textContent='Google todavía no confirmó el enlace de Meet.';item.append(pending);}
+        else {const pending=document.createElement('p');pending.textContent='MEET_PENDING · Google todavía no confirmó el enlace de Meet. La comprobación se limita para evitar consultas repetidas.';item.append(pending);}
+      }
+      if(bookingEnabled&&['reconciling','meet_pending'].includes(m.status)&&m.idempotencyKey&&
+        typeof repo.refreshGoogleCalendarMeeting==='function'){
+        const refresh=document.createElement('button');refresh.type='button';
+        refresh.textContent=m.status==='reconciling'?'Comprobar estado en Google Calendar':'Comprobar enlace de Meet';
+        refresh.onclick=async()=>{
+          refresh.disabled=true;
+          try{
+            const checked=await repo.refreshGoogleCalendarMeeting(projectId,m.idempotencyKey);
+            googleCalendarRows=[checked,...googleCalendarRows.filter(row=>row.idempotencyKey!==checked.idempotencyKey)];
+            status.textContent=checked.status==='created'?'Google confirmó el enlace de Meet.':
+              checked.status==='reconciling'?'RESULTADO PENDIENTE · Google aún no confirma la reunión. No la envíes de nuevo.':
+              'MEET_PENDING · Google aún no confirma el enlace. Comprueba de nuevo más tarde.';
+            render();
+          }catch{status.textContent='No se pudo comprobar el resultado en Google. La solicitud se conserva y no se creará otra.';refresh.disabled=false;}
+        };
+        item.append(refresh);
       }
       list.append(item);
     }
@@ -355,10 +380,12 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
       start:startTime.toISOString(),end:endTime.toISOString(),timeZone:'America/Bogota',
     });
     if(!root.isConnected||!isProjectCurrent())return;
-    googleCalendarRows=[created,...googleCalendarRows.filter(row=>row.googleEventId!==created.googleEventId)];
+    googleCalendarRows=[created,...googleCalendarRows.filter(row=>row.googleEventId!==created.googleEventId&&row.idempotencyKey!==created.idempotencyKey)];
     status.textContent=created.status==='created'
       ?'Reunión creada en Google Calendar. ID: '+created.googleEventId+'. El enlace de Google Meet está disponible abajo.'
-      :'Evento creado en Google Calendar; el enlace de Google Meet sigue pendiente de confirmación.';
+      :created.status==='reconciling'
+        ?'RESULTADO PENDIENTE · Google aún no confirma si recibió la solicitud. No vuelvas a enviarla; ADPHOR conservará y comprobará el mismo ID.'
+        :'Evento creado en Google Calendar; el enlace de Google Meet sigue pendiente de confirmación.';
     editing=null;form.reset();render();experience.reset();
     return;
    }
@@ -367,7 +394,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    editing=null;form.reset();render();experience.reset();
   }catch(error){status.textContent=error.message==='CAL_PILOT_DISABLED'?'El piloto de Google Calendar no está habilitado para esta cuenta y copropiedad.':'No se pudo completar la operación de reunión. No se confirmó ningún resultado.';}finally{button.disabled=false;}
  };
- experience=enhanceMeetings(root,{form,list,projectName,demo,role,isProjectCurrent,getRows:()=>demo?listDemoMeetings(projectId):verifiedCloudRows});
+ experience=enhanceMeetings(root,{form,list,projectName,demo,role,isProjectCurrent,getRows:()=>demo?listDemoMeetings(projectId):calendarGridRows()});
  if(!demo){
   const diagnostics=document.createElement('div');
   diagnostics.dataset.qaCalendarDiagnostics='';
@@ -386,13 +413,13 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  }
  if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
    loadVerifiedAgenda(repo,projectId).then(rows=>{
-     if(!root.isConnected)return;
+     if(!root.isConnected||!isProjectCurrent())return;
      verifiedCloudRows=(Array.isArray(rows)?rows:[]).map(r=>({
-       id:r.id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
+       id:r.id,projectId:r.project_id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
      }));
      render();
    }).catch(error=>{
-     if(!root.isConnected)return;
+     if(!root.isConnected||!isProjectCurrent())return;
      status.textContent='No se pudo consultar la agenda QA autorizada: '+verifiedAgendaUiError(error);
    });
  }
