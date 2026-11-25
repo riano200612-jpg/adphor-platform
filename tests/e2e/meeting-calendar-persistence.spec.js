@@ -23,6 +23,9 @@ test('verified Google meeting appears in history and calendar grid after reload;
    refreshGoogleCalendarMeeting:(project,key)=>window.refreshMeetingFixture(project,key),
    listVerifiedQaMeetings:async()=>[]}});</script></html>`}));
  await page.goto(fixture);
+  await expect(page.getByRole('heading', {
+    name: 'Reuniones', exact: true
+  })).toBeVisible();
  await expect(page.locator('[data-list]')).toContainText(eventId);
  await expect(page.locator('[data-list]')).toContainText('MEET_PENDING');
  await expect(page.locator('.calendar-grid .calendar-day small').filter({hasText:'[ADPHOR QA] Reunión persistida'})).toHaveCount(1);
