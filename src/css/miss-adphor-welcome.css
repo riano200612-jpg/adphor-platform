@@ -458,3 +458,36 @@
 .miss-welcome-cover .miss-entry-guide p:not(.eyebrow){
   display:block!important;color:#183b52;line-height:1.5;
 }
+
+/* QA Integral: shared corporate identity and full viewport entry. */
+.miss-welcome-cover.login-shell,
+.miss-welcome-cover.miss-entry-is-cover.login-shell{
+  box-sizing:border-box;width:100%;max-width:none;min-height:100svh;
+  margin:0;padding:clamp(12px,2vw,32px);
+  background:#0c2743;gap:clamp(12px,2vw,24px);
+}
+body:has(.miss-welcome-cover){background:#0c2743}
+.miss-welcome-cover.login-shell>.miss-qa-corporate-identity{
+  box-sizing:border-box;grid-column:1/-1;align-self:stretch;
+  display:flex;flex-direction:row;justify-content:space-between;align-items:center;
+  width:100%;max-width:none;margin:0;padding:0 0 12px;
+  background:transparent;border:0;border-bottom:1px solid #d9be79a8;
+  border-radius:0;gap:12px;flex:none;
+}
+.miss-welcome-cover.login-shell>.miss-qa-corporate-identity img{
+  width:clamp(88px,12vw,167px);max-width:45%;height:auto;object-fit:contain;
+}
+.miss-welcome-cover.login-shell>.miss-qa-corporate-identity p{
+  font-size:clamp(13px,1.7vw,22px);color:#fff3d1;text-align:right;margin:0;
+}
+.miss-welcome-cover.miss-entry-is-cover.login-shell{justify-content:flex-start}
+.miss-welcome-cover.miss-entry-is-cover .login-story{margin-block:auto}
+@media(min-width:840px){
+  .miss-welcome-cover.miss-entry-is-login.login-shell{
+    grid-template-columns:minmax(0,.38fr) minmax(0,.62fr);
+    grid-template-rows:auto 1fr;align-content:stretch;
+  }
+  .miss-welcome-cover.miss-entry-is-login .login-form-wrap form{
+    max-width:660px;margin-inline:auto;
+  }
+}

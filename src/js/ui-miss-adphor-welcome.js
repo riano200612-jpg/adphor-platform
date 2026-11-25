@@ -59,11 +59,9 @@ export function mountMissAdphorWelcome(root, options={}) {
   identity.append(corporateLogo,motto);
   const eyebrow=root.querySelector?.('.login-form-wrap .eyebrow');
   const loginForm=root.querySelector?.('#login-form');
-  // Keep the official logo immediately above the original credential heading
-  // on desktop and mobile, without rebuilding/replacing the form or its inputs.
-  if(eyebrow){eyebrow.hidden=true;eyebrow.after(identity);}
-  else if(loginForm?.insertBefore)loginForm.insertBefore(identity,loginForm.firstChild);
-  else loginForm?.append?.(identity);
+  // Shared identity above both entry states; the original form remains mounted.
+  if(eyebrow)eyebrow.hidden=true;
+  shell.prepend(identity);
 
   // Two entry choices requested by José in the 18 November ADPHOR meeting.
   // The original corporate portrait, MP4 and login are deliberately untouched.
