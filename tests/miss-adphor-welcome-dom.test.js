@@ -16,6 +16,7 @@ function setupFakeDom({reducedMotion=false,rejectPlay=false}={}){
     getAttribute(k){return this.attrs[k]??null;}
     removeAttribute(k){delete this.attrs[k];}
     append(...children){this.children.push(...children);}
+    prepend(...children){this.children.unshift(...children);}
     after(c){this.next=c;}
     addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);}
     fire(k){return Promise.all((this.listeners[k]||[]).map(fn=>fn()));}
@@ -195,6 +196,9 @@ test('shows official ADPHOR identity without replacing the original portrait or 
     assert.equal(dom.portrait.getAttribute('src'),'/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp');
     assert.equal(dom.form.disabled,undefined);
     const brand=dom.created.find(e=>e.className==='miss-qa-corporate-identity');
+    assert.equal(dom.shell.children[0],brand);
+    assert.deepEqual(brand.children,[image,slogan]);
+    assert.equal(dom.form.children.includes(brand),false);
     stop();assert.equal(brand.removed,true);
   }finally{dom.restore();}
 });
