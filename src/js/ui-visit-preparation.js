@@ -76,6 +76,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
           <label>Buscar visitas<input type="search" data-visit-search placeholder="Motivo o radicado"></label>
           <label>Filtrar por fecha<input type="date" data-visit-date></label>
           <label>Filtrar por responsable<select data-visit-responsible><option value="">Todos</option></select></label>
+          <button type="button" class="btn secondary visit-clear-filters" data-visit-clear-filters hidden>Limpiar filtros</button>
         </div>
         <p data-list-status role="status"></p>
         <div data-visit-empty-guide hidden>
@@ -133,6 +134,12 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   const search=root.querySelector('[data-visit-search]');
   const date=root.querySelector('[data-visit-date]');
   const responsibleFilter=root.querySelector('[data-visit-responsible]');
+  const clearFilters=root.querySelector('[data-visit-clear-filters]');
+  const syncFilters=()=>{clearFilters.hidden=!(search.value||date.value||responsibleFilter.value);};
+  clearFilters.addEventListener('click',()=>{
+    search.value='';date.value='';responsibleFilter.value='';
+    syncFilters();drawList();search.focus();
+  });
   const responsibleNames=new Map([...select.options].filter(option=>option.value).map(option=>[option.value,option.textContent]));
   for(const [id,name] of responsibleNames)responsibleFilter.add(new Option(name,id));
   const canList=typeof repository?.list==='function';
@@ -140,6 +147,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
   const dateFormat=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'});
   const localDate=row=>dateFormat.format(new Date(row.scheduled_at));
   const drawList=()=>{
+    syncFilters();
     if(!listLoaded)return;
     const term=search.value.trim().toLocaleLowerCase('es');
     const visible=rows.filter(row=>(!date.value || localDate(row)===date.value) &&
@@ -259,7 +267,7 @@ export function mountVisitPreparation(root, {projectId, projectName, members, pr
       if(!savedRequestId||!listLoaded)return;
       // Existing filters must not hide a visit the user has just registered.
       search.value='';date.value='';responsibleFilter.value='';
-      drawList();
+      syncFilters();drawList();
       const item=Array.from(results.children).find(el=>el.dataset.visitRequestId===savedRequestId);
       const details=item?.querySelector('details');
       if(!details){
