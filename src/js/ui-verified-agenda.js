@@ -3,55 +3,97 @@ const safeV4=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 const hhmmV4=v=>new Intl.DateTimeFormat('en-GB',{timeZone:'America/Bogota',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(v));
 function mountOriginalV4(root,options){
   root.replaceChildren();
-  const overlay=document.createElement('section');overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;background:#fff';
-  overlay.setAttribute('aria-label','Agenda Virtual V4.0');
-  const iframe=document.createElement('iframe');iframe.title='ADPHOR Centro de Inteligencia Directiva V4.0';
-  iframe.setAttribute('sandbox','allow-scripts allow-downloads allow-forms');
-  iframe.style.cssText='width:100%;height:100%;border:0';iframe.srcdoc=ORIGINAL_ADPHOR_V4;
-  const back=document.createElement('button');back.type='button';back.textContent='← Volver al portal ADPHOR';
-  back.style.cssText='position:absolute;bottom:12px;left:16px;z-index:1;background:#f4b400;color:#0b2545;border:2px solid #0b2545;padding:10px 16px;border-radius:10px;font-weight:800;cursor:pointer';
+  const workspace=document.createElement('section');
+  workspace.className='adphor-integrated-agenda';
+  workspace.style.width='100%';
+  workspace.setAttribute('aria-label','Agenda Virtual: Centro de Inteligencia Directiva V4');
+  const toolbar=document.createElement('div');
+  toolbar.className='adphor-integrated-agenda-toolbar';
+  const back=document.createElement('button');
+  back.type='button';
+  back.className='adphor-integrated-agenda-back';
+  back.textContent='← Volver a la sección anterior';
   back.addEventListener('click',()=>{
-    overlay.remove();
     if(typeof options.onClose==='function')options.onClose();
-    else mountVerifiedAgendaLegacy(root,options);
+    else root.replaceChildren();
   });
+  const scope=document.createElement('div');
+  scope.className='adphor-integrated-agenda-scope';
+  scope.setAttribute('aria-label','Copropiedad activa');
+  scope.textContent=options.projectName||'Copropiedad seleccionada';
   const refresh=document.createElement('button');
-  refresh.type='button';refresh.textContent='Actualizar reuniones';
-  refresh.setAttribute('aria-label','Volver a consultar las reuniones autorizadas');
-  refresh.style.cssText='position:absolute;bottom:12px;right:16px;z-index:1;background:#0b2545;color:white;border:2px solid #f4b400;padding:10px 16px;border-radius:10px;font-weight:800;cursor:pointer';
-  overlay.append(iframe,back,refresh);root.append(overlay);
-  let ready=false,meetings=[],message='Consultando agenda autorizada…';
-  const send=()=>{if(overlay.isConnected&&iframe.contentWindow)iframe.contentWindow.postMessage({type:'ADPHOR_V4_VERIFIED_QA',meetings,message},'*');};
-  iframe.addEventListener('load',()=>{ready=true;send();});
-  const reload=()=>{
-    refresh.disabled=true;
-    meetings=[];message='Consultando agenda autorizada…';
-    if(ready)send();
-    return loadVerifiedAgenda(options.repo,options.projectId).then(rows=>{
-    if(!overlay.isConnected)return;
-    meetings=rows.map((r,i)=>{
-      const k=String(r.kind||'').toLowerCase(),tipo=k.includes('asamblea')?'Asamblea':k.includes('comit')?'Comité':'Consejo';
-      return {id:'QA-'+(i+1),fecha:bogotaAgendaDate(r.start_at),inicio:hhmmV4(r.start_at),fin:hhmmV4(r.end_at),
-        copropiedad:safeV4(options.projectName||'Copropiedad autorizada'),tipo,
-        clasificacion:tipo==='Comité'?'Otro':tipo==='Asamblea'?'Otra':'Otro',modalidad:'Por verificar',estado:'Confirmada',
-        meet:'',delegado:'Responsable por confirmar',lugar:'Modalidad por verificar',solicitudAdicional:[],
-        nota:safeV4(r.title),evidencia:'Agenda QA verificada',asistenciaVerificada:false};
-    });
-    message=rows.length?'Solo lectura: '+rows.length+' reuniones verificadas de '+(options.projectName||'copropiedad seleccionada')+'.':'No hay reuniones verificadas para esta copropiedad.';
-    if(ready)send();
-  }).catch(error=>{
-    if(!overlay.isConnected)return;
-    meetings=[];message=verifiedAgendaUiError(error)+' Pulsa Actualizar reuniones para reintentar.';
-    if(ready)send();
-  }).finally(()=>{refresh.disabled=false;});
+  refresh.type='button';refresh.textContent='↻ Actualizar reuniones';
+  refresh.className='adphor-integrated-agenda-refresh';
+  refresh.setAttribute('aria-label','Volver a consultar reuniones autorizadas');
+  const status=document.createElement('p');
+  status.className='adphor-integrated-agenda-status';
+  status.setAttribute('role','status');
+  status.setAttribute('aria-live','polite');
+  status.textContent='Consultando reuniones autorizadas…';
+  const iframe=document.createElement('iframe');
+  iframe.title='Agenda Virtual ADPHOR: ocho secciones';
+  iframe.setAttribute('sandbox','allow-scripts allow-downloads allow-forms');
+  iframe.className='adphor-integrated-agenda-frame';
+  iframe.style.cssText='display:block;width:100%;height:720px;min-height:540px;border:0';
+  iframe.srcdoc=ORIGINAL_ADPHOR_V4.replace('</style>',`
+    /* Contenido V4 integrado: el portal conserva su único encabezado global */
+    .topbar {display:none !important}
+    .app-shell {min-height:calc(100vh - 80px)}
+    .main-area {padding:clamp(14px,2vw,24px)}
+    @media (max-width:900px) {.sidebar {top:0}}
+    </style>`);
+  toolbar.append(back,scope,refresh);
+  workspace.append(toolbar,status,iframe);
+  root.append(workspace);
+  let ready=false,meetings=[],message='Consultando agenda autorizada…',request=0;
+  const send=()=>{
+    if(workspace.isConnected&&iframe.contentWindow)
+      iframe.contentWindow.postMessage({type:'ADPHOR_V4_VERIFIED_QA',meetings,message},'*');
   };
+  iframe.addEventListener('load',()=>{ready=true;send();});
+  async function reload(){
+    const id=++request;
+    refresh.disabled=true;
+    meetings=[];message='Consultando reuniones autorizadas…';
+    status.textContent=message;
+    if(ready)send();
+    try {
+      // Modo demostración sin origen verificado: interfaz completa, pero sin inventar eventos.
+      const rows=options.repo?.mode==='demo'?[]:await loadVerifiedAgenda(options.repo,options.projectId);
+      if(id!==request||!workspace.isConnected)return;
+      meetings=rows.map((r,i)=>{
+        const k=String(r.kind||'').toLowerCase();
+        const tipo=k.includes('asamblea')?'Asamblea':k.includes('comit')?'Comité':'Consejo';
+        return {id:'QA-'+(i+1),fecha:bogotaAgendaDate(r.start_at),inicio:hhmmV4(r.start_at),
+          fin:hhmmV4(r.end_at),copropiedad:safeV4(options.projectName||'Copropiedad autorizada'),
+          tipo,clasificacion:'Otro',modalidad:'Por verificar',estado:'Confirmada',
+          meet:'',delegado:'Responsable por confirmar',lugar:'Modalidad por verificar',
+          solicitudAdicional:[],nota:safeV4(r.title),evidencia:'Agenda QA verificada',
+          asistenciaVerificada:false};
+      });
+      message=options.repo?.mode==='demo'
+        ?'Demostración sin reuniones verificadas. Las funciones externas no están conectadas.'
+        :rows.length
+          ?'Solo lectura: '+rows.length+' reuniones verificadas de '+(options.projectName||'copropiedad seleccionada')+'.'
+          :'No hay reuniones verificadas para esta copropiedad.';
+    } catch(error) {
+      if(id!==request||!workspace.isConnected)return;
+      message=verifiedAgendaUiError(error)+' Utiliza Actualizar reuniones para reintentar.';
+    } finally {
+      if(id===request&&workspace.isConnected){
+        refresh.disabled=false;status.textContent=message;if(ready)send();
+      }
+    }
+  }
   refresh.addEventListener('click',reload);
   void reload();
 }
 export function mountVerifiedAgenda(root,options){
- if(options?.repo?.mode==='cloud')return mountOriginalV4(root,options);
- return mountVerifiedAgendaLegacy(root,options);
+  // Legacy fixture contract only: real portal sessions always have a defined mode.
+  if(options?.repo?.mode!=='cloud' && options?.repo?.mode!=='demo')return mountVerifiedAgendaLegacy(root,options);
+  return mountOriginalV4(root,options);
 }
+
 import {bogotaAgendaDate,loadVerifiedAgenda,filterVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
 function mountVerifiedAgendaLegacy(root,{repo,projectId,projectName}){
  root.innerHTML=`<section class="visit-workspace" aria-label="Agenda de reuniones verificadas">
