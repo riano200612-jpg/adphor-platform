@@ -1,4 +1,5 @@
 import {createMeetingRequestGate} from './services/meeting-request-gate.js';
+import {dedupeCalendarMeetingRows} from './services/meeting-calendar-identity.js';
 import {calendarHasConflict} from './services/calendar-availability.js';
 import {loadVerifiedAgenda,verifiedAgendaUiError} from './services/verified-agenda.js';
 import {mountQaCalendarProbe} from './ui-qa-calendar-probe.js';
@@ -268,14 +269,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  let editing=null, experience;
  let verifiedCloudRows=[];
  let googleCalendarRows=[];
- function calendarRows(){
-  const rows=[...googleCalendarRows,...verifiedCloudRows],unique=new Map();
-  for(const row of rows){
-   const key=row.googleEventId?'google:'+row.googleEventId:row.idempotencyKey?'request:'+row.idempotencyKey:'qa:'+String(row.id);
-   if(!unique.has(key))unique.set(key,row);
-  }
-  return [...unique.values()].map(row=>({...row,title:row.summary||row.title||'Reunión'}));
- }
+ function calendarRows(){return dedupeCalendarMeetingRows([...googleCalendarRows,...verifiedCloudRows],projectId);}
  function calendarGridRows(){return calendarRows().filter(row=>!['reconciling','failed'].includes(row.status));}
  function render(){
   experience?.draw();
@@ -421,7 +415,7 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
    loadVerifiedAgenda(repo,projectId).then(rows=>{
      if(!root.isConnected||!isProjectCurrent())return;
      verifiedCloudRows=(Array.isArray(rows)?rows:[]).map(r=>({
-       id:r.id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
+       id:r.id,projectId:r.project_id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
      }));
      render();
    }).catch(error=>{
