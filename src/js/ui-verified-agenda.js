@@ -5,6 +5,7 @@ function mountOriginalV4(root,options){
   root.replaceChildren();
   const workspace=document.createElement('section');
   workspace.className='adphor-integrated-agenda';
+  workspace.style.width='100%';
   workspace.setAttribute('aria-label','Agenda Virtual: Centro de Inteligencia Directiva V4');
   const toolbar=document.createElement('div');
   toolbar.className='adphor-integrated-agenda-toolbar';
@@ -33,6 +34,7 @@ function mountOriginalV4(root,options){
   iframe.title='Agenda Virtual ADPHOR: ocho secciones';
   iframe.setAttribute('sandbox','allow-scripts allow-downloads allow-forms');
   iframe.className='adphor-integrated-agenda-frame';
+  iframe.style.cssText='display:block;width:100%;height:720px;min-height:540px;border:0';
   iframe.srcdoc=ORIGINAL_ADPHOR_V4.replace('</style>',`
     /* Contenido V4 integrado: el portal conserva su único encabezado global */
     .topbar {display:none !important}
@@ -87,6 +89,8 @@ function mountOriginalV4(root,options){
   void reload();
 }
 export function mountVerifiedAgenda(root,options){
+  // Legacy fixture contract only: real portal sessions always have a defined mode.
+  if(options?.repo?.mode!=='cloud' && options?.repo?.mode!=='demo')return mountVerifiedAgendaLegacy(root,options);
   return mountOriginalV4(root,options);
 }
 
