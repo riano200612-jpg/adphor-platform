@@ -37,19 +37,123 @@ test('proposed private RLS allows only the scoped login to read encrypted connec
 
     const store=createCalendarOAuthMeetingStore({database});
     const idempotencyKey='pilot-store-test-request-001';
-    assert.deepEqual(await store.claim({actor,idempotencyKey}),{status:'claimed'});
+    const initialClaim=await store.claim({actor,idempotencyKey});
+    assert.equal(initialClaim.status,'claimed');
+    assert.match(initialClaim.claimGeneration,/^\d{9,14}(?:\.\d{1,6})?$/);
+    const eventId='0123456789abcdef0123456789abcdef';
+    const initialAttempt=await store.markAttempted({actor,idempotencyKey,googleEventId:eventId,claimGeneration:initialClaim.claimGeneration,summary:'QA privada',
+      start:'2026-12-01T15:00:00.000Z',end:'2026-12-01T15:30:00.000Z'});
+    assert.equal((await store.claim({actor,idempotencyKey})).status,'in_progress');
+    const intent=await database.transaction(async tx=>{
+      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
+        [actor.userId,actor.projectId]);
+      return tx.query('SELECT google_event_id,status FROM calendar_oauth_private.meetings WHERE idempotency_key=$1',[idempotencyKey]);
+    });
+    assert.equal(intent.rows[0].google_event_id,eventId);
+    assert.equal(intent.rows[0].status,'creating');
     await store.complete({actor,event:{
-      userId:actor.userId,projectId:actor.projectId,idempotencyKey,googleEventId:'event_12345',
+      userId:actor.userId,projectId:actor.projectId,idempotencyKey,googleEventId:eventId,
       meetLink:'https://meet.google.com/abc-defg-hij',status:'created',
       summary:'QA privada',start:'2026-12-01T15:00:00.000Z',end:'2026-12-01T15:30:00.000Z',
-    }});
+    },expectedGeneration:initialAttempt.attemptGeneration});
     const duplicate=await store.claim({actor,idempotencyKey});
     assert.equal(duplicate.status,'complete');
-    assert.equal(duplicate.event.googleEventId,'event_12345');
+    assert.equal(duplicate.event.googleEventId,eventId);
     const rows=await store.list({actor});
     assert.equal(rows.length,1);
     assert.equal(rows[0].meetLink,'https://meet.google.com/abc-defg-hij');
     assert.deepEqual(await store.list({actor:{userId:'other-user',projectId:'source-28'}}),[]);
+    const pendingKey='pilot-store-meet-pending-002';
+    const pendingClaim=await store.claim({actor,idempotencyKey:pendingKey});
+    const pendingId='1123456789abcdef0123456789abcdef';
+    const pendingAttempt=await store.markAttempted({actor,idempotencyKey:pendingKey,googleEventId:pendingId,claimGeneration:pendingClaim.claimGeneration,summary:'QA Meet pendiente',
+      start:'2026-12-02T15:00:00.000Z',end:'2026-12-02T15:30:00.000Z'});
+    await store.complete({actor,event:{userId:actor.userId,projectId:actor.projectId,idempotencyKey:pendingKey,
+      googleEventId:pendingId,meetLink:null,status:'meet_pending',summary:'QA Meet pendiente',
+      start:'2026-12-02T15:00:00.000Z',end:'2026-12-02T15:30:00.000Z'},expectedGeneration:pendingAttempt.attemptGeneration});
+    await database.transaction(async tx=>{
+      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
+        [actor.userId,actor.projectId]);
+      await tx.query("UPDATE calendar_oauth_private.meetings SET updated_at=CURRENT_TIMESTAMP-interval '2 minutes' WHERE idempotency_key=$1",[pendingKey]);
+    });
+    const refreshed=await store.claimMeetRefresh({actor,idempotencyKey:pendingKey});
+    assert.equal(refreshed.status,'claimed');
+    assert.match(refreshed.claimGeneration,/^\d{9,14}(?:\.\d{1,6})?$/);
+    assert.equal((await store.claimMeetRefresh({actor,idempotencyKey:pendingKey})).status,'cooldown');
+    const rejectedKey='pilot-store-rejected-003';
+    const rejectedClaim=await store.claim({actor,idempotencyKey:rejectedKey});
+    const rejectedId='2123456789abcdef0123456789abcdef';
+    const rejectedAttempt=await store.markAttempted({actor,idempotencyKey:rejectedKey,googleEventId:rejectedId,claimGeneration:rejectedClaim.claimGeneration,summary:'QA rechazada',
+      start:'2026-12-03T15:00:00.000Z',end:'2026-12-03T15:30:00.000Z'});
+    await store.failDefinitively({actor,idempotencyKey:rejectedKey,googleEventId:rejectedId,attemptGeneration:rejectedAttempt.attemptGeneration});
+    assert.equal((await store.claim({actor,idempotencyKey:rejectedKey})).status,'rejected');
+    const rejectedRows=await store.list({actor});
+    const rejected=rejectedRows.find(row=>row.idempotencyKey===rejectedKey);
+    assert.equal(rejected.status,'failed');
+    assert.equal(rejected.googleEventId,null);
+
+    // Simulate an expired DB claim reclaimed while the first request is suspended.
+    const staleKey='pilot-store-stale-claim-004';
+    const oldClaim=await store.claim({actor,idempotencyKey:staleKey});
+    assert.equal(oldClaim.status,'claimed');
+    await database.transaction(async tx=>{
+      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
+        [actor.userId,actor.projectId]);
+      await tx.query("UPDATE calendar_oauth_private.meetings SET updated_at=CURRENT_TIMESTAMP-interval '3 minutes' WHERE idempotency_key=$1",[staleKey]);
+    });
+    const freshClaim=await store.claim({actor,idempotencyKey:staleKey});
+    assert.equal(freshClaim.status,'claimed');
+    assert.notEqual(oldClaim.claimGeneration,freshClaim.claimGeneration);
+    const staleEvent='3123456789abcdef0123456789abcdef';
+    await assert.rejects(store.markAttempted({actor,idempotencyKey:staleKey,googleEventId:staleEvent,
+      claimGeneration:oldClaim.claimGeneration,summary:'Solicitud anterior suspendida',
+      start:'2026-12-04T15:00:00.000Z',end:'2026-12-04T15:30:00.000Z'}),
+      /intent persistence failed/);
+    await store.fail({actor,idempotencyKey:staleKey,claimGeneration:oldClaim.claimGeneration});
+    assert.equal((await store.claim({actor,idempotencyKey:staleKey})).status,'in_progress');
+    const freshAttempt=await store.markAttempted({actor,idempotencyKey:staleKey,googleEventId:staleEvent,
+      claimGeneration:freshClaim.claimGeneration,summary:'Solicitud recuperada',
+      start:'2026-12-04T15:00:00.000Z',end:'2026-12-04T15:30:00.000Z'});
+    assert.match(freshAttempt.attemptGeneration,/^\d{9,14}(?:\.\d{1,6})?$/);
+    await store.complete({actor,event:{userId:actor.userId,projectId:actor.projectId,
+      idempotencyKey:staleKey,googleEventId:staleEvent,meetLink:null,status:'meet_pending',
+      summary:'Solicitud recuperada',start:'2026-12-04T15:00:00.000Z',
+      end:'2026-12-04T15:30:00.000Z'},expectedGeneration:freshAttempt.attemptGeneration});
+    assert.equal((await store.claim({actor,idempotencyKey:staleKey})).status,'complete');
+
+    // A worker whose claim has expired cannot complete a meeting after a newer
+    // claimant successfully marked its own attempt for the same Google event.
+    const lateKey='pilot-store-late-remote-005';
+    const lateId='4123456789abcdef0123456789abcdef';
+    const lateClaim=await store.claim({actor,idempotencyKey:lateKey});
+    const oldAttempt=await store.markAttempted({actor,idempotencyKey:lateKey,
+      googleEventId:lateId,claimGeneration:lateClaim.claimGeneration,
+      summary:'Reunión vencida',start:'2026-12-05T15:00:00.000Z',
+      end:'2026-12-05T15:30:00.000Z'});
+    await database.transaction(async tx=>{
+      await tx.query("SELECT set_config('adphor.calendar_user_id',$1,true),set_config('adphor.calendar_project_id',$2,true)",
+        [actor.userId,actor.projectId]);
+      await tx.query("UPDATE calendar_oauth_private.meetings SET updated_at=CURRENT_TIMESTAMP-interval '3 minutes' WHERE idempotency_key=$1",
+        [lateKey]);
+    });
+    const successor=await store.claim({actor,idempotencyKey:lateKey});
+    const newAttempt=await store.markAttempted({actor,idempotencyKey:lateKey,
+      googleEventId:lateId,claimGeneration:successor.claimGeneration,
+      summary:'Reunión recuperada',start:'2026-12-05T15:00:00.000Z',
+      end:'2026-12-05T15:30:00.000Z'});
+    const lateEvent={userId:actor.userId,projectId:actor.projectId,
+      idempotencyKey:lateKey,googleEventId:lateId,status:'created',
+      meetLink:'https://meet.google.com/abc-defg-hij',summary:'Reunión recuperada',
+      start:'2026-12-05T15:00:00.000Z',end:'2026-12-05T15:30:00.000Z'};
+    await assert.rejects(store.complete({actor,event:lateEvent,
+      expectedGeneration:oldAttempt.attemptGeneration}),/persistence failed/);
+    await assert.rejects(store.failDefinitively({actor,idempotencyKey:lateKey,
+      googleEventId:lateId,attemptGeneration:oldAttempt.attemptGeneration}),/claim expired/);
+    assert.equal((await store.claim({actor,idempotencyKey:lateKey})).status,'in_progress');
+    await store.complete({actor,event:lateEvent,
+      expectedGeneration:newAttempt.attemptGeneration});
+    assert.equal((await store.claim({actor,idempotencyKey:lateKey})).status,'complete');
+
     const privileges=await database.query(`SELECT
       pg_has_role(current_user,'adphor_qa_calendar_oauth_state','USAGE') AS inherited,
       NOT has_table_privilege(current_user,'calendar_oauth_private.connections','SELECT') AS no_tablewide_select,

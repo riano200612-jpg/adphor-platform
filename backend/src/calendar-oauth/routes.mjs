@@ -4,11 +4,12 @@ import {createCalendarOAuthFinalize} from './finalize.mjs';
 import {createCalendarOAuthStart} from './start.mjs';
 import {createCalendarMeetingCreate} from './meeting-create.mjs';
 import {createCalendarMeetingList} from './meeting-list.mjs';
+import {createCalendarMeetingRefresh} from './meeting-refresh.mjs';
 import {createCalendarSupabaseAuthorization} from './supabase-authorization.mjs';
 
 // The QA runtime must supply the server-only transaction store, staging
 // adapter and the audience of the exact Access application serving these URLs.
-export function createCalendarOAuthRoutes({access, supabase, clientId, store, pending, completeAuthorization, createMeeting, meetingStore, pilotProjectId}) {
+export function createCalendarOAuthRoutes({access, supabase, clientId, store, pending, completeAuthorization, createMeeting, refreshMeeting, meetingStore, pilotProjectId}) {
   if (typeof clientId !== 'string' || !clientId || typeof store?.save !== 'function' ||
       typeof store?.consume !== 'function' || typeof pending?.stage !== 'function' ||
       typeof pending?.consume !== 'function' || typeof completeAuthorization !== 'function') {
@@ -28,6 +29,9 @@ export function createCalendarOAuthRoutes({access, supabase, clientId, store, pe
     });
     routes.listMeetings = createCalendarMeetingList({
       verifyAccess, ...identity, meetingStore, pilotProjectId,
+    });
+    if(typeof refreshMeeting==='function')routes.refreshMeeting=createCalendarMeetingRefresh({
+      verifyAccess,...identity,refreshMeeting,pilotProjectId,
     });
   }
   return routes;

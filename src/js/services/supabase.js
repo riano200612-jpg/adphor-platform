@@ -114,7 +114,7 @@ export function createCloudRepository(url, key) {
       method,headers,body:body===undefined?undefined:JSON.stringify(body),
       credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(20000),
     });
-    if(!response.ok)throw Error('CAL_MEETING_HTTP_'+response.status);
+    if(!response.ok)throw Error(response.status===422?'CAL_GOOGLE_REJECTED':'CAL_MEETING_HTTP_'+response.status);
     return response;
   }
   return {
@@ -213,7 +213,7 @@ export function createCloudRepository(url, key) {
         const data=await response.json();
         let meet=null;
         if(typeof data?.meetLink==='string')meet=new URL(data.meetLink);
-        if(data?.projectId!==projectId||!['created','meet_pending'].includes(data?.status)||
+        if(data?.projectId!==projectId||!['created','meet_pending','reconciling'].includes(data?.status)||
           typeof data?.googleEventId!=='string'||
           (data.status==='created'&&!meet)||
           (data.meetLink!==null&&typeof data.meetLink!=='string')||
@@ -227,6 +227,16 @@ export function createCloudRepository(url, key) {
         const data=await response.json();
         if(data?.projectId!==projectId||!Array.isArray(data.meetings))throw Error('CAL_MEETING_LIST_INVALID');
         return data.meetings;
+      },
+      async refreshGoogleCalendarMeeting(projectId,idempotencyKey) {
+        const response=await calendarMeetingRequest('refresh',projectId,{method:'POST',body:{idempotencyKey}});
+        const data=await response.json();let meet=null;
+        if(typeof data?.meetLink==='string')meet=new URL(data.meetLink);
+        if(data?.projectId!==projectId||!['created','meet_pending','reconciling'].includes(data?.status)||
+          typeof data?.googleEventId!=='string'||(data.status==='created'&&!meet)||
+          (data.meetLink!==null&&typeof data.meetLink!=='string')||
+          (meet&&!(meet.protocol==='https:'&&meet.hostname==='meet.google.com')))throw Error('CAL_MEETING_RESPONSE_INVALID');
+        return data;
       },
     }),
     async meetingAvailability(projectId, start, end) {
