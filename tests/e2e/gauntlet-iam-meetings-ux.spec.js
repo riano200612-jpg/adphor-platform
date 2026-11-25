@@ -1,7 +1,12 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from '../../qa/isolated-browser-test.js';
 
 test('GAUNTLET: IAM technical check fail-closed and emits only a safe diagnostic',async({page})=>{
- await page.goto('./');
+ await page.route('**/iam-meetings-fixture', route =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<!doctype html><html lang="es"><body></body></html>'
+    }));
+  await page.goto('./iam-meetings-fixture');
  const result=await page.evaluate(async()=>{
   const {verifyGeneralAdmin,corporateAccessNotice}=await import('/adphor-platform/src/js/services/delegate-scope.js');
   const states=[];
@@ -20,7 +25,12 @@ test('GAUNTLET: IAM technical check fail-closed and emits only a safe diagnostic
  await expect(page.getByRole('status')).not.toContainText('secret bearer');
 });
 test('GAUNTLET: positive operator snapshot does not change unrelated building privileges',async({page})=>{
- await page.goto('./');
+ await page.route('**/iam-meetings-fixture', route =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<!doctype html><html lang="es"><body></body></html>'
+    }));
+  await page.goto('./iam-meetings-fixture');
  const states=await page.evaluate(async()=>{
   const {verifyGeneralAdmin,corporatePageAllowed}=await import('/adphor-platform/src/js/services/delegate-scope.js');
   const phases=[];
