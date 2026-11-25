@@ -74,6 +74,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const icon = name => `<i class="fa-solid fa-${name}" aria-hidden="true"></i>`;
 const fmt = date => date && !Number.isNaN(new Date(date).getTime()) ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' }).format(new Date(date.length === 10 ? `${date}T12:00:00-05:00` : date)) : '—';
 const stamp = date => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' }).format(new Date(date));
+let agendaReturnPage='dashboard';
 const state = { user: null, projects: [], members: [], tickets: [], projectId: '', page: 'dashboard', view: 'board', filters: {}, reportMonth: '', lastSync: null, corporateAdmin: false, iamStatus: 'not-checked', sprintOffset: 0, sprintScope: 'mine' };
 let disposeQaAccountAvatar=()=>{};
 let busy = false;
@@ -329,7 +330,7 @@ function renderPage() {
     mountQaTaskCatalog($('page-content'),{repo,projectId:state.projectId,projectName:project().name,userId:state.user.id});return;
   }
   if (state.page === 'agenda') {
-    mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name,onClose:()=>{state.page='dashboard';renderPage();}});return;
+    mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name,onClose:()=>{state.page=agendaReturnPage==='agenda'?'dashboard':agendaReturnPage;shell();}});return;
   }
   if (state.page === 'visits') {
     mountVisitPreparation($('page-content'),{projectId:state.projectId,projectName:project().name,members:team(),projects:state.projects,onProjectChange:selectWorkspaceProject,visitRepository:repo.mode==='cloud'?repo.visits:null,canCreate:repo.visits?.writesEnabled===true&&['admin','coordinator'].includes(role())});return;
@@ -538,7 +539,7 @@ document.addEventListener('click', async event => {
   try {
     if(el.dataset.action==='enroll-mfa'){el.disabled=true;try{mfaScreen(true,await repo.enrollMfa());}catch(error){el.disabled=false;reportError(error);}return;}
     if(el.dataset.action==='cancel-mfa'){await repo.logout();state.user=null;state.corporateAdmin=false;loginScreen();return;}
-    if (el.dataset.page) { event.preventDefault(); state.page = el.dataset.page; state.filters = {}; shell(); return; }
+    if (el.dataset.page) { event.preventDefault(); if(el.dataset.page==='agenda'&&state.page!=='agenda')agendaReturnPage=state.page; state.page = el.dataset.page; state.filters = {}; shell(); return; }
     if (el.dataset.ticket) { await openCase(el.dataset.ticket); return; }
     if (el.dataset.sprintShift) { const shift=Number(el.dataset.sprintShift); if(state.page==='mine' && Number.isInteger(shift) && [-1,1].includes(shift) && Math.abs(state.sprintOffset+shift)<=26){state.sprintOffset+=shift;renderPage();}return; }
     if (el.dataset.sprintScope) { const next=el.dataset.sprintScope; if(state.page==='mine' && ['mine','team'].includes(next) && (next==='mine'||isManager(role()))){state.sprintScope=next;renderPage();}return; }
