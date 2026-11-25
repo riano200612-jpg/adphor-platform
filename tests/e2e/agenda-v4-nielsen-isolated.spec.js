@@ -22,7 +22,7 @@ test('Agenda V4 applies Nielsen: current Bogota date, active navigation, control
  await expect(frame.locator('#fbtn-lg')).toHaveAttribute('aria-pressed','true');
  await frame.locator('.menu-toggle').click();
  await expect(frame.locator('.menu-toggle')).toHaveAttribute('aria-expanded','false');
- await page.locator('#v4-nielsen button').filter({hasText:'Volver al portal'}).click();
+ await page.locator('#v4-nielsen .adphor-integrated-agenda-back').click();
  await expect.poll(()=>page.evaluate(()=>window.__v4Closed)).toBe(true);
  expect(errors).toEqual([]);
 });
@@ -41,7 +41,7 @@ test('Agenda V4 error is recoverable without leaking cross-tenant data',async({p
    }},projectId:'p1',projectName:'Edificio Piloto'});
  });
  const frame=page.frameLocator('#v4-retry iframe');
- await expect(frame.locator('#adphor-v4-source')).toContainText('Pulsa Actualizar reuniones');
+ await expect(frame.locator('#adphor-v4-source')).toContainText('Actualizar reuniones');
  await expect(frame.locator('body')).not.toContainText('Confidential SQL server detail');
  await page.locator('#v4-retry button').filter({hasText:'Actualizar reuniones'}).click();
  await expect(frame.locator('#adphor-v4-source')).toContainText('1 reuniones verificadas');
