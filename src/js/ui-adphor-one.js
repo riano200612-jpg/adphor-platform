@@ -12,7 +12,7 @@ export const ADPHOR_ONE_GROUPS = Object.freeze([
 
 export const ADPHOR_ONE_MODULES = Object.freeze([
   Object.freeze({id:'mine',title:'Mis tareas',icon:'list-check',tone:'sky',hint:'Actividades asignadas',group:'daily'}),
-  Object.freeze({id:'agenda',title:'Calendario',icon:'calendar-days',tone:'navy',hint:'Agenda verificada',group:'daily'}),
+  Object.freeze({id:'agenda',title:'Agenda virtual',icon:'calendar-days',tone:'navy',hint:'Actividades y compromisos',group:'daily'}),
   Object.freeze({id:'pqrs',title:'PQRS',icon:'message',tone:'champagne',hint:'Solicitudes y seguimiento',group:'daily'}),
   Object.freeze({id:'visits',title:'Visitas',icon:'clipboard-check',tone:'sage',hint:'Visitas y evidencias',group:'daily'}),
   Object.freeze({id:'meetings',title:'Reuniones',icon:'video',tone:'steel',hint:'Gestión de reuniones',group:'daily'}),
