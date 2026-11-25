@@ -408,3 +408,23 @@
 @media(prefers-reduced-motion:reduce) {
  .adphor-one-shell #page-content :is(button,.btn,select,input,textarea) {transition:none}
 }
+
+/* P0 Nielsen: clearly reversible filters across PQRS and Visitas. */
+.adphor-one-shell .pqrs-clear-filters,
+.adphor-one-shell .visit-clear-filters {
+ min-height:44px; padding:10px 16px; border:1px solid #cbd7e2;
+ border-radius:12px; color:#0b2545; background:#fff; cursor:pointer;
+ font-weight:700; align-self:end;
+}
+.adphor-one-shell .pqrs-clear-filters:hover,
+.adphor-one-shell .visit-clear-filters:hover {
+ background:#fff7de; border-color:#b59c21;
+}
+.adphor-one-shell .pqrs-clear-filters:focus-visible,
+.adphor-one-shell .visit-clear-filters:focus-visible {
+ outline:3px solid #f4b400; outline-offset:2px;
+}
+@media(max-width:650px){
+ .adphor-one-shell .pqrs-clear-filters,
+ .adphor-one-shell .visit-clear-filters {width:100%}
+}
