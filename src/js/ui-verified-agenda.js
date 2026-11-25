@@ -17,7 +17,7 @@ export function mountVerifiedAgenda(root,{repo,projectId,projectName}){
 <li><strong>Comité · De Obras</strong> — Coordinación Operativa, Arquitectura</li>
 <li><strong>Comité · Otro</strong> — Sin rol preasignado</li></ul></details>
  <label>Abrir informe privado V4.0 desde este dispositivo<input type="file" accept=".html,text/html" data-report-file></label>
- <p data-report-status role="status"></p><div data-report-view></div></section>
+ <p data-report-status aria-live="polite"></p><div data-report-view></div></section>
  <section class="panel"><h2>Consultar compromisos</h2><div class="visit-filters">
  <label>Buscar en agenda<input type="search" data-agenda-search placeholder="Asunto, tipo o estado"></label>
  <label>Fecha en Colombia<input type="date" data-agenda-date></label>
