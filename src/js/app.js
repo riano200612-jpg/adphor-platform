@@ -329,7 +329,7 @@ function renderPage() {
     mountQaTaskCatalog($('page-content'),{repo,projectId:state.projectId,projectName:project().name,userId:state.user.id});return;
   }
   if (state.page === 'agenda') {
-    mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name});return;
+    mountVerifiedAgenda($('page-content'),{repo,projectId:state.projectId,projectName:project().name,onClose:()=>{state.page='dashboard';renderPage();}});return;
   }
   if (state.page === 'visits') {
     mountVisitPreparation($('page-content'),{projectId:state.projectId,projectName:project().name,members:team(),projects:state.projects,onProjectChange:selectWorkspaceProject,visitRepository:repo.mode==='cloud'?repo.visits:null,canCreate:repo.visits?.writesEnabled===true&&['admin','coordinator'].includes(role())});return;
