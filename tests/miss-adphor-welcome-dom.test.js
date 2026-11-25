@@ -190,8 +190,9 @@ test('shows official ADPHOR identity without replacing the original portrait or 
   try{
     const stop=mountMissAdphorWelcome(dom.root);
     const image=dom.created.find(e=>e.tag==='img' && e.alt?.includes('Administradores Profesionales en Propiedad Horizontal'));
-    const slogan=dom.created.find(e=>e.tag==='p' && e.textContent==='Administramos sueños');
+    const slogan=dom.created.find(e=>e.tag==='img' && e.alt==='Administramos sueños');
     assert.ok(image);assert.ok(slogan);
+    assert.equal(slogan.src,'/assets/branding/adphor-eslogan-original.png');
     assert.equal(image.src,'/assets/branding/adphor-logo-oficial-v3.png');
     assert.equal(dom.portrait.getAttribute('src'),'/assets/branding/miss-adphor-qa-integral-bordado-oficial.webp');
     assert.equal(dom.form.disabled,undefined);

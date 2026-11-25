@@ -503,3 +503,26 @@ body:has(.miss-welcome-cover){background:#0c2743}
     max-width:660px;margin-inline:auto;
   }
 }
+
+/* QA Integral: original graphic slogan; single portrait panel on the cover. */
+.miss-welcome-cover.login-shell>.miss-qa-corporate-identity .miss-qa-corporate-slogan{
+  width:clamp(100px,15vw,200px);height:auto;max-width:46%;object-fit:contain;
+}
+.miss-welcome-cover.miss-entry-is-cover .login-story{
+  width:min(100%,660px);padding:0;border:0;box-shadow:none;background:transparent;
+}
+.miss-welcome-cover.miss-entry-is-cover .client-avatar-frame:has(.client-avatar-image){
+  width:min(100%,660px);height:clamp(240px,calc(100svh - 210px),640px);
+  max-height:none;aspect-ratio:auto;margin:0;border:1px solid #d9be79;
+}
+.miss-welcome-cover.miss-entry-is-cover .client-avatar-frame .client-avatar-image,
+.miss-welcome-cover.miss-entry-is-cover .client-avatar-frame .miss-welcome-video{
+  object-fit:cover;object-position:center 32%;aspect-ratio:auto;
+}
+.miss-welcome-cover.miss-entry-is-cover .miss-entry-actions{margin:10px auto 0}
+@media(max-width:580px){
+ .miss-welcome-cover.miss-entry-is-cover .login-story{width:100%;max-width:380px}
+ .miss-welcome-cover.miss-entry-is-cover .client-avatar-frame:has(.client-avatar-image){
+   height:clamp(230px,calc(100svh - 185px),490px);
+ }
+}
