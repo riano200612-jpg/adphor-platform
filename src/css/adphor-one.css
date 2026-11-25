@@ -344,3 +344,67 @@
     min-width: 0;
   }
 }
+
+/* QA Integral · Portal unificado: capa visual global, sin alterar autenticación ni lógica. */
+.adphor-one-shell {
+ --adphor-navy:#0b2545;
+ --adphor-gold:#f4b400;
+ --adphor-outline:#d8e0ea;
+ --adphor-surface:#fff;
+ --adphor-radius:16px;
+}
+.adphor-one-shell .workspace main {
+ background:linear-gradient(160deg,#f4f6f9 0%,#f9fbfd 100%);
+}
+.adphor-one-shell #page-content :is(.panel,.card,.visit-workspace,.meeting-card) {
+ border-radius:var(--adphor-radius);
+ box-shadow:0 4px 22px rgba(11,37,69,.065);
+}
+.adphor-one-shell #page-content :is(button,.btn,select,input,textarea) {
+ transition:border-color .16s ease,box-shadow .16s ease,background-color .16s ease,transform .16s ease;
+}
+.adphor-one-shell #page-content :is(button,.btn):not(:disabled):active {transform:translateY(1px)}
+.adphor-one-shell #page-content :is(button,.btn,input,select,textarea,a):focus-visible,
+.adphor-one-shell .adphor-one-go-home:focus-visible {
+ outline:3px solid var(--adphor-gold);outline-offset:3px;
+}
+.adphor-one-shell #page-content :is(input,select,textarea) {
+ border-radius:10px;min-height:42px;
+}
+.adphor-one-shell #page-content :is(.panel,.card) :is(h2,h3) {color:#0b2545}
+.adphor-one-shell #page-content :is(.notice,[role="status"]) {line-height:1.55}
+.adphor-one-shell .adphor-integrated-agenda {
+ width:100%;min-width:0;background:var(--adphor-surface);
+ border:1px solid var(--adphor-outline);border-radius:18px;
+ box-shadow:0 8px 30px rgba(11,37,69,.07);overflow:hidden;
+}
+.adphor-one-shell .adphor-integrated-agenda-toolbar {
+ display:flex;align-items:center;flex-wrap:wrap;gap:12px;
+ padding:12px 16px;background:#0b2545;color:#fff;
+}
+.adphor-one-shell .adphor-integrated-agenda-toolbar button {
+ min-height:43px;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:750;cursor:pointer;
+}
+.adphor-one-shell .adphor-integrated-agenda-back {
+ background:#f4b400;color:#0b2545;border:1px solid #f4b400;
+}
+.adphor-one-shell .adphor-integrated-agenda-refresh {
+ background:#fff;color:#0b2545;border:1px solid #e2e8f0;
+}
+.adphor-one-shell .adphor-integrated-agenda-toolbar button:disabled {opacity:.6;cursor:wait}
+.adphor-one-shell .adphor-integrated-agenda-scope {font-size:14px;font-weight:750;margin-right:auto}
+.adphor-one-shell .adphor-integrated-agenda-status {
+ margin:0;padding:10px 16px;background:#fff9e8;color:#614800;
+ border-bottom:1px solid #e5d9b1;font-size:14px;
+}
+.adphor-one-shell .adphor-integrated-agenda-frame {
+ display:block;border:0;width:100%;height:min(900px,calc(100vh - 220px));min-height:540px;
+}
+@media(max-width:650px) {
+ .adphor-one-shell .adphor-integrated-agenda-toolbar {padding:10px;gap:8px}
+ .adphor-one-shell .adphor-integrated-agenda-scope {flex-basis:100%;order:-1}
+ .adphor-one-shell .adphor-integrated-agenda-frame {height:calc(100vh - 250px);min-height:460px}
+}
+@media(prefers-reduced-motion:reduce) {
+ .adphor-one-shell #page-content :is(button,.btn,select,input,textarea) {transition:none}
+}
