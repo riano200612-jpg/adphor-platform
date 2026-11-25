@@ -37,15 +37,15 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  if(!demo&&repo.staffDirectoryEnabled){
   escortChoices.replaceChildren();
   repo.staffDirectory(projectId).then(people=>{
-   if(!escortChoices.isConnected)return;
+   if(!escortChoices.isConnected||!isProjectCurrent())return;
    const eligible=people.filter(p=>p.relationship==='coordinator'||['GG','GF','GT','CG','CO','A'].includes(p.role_code));
    drawCompanionOptions(escortChoices,eligible.map(p=>({id:p.id,nombre:p.name,leyendaRol:p.role_label,photoStoragePath:p.photo_path})),{photoUrl:id=>repo.staffPhotoUrl(projectId,id)});
-  }).catch(()=>{if(escortChoices.isConnected){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
+  }).catch(()=>{if(escortChoices.isConnected&&isProjectCurrent()){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
  }else if(!demo&&repo.privateMediaEnabled){
   escortChoices.replaceChildren();
   repo.authorizedCompanions(projectId,sector).then(people=>{
-    if(escortChoices.isConnected)drawCompanionOptions(escortChoices,people,{photoUrl:id=>repo.companionPhotoUrl(projectId,id)});
-  }).catch(()=>{if(escortChoices.isConnected){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
+    if(escortChoices.isConnected&&isProjectCurrent())drawCompanionOptions(escortChoices,people,{photoUrl:id=>repo.companionPhotoUrl(projectId,id)});
+  }).catch(()=>{if(escortChoices.isConnected&&isProjectCurrent()){drawCompanionOptions(escortChoices,[]);const note=document.createElement('p');note.textContent='No se pudo consultar el equipo autorizado. Actualiza la vista.';escort.append(note);}});
  }
  if(role==='admin' && !demo){
    const help=document.createElement('div');help.className='panel';
@@ -419,13 +419,13 @@ export function mountMeetingAssessment(root,{repo,projectId,projectName=projectI
  }
  if(!demo && typeof repo.listVerifiedQaMeetings==='function'){
    loadVerifiedAgenda(repo,projectId).then(rows=>{
-     if(!root.isConnected)return;
+     if(!root.isConnected||!isProjectCurrent())return;
      verifiedCloudRows=(Array.isArray(rows)?rows:[]).map(r=>({
        id:r.id,title:r.title,start:r.start_at,end:r.end_at,status:'confirmed'
      }));
      render();
    }).catch(error=>{
-     if(!root.isConnected)return;
+     if(!root.isConnected||!isProjectCurrent())return;
      status.textContent='No se pudo consultar la agenda QA autorizada: '+verifiedAgendaUiError(error);
    });
  }

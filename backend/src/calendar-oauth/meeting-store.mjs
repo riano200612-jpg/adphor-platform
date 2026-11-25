@@ -27,11 +27,13 @@ export function createCalendarOAuthMeetingStore({database}) {
                     AND calendar_oauth_private.meetings.google_event_id IS NULL)
                 OR (calendar_oauth_private.meetings.status='creating'
                     AND calendar_oauth_private.meetings.updated_at < CURRENT_TIMESTAMP - interval '2 minutes')
-           RETURNING idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at`,
+           RETURNING idempotency_key,google_event_id,meet_url,status,summary,start_at,end_at,updated_at,
+                  extract(epoch from updated_at)::text AS claim_generation`,
           [actor.userId,actor.projectId,idempotencyKey]);
         if(inserted.rows.length===1){
           const row=inserted.rows[0];
           return {status:'claimed',googleEventId:row.google_event_id??null,
+            claimGeneration:row.claim_generation,
             event:row.google_event_id?{...eventForRow(row,actor),status:'reconciling'}:null};
         }
         const current=await tx.query(
@@ -44,17 +46,20 @@ export function createCalendarOAuthMeetingStore({database}) {
         return {status:'in_progress'};
       });
     },
-    async markAttempted({actor,idempotencyKey,googleEventId,summary,start,end}) {
+    async markAttempted({actor,idempotencyKey,googleEventId,summary,start,end,claimGeneration}) {
       return scoped(database,actor,async tx=>{
         if(typeof googleEventId!=='string'||!/^[0-9a-f]{32}$/.test(googleEventId))throw new Error('Invalid Google event identity.');
+        if(typeof claimGeneration!=='string'||!/^\d{9,14}(?:\.\d{1,6})?$/.test(claimGeneration))throw new Error('Invalid Calendar claim generation.');
         const {rows}=await tx.query(
           `UPDATE calendar_oauth_private.meetings
               SET google_event_id=$4,summary=$5,start_at=$6::timestamptz,end_at=$7::timestamptz,updated_at=CURRENT_TIMESTAMP
             WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3 AND status='creating'
+              AND extract(epoch from updated_at)::text=$8
               AND (google_event_id IS NULL OR google_event_id=$4)
-            RETURNING idempotency_key`,
-          [actor.userId,actor.projectId,idempotencyKey,googleEventId,summary,start,end]);
+            RETURNING idempotency_key,extract(epoch from updated_at)::text AS attempt_generation`,
+          [actor.userId,actor.projectId,idempotencyKey,googleEventId,summary,start,end,claimGeneration]);
         if(rows.length!==1)throw new Error('Calendar meeting intent persistence failed.');
+        return {attemptGeneration:rows[0].attempt_generation};
       });
     },
     async claimMeetRefresh({actor,idempotencyKey}) {
@@ -95,18 +100,22 @@ export function createCalendarOAuthMeetingStore({database}) {
         if(rows.length!==1)throw new Error('Calendar meeting persistence failed.');
       });
     },
-    async failDefinitively({actor,idempotencyKey,googleEventId}) {
+    async failDefinitively({actor,idempotencyKey,googleEventId,attemptGeneration}) {
+      if(typeof attemptGeneration!=='string'||!/^\d{9,14}(?:\.\d{1,6})?$/.test(attemptGeneration))throw new Error('Invalid Calendar attempt generation.');
       return scoped(database,actor,tx=>tx.query(
         `UPDATE calendar_oauth_private.meetings SET status='failed',updated_at=CURRENT_TIMESTAMP
-          WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3 AND status='creating' AND google_event_id=$4`,
-        [actor.userId,actor.projectId,idempotencyKey,googleEventId]));
+          WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3 AND status='creating' AND google_event_id=$4
+            AND extract(epoch from updated_at)::text=$5`,
+        [actor.userId,actor.projectId,idempotencyKey,googleEventId,attemptGeneration]));
     },
-    async fail({actor,idempotencyKey}) {
+    async fail({actor,idempotencyKey,claimGeneration}) {
+      if(typeof claimGeneration!=='string'||!/^\d{9,14}(?:\.\d{1,6})?$/.test(claimGeneration))throw new Error('Invalid Calendar claim generation.');
       await scoped(database,actor,tx=>tx.query(
         `UPDATE calendar_oauth_private.meetings SET status='failed',updated_at=CURRENT_TIMESTAMP
           WHERE user_id=$1 AND project_id=$2 AND idempotency_key=$3
-            AND status='creating' AND google_event_id IS NULL`,
-        [actor.userId,actor.projectId,idempotencyKey],
+            AND status='creating' AND google_event_id IS NULL
+            AND extract(epoch from updated_at)::text=$4`,
+        [actor.userId,actor.projectId,idempotencyKey,claimGeneration],
       ));
     },
     async list({actor}) {

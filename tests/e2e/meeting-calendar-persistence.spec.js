@@ -57,3 +57,34 @@ test('uncertain remote result stays visible after reload without exposing an unc
  await expect(page.locator('[data-list]')).toContainText('RESULTADO PENDIENTE');
  await expect(page.locator('[data-list]')).not.toContainText(eventId);
 });
+
+test('late verified QA agenda response from former property is discarded',async({page,baseURL})=>{
+ const fixture=new URL('meeting-calendar-stale-tenant-fixture',baseURL).href;
+ const moduleUrl=new URL('src/js/ui-meeting-assessment.js',baseURL).href;
+ await page.route('**/meeting-calendar-stale-tenant-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html>
+  <html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <main id="meetings"></main><script type="module">
+  import {mountMeetingAssessment} from '${moduleUrl}';
+  window.__activeProject='source-28';window.__qaStarted=false;
+  mountMeetingAssessment(document.querySelector('#meetings'),{
+    projectId:'source-28',projectName:'Entrelagos',role:'admin',
+    isProjectCurrent:()=>window.__activeProject==='source-28',
+    repo:{mode:'cloud',calendarBookingEnabled:false,verifiedCalendarEnabled:true,
+      listVerifiedQaMeetings:()=>new Promise(resolve=>{
+        window.__qaResolve=resolve;window.__qaStarted=true;
+      })}});
+  </script></html>`}));
+ await page.goto(fixture);
+ await page.waitForFunction(()=>window.__qaStarted===true);
+ await page.evaluate(()=>{
+   window.__activeProject='source-29';
+   const start=new Date(Date.now()+86400000).toISOString();
+   const end=new Date(Date.now()+90000000).toISOString();
+   window.__qaResolve([{id:'8ed75956-34a9-4f0a-959f-68e6f1eb0441',
+     project_id:'source-28',title:'Reunión exclusiva de edificio anterior',
+     is_calendar_verified:true,source_status:'Confirmada',start_at:start,end_at:end}]);
+ });
+ await page.waitForTimeout(150);
+ await expect(page.locator('[data-list]')).not.toContainText('Reunión exclusiva de edificio anterior');
+ await expect(page.locator('.calendar-grid .calendar-day small').filter({hasText:'Reunión exclusiva de edificio anterior'})).toHaveCount(0);
+});

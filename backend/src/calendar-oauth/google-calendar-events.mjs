@@ -97,8 +97,9 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
     try{
       const token=await accessToken(actor);
       eventId=eventId||await googleEventIdFor(idempotencyKey);
-      await eventStore.markAttempted({actor,idempotencyKey,googleEventId:eventId,
-        summary:meeting.summary.trim(),start:meeting.start,end:meeting.end});
+      const attempt=await eventStore.markAttempted({actor,idempotencyKey,googleEventId:eventId,
+        summary:meeting.summary.trim(),start:meeting.start,end:meeting.end,
+        claimGeneration:claim.claimGeneration});
       intentDurable=true;
       let remote;
       if(previousAttempt){
@@ -118,7 +119,8 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
             method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
         }catch(error){
           if([400,401,403,404,410,422].includes(error?.status)){
-            try{await eventStore.failDefinitively({actor,idempotencyKey,googleEventId:eventId});
+            try{await eventStore.failDefinitively({actor,idempotencyKey,googleEventId:eventId,
+              attemptGeneration:attempt?.attemptGeneration});
               return {...reconciliationEvent(actor,idempotencyKey,meeting,eventId),googleEventId:null,status:'failed'};
             }catch{return reconciliationEvent(actor,idempotencyKey,meeting,eventId);}
           }
@@ -133,7 +135,7 @@ export function createGoogleCalendarEventService({clientId,clientSecret,getConne
       return result;
     }catch(error){
       if(intentDurable)return reconciliationEvent(actor,idempotencyKey,meeting,eventId);
-      try{await eventStore.fail({actor,idempotencyKey});}catch{}
+      try{await eventStore.fail({actor,idempotencyKey,claimGeneration:claim.claimGeneration});}catch{}
       throw error;
     }
   }
